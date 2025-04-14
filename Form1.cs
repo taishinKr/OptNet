@@ -9,14 +9,9 @@ namespace OptNet
             InitializeComponent();
 
             mObjectJ = new ObjectJClass<double>(ObjectJClass<double>.JTest, 11, 0, 1);
-            mOpt1D = new Opt1D<double>(mObjectJ);
+            mOpt1D = new Opt1D<double>(mObjectJ,"Both");  // "Min", "Max", or "Both"
             // Display the Result
-            string s = string.Format("Key = {0,8:G5},   Value = {1,8:G5}", mOpt1D.Max.Key, mOpt1D.Max.Value);
-            DisplayMessage("Max"+s);
-            s = string.Format("Key = {0,8:G5}, Value = {1,8:G5}", mOpt1D.Min.Key, mOpt1D.Min.Value);
-            DisplayMessage("Min" + s);
-            //DisplayMessage($"Max: Key = {mOpt1D.Max.Key,10:G5}, Value = {mOpt1D.Max.Value,10:G5}");
-            //DisplayMessage($"Min: Key = {mOpt1D.Min.Key}, Value = {mOpt1D.Min.Value}");
+            mOpt1D.DisplayResult(DisplayMessage);
         }
 
         private void Form1_Load(object sender, EventArgs e)

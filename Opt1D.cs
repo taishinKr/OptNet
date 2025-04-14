@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Numerics;
 using System.Collections.Immutable;
 using System.Drawing.Design;
+using static System.Windows.Forms.AxHost;
 
 namespace OptNet
 {
@@ -63,16 +64,19 @@ namespace OptNet
         private readonly T[] omegaW;
         private readonly T[] A;
         private readonly T[] B;
-        private readonly T[] C;
-        private readonly Dictionary<T, T> Lo;
+        private readonly T[] C;        
 
         private readonly ObjectJClass<T> objectJ;
         //private readonly ImmutableArray<T> sampleJs;
         private readonly T[] sampleJs;
-        private readonly OfflineCalc<T> offlineCalc;
+        private readonly OfflineGet<T> constVars;
 
-        private T[] calcW(T[] Js) => GeneralMath<T>.LinearTransform(offlineCalc.P, Js);
-        private T[] calcOmegaW(T[] Js) => GeneralMath<T>.LinearTransform(offlineCalc.P, Js);
+        [Flags]
+        public enum staMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3 }
+        private UInt32 mState = 0;
+
+        private T[] calcW(T[] Js) => GeneralMath<T>.LinearTransform(constVars.P, Js);
+        private T[] calcOmegaW(T[] Js) => GeneralMath<T>.LinearTransform(constVars.P, Js);
 
 
         public uint OrderM => M;
@@ -82,27 +86,55 @@ namespace OptNet
         public ObjectJClass<T> ObjectJ => objectJ;
         public KeyValuePair<T, T> Max { get; }
         public KeyValuePair<T, T> Min { get; }
+        public Dictionary<T, T> Lo { get; }
 
-        public Opt1D(ObjectJClass<T> argObjectJ)
+        public Opt1D(ObjectJClass<T> argObjectJ, string mode)
         {
+            if (mode == "Max") setSysFlag(staMaskEnum.Max);
+            else clrSysFlag(staMaskEnum.Max);
+            if (mode == "Min") setSysFlag(staMaskEnum.Min);
+            else clrSysFlag(staMaskEnum.Min);
+            if (mode == "Both") setSysFlag(staMaskEnum.Max | staMaskEnum.Min);
+
             objectJ = argObjectJ;
             Ns = (uint)objectJ.Js.Length;
             M = Ns - 1;
             tildM = M * 3;
             sampleJs = objectJ.Js;
 
-            offlineCalc = new OfflineCalc<T>(M, tildM);
+            constVars = new OfflineGet<T>(M, tildM);
 
             W = calcW(Js);
             omegaW = calcOmegaW(Js);
 
-            A = GeneralMath<T>.LinearTransform(offlineCalc.Ra, Js);
-            B = GeneralMath<T>.LinearTransform(offlineCalc.Rb, Js);
-            C = GeneralMath<T>.LinearTransform(offlineCalc.Rc, Js);
+            A = GeneralMath<T>.LinearTransform(constVars.Ra, Js);
+            B = GeneralMath<T>.LinearTransform(constVars.Rb, Js);
+            C = GeneralMath<T>.LinearTransform(constVars.Rc, Js);
 
             Lo = getLo();
-            Max = Lo.MaxBy(x => x.Value);
-            Min = Lo.MinBy(x => x.Value);
+            if (isSetSysFlag(staMaskEnum.Max)) Max = Lo.MaxBy(x => x.Value);
+            if (isSetSysFlag(staMaskEnum.Min)) Min = Lo.MinBy(x => x.Value);
+        }
+
+        public void DisplayResult(Action<string> DisplayMessage)
+        {
+            string msgTemplate = "Key = {0,8:G5},   Value = {1,8:G5}";
+            string s;
+            foreach (KeyValuePair<T, T> kv in Lo)
+            {
+                s = string.Format(msgTemplate, kv.Key, kv.Value);
+                DisplayMessage("Lo  " + s);
+            }
+            if (isSetSysFlag(staMaskEnum.Max))
+            {
+                s = string.Format(msgTemplate, Max.Key, Max.Value);
+                DisplayMessage("Max:  " + s);
+            }
+            if (isSetSysFlag(staMaskEnum.Min))
+            {
+                s = string.Format(msgTemplate, Min.Key, Min.Value);
+                DisplayMessage("Min:  " + s);
+            }             
         }
         private Dictionary<T, T> getLo()
         {
@@ -138,7 +170,7 @@ namespace OptNet
 
         private bool IsInCi(T x, uint k)
         {
-            if ((x >= offlineCalc.Dp[k]) && (x < offlineCalc.Dp[k + 1]))
+            if ((x >= constVars.Dp[k]) && (x < constVars.Dp[k + 1]))
                 return true;
             else
                 return false;
@@ -150,6 +182,37 @@ namespace OptNet
             for (uint n = 0; n <= M; n++)
                 sum += W[n] * T.CreateChecked( Math.Cos(n * Math.PI * double.CreateChecked(x))); // Convert T to double    
             return sum;
+        }
+
+        public void setSysFlag(staMaskEnum mask)
+        {
+            mState = setFlag(mState, (UInt32)mask);
+
+        }
+        public void clrSysFlag(staMaskEnum mask)
+        {
+            mState = clrFlag(mState, (UInt32)mask);
+        }
+        public bool isSetSysFlag(staMaskEnum mask)
+        {
+            return isSetFlag(mState, (UInt32)mask);
+        }
+        private UInt32 setFlag(UInt32 Flag, UInt32 mask)
+        {
+            Flag |= mask;
+            return Flag;
+        }
+        private UInt32 clrFlag(UInt32 Flag, UInt32 mask)
+        {
+            Flag &= (UInt32)(~mask);
+            return Flag;
+        }
+        private bool isSetFlag(UInt32 Flag, UInt32 mask)
+        {
+            if ((Flag & mask) == 0)
+                return false;
+            else
+                return true;
         }
     }
 }
