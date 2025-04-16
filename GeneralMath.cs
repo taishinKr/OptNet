@@ -174,7 +174,25 @@ namespace OptNet
 
             return subarray;
         }
-        
+
+        public static UInt32 setFlag(UInt32 Flag, UInt32 mask)
+        {
+            Flag |= mask;
+            return Flag;
+        }
+        public static UInt32 clrFlag(UInt32 Flag, UInt32 mask)
+        {
+            Flag &= (UInt32)(~mask);
+            return Flag;
+        }
+        public static bool isSetFlag(UInt32 Flag, UInt32 mask)
+        {
+            if ((Flag & mask) == 0)
+                return false;
+            else
+                return true;
+        }
+
         /*public static BigInteger Sqrt(BigInteger value)
         {
             if (value < 0)

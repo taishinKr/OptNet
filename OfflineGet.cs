@@ -25,15 +25,17 @@ namespace OptNet
         private string fileNameCsv;
         private string fileNameBin;
 
+        //test
+
         public T[,] P { get; }
         public T[,] Ra { get; }
         public T[,] Rb { get; }
         public T[,] Rc { get; }
         public T[] Dp { get; }
-        public OfflineGet(uint M, uint tildM)
+        public OfflineGet(uint Ns)
         {
-            this.M = M;
-            this.tildM = tildM;
+            this.M = Ns - 1;
+            this.tildM = M * 100;
             this.Ns = M + 1;
 
             string baseFolder = AppDomain.CurrentDomain.BaseDirectory;
@@ -41,14 +43,15 @@ namespace OptNet
             fileNameCsv = fileNameBase + ".csv";
             fileNameBin = fileNameBase + ".bin";
 
+
             if (File.Exists(fileNameBin))
             {
-                FileReadBin(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc);
+                FileReadBin(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc, out T[,] p);
                 Dp = dp;
                 Ra = ra;
                 Rb = rb;
                 Rc = rc;
-                P = new T[M + 1, M + 1];
+                P = p;
                 Q = new T[M, tildM];
                 Rw = new T[M, M];
                 A = new T[M, M];
@@ -57,20 +60,21 @@ namespace OptNet
             }
             else if (File.Exists(fileNameCsv))
             {
-                FileReadCsv(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc);
+                FileReadCsv(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc, out T[,] p);
                 Dp = dp;
                 Ra = ra;
                 Rb = rb;
                 Rc = rc;
-                P = new T[M + 1, M + 1];
+                P = p;
                 Q = new T[M, tildM];
                 Rw = new T[M, M];
                 A = new T[M, M];
                 B = new T[M, M];
-                C = new T[M, M];               
-            }            
+                C = new T[M, M];
+            }
             else
             {
+
                 Dp = calcDp();
                 P = calcP();
                 Q = calcQ();
@@ -86,7 +90,7 @@ namespace OptNet
                 FileWriteBin();
             }
         }
-        private void FileReadCsv(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc)
+        private void FileReadCsv(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc, out T[,] p)
         {
             using (FileStream fs = new FileStream(fileNameCsv, FileMode.Open, FileAccess.Read))
             using (StreamReader sr = new StreamReader(fs))
@@ -112,6 +116,14 @@ namespace OptNet
 
                 rc = new T[rowLength, M + 1];
                 for (uint i = 0; i < rowLength; i++)
+                {
+                    convOneLine(sr, out T[] row);
+                    for (uint j = 0; j < M + 1; j++)
+                        rc[i, j] = row[j];
+                }
+
+                p = new T[ M + 1, M + 1];
+                for (uint i = 0; i < M+1; i++)
                 {
                     convOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
@@ -175,12 +187,17 @@ namespace OptNet
                         fwriter.Write(Rc[i, j].ToString() + ',');
                     fwriter.Write(Environment.NewLine);
                 }
+                for (uint i = 0; i < M+1; i++)
+                {
+                    for (uint j = 0; j < M+1; j++)
+                        fwriter.Write(P[i, j].ToString() + ',');
+                    fwriter.Write(Environment.NewLine);
+                }
 
                 fwriter.Flush();
                 fs.Position = 0;
             }
         }
-
         /*private void FileReadBin(string fileNameBin, out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc)
         {
             using (FileStream fs = new FileStream(fileNameBin, FileMode.Open, FileAccess.Read))
@@ -193,7 +210,7 @@ namespace OptNet
                 Buffer.BlockCopy(bytes, 0, dp, 0, size);
             }
         }*/
-        private void FileReadBin(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc)
+        private void FileReadBin(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc, out T[,] p)
         {
             using (FileStream fs = new FileStream(fileNameBin, FileMode.Open, FileAccess.Read))
             using (BinaryReader freader = new BinaryReader(fs))
@@ -222,6 +239,14 @@ namespace OptNet
                 {
                     for (uint j = 0; j < M + 1; j++)
                         rc[i, j] = obj[i * (M + 1) + j];
+                }
+
+                p = new T[M + 1, M + 1];
+                convOneVar(freader, out obj);
+                for (uint i = 0; i < M + 1; i++)
+                {
+                    for (uint j = 0; j < M + 1; j++)
+                        p[i, j] = obj[i * (M + 1) + j];
                 }
             }
         }
@@ -263,6 +288,13 @@ namespace OptNet
                 }
                 obj = Rc;
                 fwriter.Write(Unsafe.SizeOf<T>() * Rc.GetLength(0) * Rc.GetLength(1));
+                foreach (var item in obj)
+                {
+                    byte[] bytes = BitConverter.GetBytes(item);
+                    fwriter.Write(bytes);
+                }
+                obj = P;
+                fwriter.Write(Unsafe.SizeOf<T>() * P.GetLength(0) * P.GetLength(1));
                 foreach (var item in obj)
                 {
                     byte[] bytes = BitConverter.GetBytes(item);

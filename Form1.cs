@@ -2,16 +2,21 @@ namespace OptNet
 {
     public partial class Form1 : Form
     {
-        ObjectJClass<double> mObjectJ;
-        Opt1D<double> mOpt1D;
         public Form1()
         {
             InitializeComponent();
 
-            mObjectJ = new ObjectJClass<double>(ObjectJClass<double>.JTest, 11, 0, 1);
-            mOpt1D = new Opt1D<double>(mObjectJ,"Both");  // "Min", "Max", or "Both"
-            // Display the Result
+            var mObjectJ = new ObjectJClass1D<double>(Opt1D<double>.JTest1D, 11, 0, 1);
+            var mConstVars = new OfflineGet<double>((uint)mObjectJ.Js.Length);
+            var mOpt1D = new Opt1D<double>(mObjectJ,mConstVars,"Both");  // "Min", "Max", or "Both"
             mOpt1D.DisplayResult(DisplayMessage);
+
+            var mOptMD = new OptMD<double>(OptMD<double>.JTestMD, 2, [11, 11], [0, 0], [1, 1], "Max");
+<<<<<<< HEAD
+            mOptMD.DisplayMsg(DisplayMessage);
+=======
+
+>>>>>>> 751f4ee85a9b7e967cb5f85d1c240c36810d17bc
         }
 
         private void Form1_Load(object sender, EventArgs e)
