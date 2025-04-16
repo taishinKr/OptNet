@@ -12,11 +12,9 @@ namespace OptNet
             mOpt1D.DisplayResult(DisplayMessage);
 
             var mOptMD = new OptMD<double>(OptMD<double>.JTestMD, 2, [11, 11], [0, 0], [1, 1], "Max");
-<<<<<<< HEAD
-            mOptMD.DisplayMsg(DisplayMessage);
-=======
 
->>>>>>> 751f4ee85a9b7e967cb5f85d1c240c36810d17bc
+            mOptMD.DisplayMsg(DisplayMessage);
+
         }
 
         private void Form1_Load(object sender, EventArgs e)

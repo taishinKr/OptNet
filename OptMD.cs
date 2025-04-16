@@ -19,16 +19,10 @@ namespace OptNet
 
         private T[] inputX;
         private uint[] inputIndex;
-<<<<<<< HEAD
         private List<T> sampleJtot;
         private KeyValuePair<T[], T> optXY;
 
         public  Func<T[], T> J;
-=======
-        private T[] optX;
-        public  Func<T[], T> J;
-        private List<T> sampleJtot;
->>>>>>> 751f4ee85a9b7e967cb5f85d1c240c36810d17bc
 
         public OptMD(Func<T[], T> j, uint dimN, uint[] Ns, T[] minX, T[] maxX, string mode)
         {
@@ -40,19 +34,11 @@ namespace OptNet
             this.mode = mode;
             inputX = new T[dimN];
             inputIndex = new uint[dimN];
-<<<<<<< HEAD
             sampleJtot = new List<T>();
             lutConstant = new Dictionary<uint, OfflineGet<T>>();
             getSample(1);
             KeyValuePair < T, T > optx = optimizeMD(1);
             optXY = new KeyValuePair<T[], T>([optx.Key,T.Zero], optx.Value); // optX is the optimal X, optx.Value is the optimal J
-=======
-            optX = new T[dimN];
-            sampleJtot = new List<T>();
-            lutConstant = new Dictionary<uint, OfflineGet<T>>();
-            getSample(1);
-            optimizeMD(1);
->>>>>>> 751f4ee85a9b7e967cb5f85d1c240c36810d17bc
         }
         private void getSample(uint curDim)
         {
@@ -117,29 +103,17 @@ namespace OptNet
                 constVar = new OfflineGet<T>(Ns[idxDim]);
                 lutConstant.Add(Ns[idxDim], constVar);
             }
-<<<<<<< HEAD
-=======
-
->>>>>>> 751f4ee85a9b7e967cb5f85d1c240c36810d17bc
             opt1D = new Opt1D<T>(objectJ, constVar, mode);
             if (mode == "Max")
             {
                 //uint optK = uint.CreateChecked(((opt1D.Max.Key - minX[idxDim]) / dX));
                 //optX[idxDim-1] = (sampleX[optK] + sampleX[optK + 1]) / (T.One+T.One);
-<<<<<<< HEAD
                 //optX[idxDim] = opt1D.Max.Key;
-=======
-                optX[idxDim] = opt1D.Max.Key;
->>>>>>> 751f4ee85a9b7e967cb5f85d1c240c36810d17bc
                 return opt1D.Max;
             }                
             else
             {
-<<<<<<< HEAD
                 //optX[idxDim] = opt1D.Min.Key;
-=======
-                optX[idxDim] = opt1D.Min.Key;
->>>>>>> 751f4ee85a9b7e967cb5f85d1c240c36810d17bc
                 return opt1D.Min;
             }
                 
@@ -165,7 +139,6 @@ namespace OptNet
         public void DisplayMsg(Action<string> DisplayMessage)
         {
             //string msgTemplate = inputIndex.ToString();
-<<<<<<< HEAD
             string msgOptX = "Optimum ";
             msgOptX += string.Format("{0,8:G5} at ", optXY.Value); ;
 
@@ -174,8 +147,6 @@ namespace OptNet
                 msgOptX += string.Format("{0,8:G5} ", optx); ;
             }
             DisplayMessage(msgOptX);
-=======
->>>>>>> 751f4ee85a9b7e967cb5f85d1c240c36810d17bc
         }
 
     }
