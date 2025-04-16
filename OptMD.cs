@@ -36,22 +36,23 @@ namespace OptNet
             inputIndex = new uint[dimN];
             sampleJtot = new List<T>();
             lutConstant = new Dictionary<uint, OfflineGet<T>>();
-            getSample(1);
-            KeyValuePair < T, T > optx = optimizeMD(1);
-            optXY = new KeyValuePair<T[], T>([optx.Key,T.Zero], optx.Value); // optX is the optimal X, optx.Value is the optimal J
+            getSample(0);
+            KeyValuePair < T, T > optx = optimizeMD(0,0);
+            optXY = new KeyValuePair<T[], T>([optx.Key,T.Zero], optx.Value);
+            optx = optimizeMD(1, 1);
+            optXY.Key[1] = optx.Key;
         }
-        private void getSample(uint curDim)
+        private void getSample(uint idxDim)
         {
-            uint idxDim = curDim - 1;
             T dX = (maxX[idxDim] - minX[idxDim]) / T.CreateChecked((Ns[idxDim] - 1));
 
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
                 inputX[idxDim] = minX[idxDim] + T.CreateChecked(n) * dX;
-                if (curDim == dimN)
+                if (idxDim == dimN-1)
                     sampleJtot.Add(J(inputX));
                 else
-                    getSample(curDim + 1);
+                    getSample(idxDim + 1);
             }
         }
         private uint getIdTot()
@@ -67,33 +68,36 @@ namespace OptNet
             
             return idTot;
         }
-        private KeyValuePair<T, T> optimizeMD(uint curDim)
+        private KeyValuePair<T, T> optimizeMD(uint axisIdx, uint idxDim)
         {
-            uint idxDim = curDim - 1;
             ObjectJClass1D<T> objectJ;
             Opt1D<T> opt1D;
-            
+
+            var prevIdx = (int)(axisIdx - 1) < 0 ? dimN - 1 : (axisIdx - 1);
+            var nextIdx = (axisIdx + 1) >= dimN ? 0 : (axisIdx + 1);
+
             var sampleJs = new T[Ns[idxDim]];
             //var sampleX = new T[Ns[idxDim]];
-            KeyValuePair<T, T> sampleOpt;            
-
+            KeyValuePair<T, T> sampleOpt;
+            
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
                 inputIndex[idxDim] = n;
-                if (curDim == dimN)
+                
+                //if (idxDim == dimN-1)
+                if (idxDim == prevIdx)
                 {
                     sampleJs[n] = sampleJtot[(int)getIdTot()];
                 }
                 else
                 {
-                    sampleOpt = optimizeMD(curDim + 1);
+                    sampleOpt = optimizeMD(axisIdx, nextIdx);
                     //sampleX[n] = sampleOpt.Key;
                     sampleJs[n] = sampleOpt.Value;
                 }
             }
 
             objectJ = new ObjectJClass1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim]);
-            //[Ns[0], new OfflineGet<double>(Ns[0]) ];
 
             OfflineGet<T> constVar;
             if ( lutConstant.ContainsKey(Ns[idxDim]) )
@@ -106,14 +110,10 @@ namespace OptNet
             opt1D = new Opt1D<T>(objectJ, constVar, mode);
             if (mode == "Max")
             {
-                //uint optK = uint.CreateChecked(((opt1D.Max.Key - minX[idxDim]) / dX));
-                //optX[idxDim-1] = (sampleX[optK] + sampleX[optK + 1]) / (T.One+T.One);
-                //optX[idxDim] = opt1D.Max.Key;
                 return opt1D.Max;
             }                
             else
             {
-                //optX[idxDim] = opt1D.Min.Key;
                 return opt1D.Min;
             }
                 
