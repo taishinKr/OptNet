@@ -11,8 +11,13 @@ namespace OptNet
             var mOpt1D = new Opt1D<double>(mObjectJ,mConstVars,"Both");  // "Min", "Max", or "Both"
             mOpt1D.DisplayResult(DisplayMessage);
 
-            var mOptMD = new OptMD<double>(OptMD<double>.JTestMD, 2, [10, 10], [0, 0], [1, 1], "Max");
+            var mOptMD = new OptMD<double>(OptMD<double>.JTest1D, 1, [11], [0], [1], "Max");
+            mOptMD.DisplayMsg(DisplayMessage);
 
+            mOptMD = new OptMD<double>(OptMD<double>.JTest2D, 2, [11, 11], [0, 0], [1, 1], "Max");
+            mOptMD.DisplayMsg(DisplayMessage);
+
+            mOptMD = new OptMD<double>(OptMD<double>.JTest3D, 3, [11, 11, 11], [0, 0, 0], [1, 1, 1], "Max");
             mOptMD.DisplayMsg(DisplayMessage);
 
         }

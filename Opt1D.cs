@@ -130,25 +130,46 @@ namespace OptNet
                 T tmpD2 = B[k] * B[k] - A[k] * C[k] * (T.One + T.One + T.One + T.One);
                 T sqrtTmpD2 = T.CreateChecked(Math.Sqrt(double.CreateChecked(tmpD2)));
                 T x;
-                if(sqrtTmpD2 == T.Zero)
-                {
-                    x = -B[k] / A[k] / (T.One + T.One);
-                    if (IsInCi(x, k))
-                        //lo.Add(x, objectJ.J(objectJ.calcRealX(x)));
-                        lo.Add(x, Jw(x));
-                    else
-                        continue;
+                if (A[k] == T.Zero) {
+                    if (B[k] == T.Zero) // Constant equation
+                    {
+                        if(C[k] == T.Zero) // All x are solution
+                        {
+                                lo.Add(constVars.Dp[k], T.Zero);
+                        }                      
+                    }
+                    else // Linear equation
+                    {
+                        x = -C[k] / B[k];
+                        if (IsInCi(x, k))
+                            //lo.Add(x, objectJ.J(objectJ.calcRealX(x)));
+                            lo.Add(x, Jw(x));
+                        else
+                            continue;
+                    }
                 }
-                else
+                else  // Quadratic equation
                 {
-                    x = (-B[k] - sqrtTmpD2) / A[k] / (T.One + T.One);
-                    if (IsInCi(x, k))
-                        //lo.Add(x, objectJ.J(objectJ.calcRealX(x)));
-                        lo.Add(x, Jw(x));
-                    x = (-B[k] + sqrtTmpD2) / A[k] / (T.One + T.One);
-                    if (IsInCi(x, k))
-                        //lo.Add(x, objectJ.J(objectJ.calcRealX(x)));
-                        lo.Add(x, Jw(x));
+                    if (sqrtTmpD2 == T.Zero)
+                    {
+                        x = -B[k] / A[k] / (T.One + T.One);
+                        if (IsInCi(x, k))
+                            //lo.Add(x, objectJ.J(objectJ.calcRealX(x)));
+                            lo.Add(x, Jw(x));
+                        else
+                            continue;
+                    }
+                    else
+                    {
+                        x = (-B[k] - sqrtTmpD2) / A[k] / (T.One + T.One);
+                        if (IsInCi(x, k))
+                            //lo.Add(x, objectJ.J(objectJ.calcRealX(x)));
+                            lo.Add(x, Jw(x));
+                        x = (-B[k] + sqrtTmpD2) / A[k] / (T.One + T.One);
+                        if (IsInCi(x, k))
+                            //lo.Add(x, objectJ.J(objectJ.calcRealX(x)));
+                            lo.Add(x, Jw(x));
+                    }
                 }
             }
             return lo;
