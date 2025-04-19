@@ -32,7 +32,7 @@ namespace OptNet
         public T[,] Rb { get; }
         public T[,] Rc { get; }
         public T[] Dp { get; }
-        public OfflineGet(uint Ns)
+        public OfflineGet(in uint Ns)
         {
             this.M = Ns - 1;
             this.tildM = M * 100;
@@ -132,7 +132,7 @@ namespace OptNet
             }
                 
         }
-        private void convOneLine(StreamReader sr, out T[] lowD)
+        private void convOneLine(in StreamReader sr, out T[] lowD)
         {
             string? line;
             if ((line = sr.ReadLine()) != null)
@@ -250,7 +250,7 @@ namespace OptNet
                 }
             }
         }
-        private uint convOneVar(BinaryReader br, out T[] oneVar)
+        private uint convOneVar(in BinaryReader br, out T[] oneVar)
         {
             int size = br.ReadInt32();
             byte[] bytes = br.ReadBytes(size);
@@ -329,7 +329,7 @@ namespace OptNet
                 }
             return p;
         }
-        private T Qmn(uint m, uint n)
+        private T Qmn(in uint m, uint n)
         {
             if (n % m != 0)
                 return T.CreateChecked(0);
@@ -375,7 +375,7 @@ namespace OptNet
             var tmpInvQQtQaKaPbar = GeneralMath<T>.MultiplyMatrices(tmpInvQQtQaKa, Pbar);
             return tmpInvQQtQaKaPbar;
         }
-        private uint kK(uint n, T x) => (uint)Math.Floor(n * double.CreateChecked(x));
+        private uint kK(in uint n, T x) => (uint)Math.Floor(n * double.CreateChecked(x));
         private T anx(uint n, T x)
         {
             uint k = kK(n, x);
@@ -400,7 +400,7 @@ namespace OptNet
             else
                 return T.CreateChecked(4 * k * (k + 1));
         }
-        private T[,] calcABC(Func<uint, T, T> abc)
+        private T[,] calcABC(in Func<uint, T, T> abc)
         {
             var ABC = new T[Dp.Length - 1, M];
             for (uint n = 1; n <= M; n++)

@@ -26,7 +26,7 @@ namespace OptNet
 
         public Func<T[], T> J;
 
-        public OptMD(Func<T[], T> j, uint dimN, uint[] Ns, T[] minX, T[] maxX, string mode)
+        public OptMD(in Func<T[], T> j, in uint dimN, in uint[] Ns, in T[] minX, in T[] maxX, in string mode)
         {
             J = j;
             this.dimN = dimN;
@@ -62,7 +62,7 @@ namespace OptNet
             }
             optXY = new KeyValuePair<T[], T>(tmpkey, optx.Value);
         }
-        private KeyValuePair<T, T> optimizeMD1Axis(uint axisIdx, uint idxDim)
+        private KeyValuePair<T, T> optimizeMD1Axis(in uint axisIdx, in uint idxDim)
         {
             ObjectJClass1D<T> objectJ;
             Opt1D<T> opt1D;
@@ -82,14 +82,14 @@ namespace OptNet
                 if (idxDim == prevAxisIdx)
                 {
                     sampleJs[n] = sampleJtot[(int)getIdTot()];
-                    if (idxDim == 0)
+                    if (axisIdx == 0)
                         optIdxCandidate[n] = new uint[dimN];
                 }
                 else
                 {
                     sampleOpt = optimizeMD1Axis(axisIdx, nextIdx);
                     sampleJs[n] = sampleOpt.Value;
-                    if (idxDim == 0)
+                    if (axisIdx == 0)
                         optIdxCandidate[n] = optIdx;
                 }
             }
@@ -104,11 +104,15 @@ namespace OptNet
                 constVar = new OfflineGet<T>(Ns[idxDim]);
                 lutConstant.Add(Ns[idxDim], constVar);
             }
-            opt1D = new Opt1D<T>(objectJ, constVar, mode);
+
+            if ( (axisIdx != 0) && (idxDim == axisIdx))
+                opt1D = new Opt1D<T>(objectJ, constVar, mode, optIdx[idxDim]);
+            else                
+                opt1D = new Opt1D<T>(objectJ, constVar, mode, null);
 
             if (mode == "Max")
             {
-                if(idxDim==0)
+                if(axisIdx ==0)
                 {
                     var curOptIdx = uint.CreateChecked((opt1D.Max.Key - minX[idxDim]) / dX[idxDim]);
                     optIdx = optIdxCandidate[curOptIdx];
@@ -118,7 +122,7 @@ namespace OptNet
             }
             else
             {
-                if (idxDim == 0)
+                if (axisIdx == 0)
                 {
                     var curOptIdx = uint.CreateChecked((opt1D.Min.Key - minX[idxDim]) / dX[idxDim]);
                     optIdx = optIdxCandidate[curOptIdx];
@@ -128,7 +132,7 @@ namespace OptNet
             }
         }
 
-        private void getSample(uint idxDim)
+        private void getSample(in uint idxDim)
         {
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
@@ -160,7 +164,7 @@ namespace OptNet
 
             return idTot;
         }
-        public T J1D(T x)
+        public T J1D(in T x)
         {
             inputX[dimN - 1] = x;
             return J(inputX);
@@ -194,7 +198,7 @@ namespace OptNet
                 * Math.Sin(Math.PI * x[2])
             );
         }
-        public void DisplayMsg(Action<string> DisplayMessage)
+        public void DisplayMsg(in Action<string> DisplayMessage)
         {
             //string msgTemplate = inputIndex.ToString();
             string msgOptX = "Optimum ";

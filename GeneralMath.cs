@@ -9,7 +9,7 @@ namespace OptNet
 {
     internal static class GeneralMath<T> where T : struct, INumber<T>
     {
-        public  static T[,] MultiplyMatrices(T[,] matrixA, T[,] matrixB)
+        public  static T[,] MultiplyMatrices(in T[,] matrixA,in T[,] matrixB)
         {
             int rowsA = matrixA.GetLength(0);
             int colsA = matrixA.GetLength(1);
@@ -38,7 +38,7 @@ namespace OptNet
 
             return result;
         }
-        public static T InnerProduct(T[] vectorA, T[] vectorB)
+        public static T InnerProduct(in T[] vectorA, in T[] vectorB)
         {
             if (vectorA.Length != vectorB.Length)
             {
@@ -54,7 +54,7 @@ namespace OptNet
 
             return result;
         }
-        public static T[] LinearTransform(T[,] matrix, T[] vector)
+        public static T[] LinearTransform(in T[,] matrix, in T[] vector, in int minK, in int maxK)
         {
             int rows = matrix.GetLength(0);
             int cols = matrix.GetLength(1);
@@ -66,7 +66,8 @@ namespace OptNet
 
             T[] result = new T[rows];
 
-            for (int i = 0; i < rows; i++)
+            //for (int i = 0; i < rows; i++)
+            for (int i = minK; i < maxK+1; i++)
             {
                 T sum = T.Zero;
                 for (int j = 0; j < cols; j++)
@@ -78,7 +79,7 @@ namespace OptNet
 
             return result;
         }
-        public static T[,] InvertMatrix(T[,] matrix)
+        public static T[,] InvertMatrix(in T[,] matrix)
         {
             int n = matrix.GetLength(0);
 
@@ -138,7 +139,7 @@ namespace OptNet
 
             return inverse;
         }
-        public static T[,] TransposeMatrix(T[,] matrix)
+        public static T[,] TransposeMatrix(in T[,] matrix)
         {
             int rows = matrix.GetLength(0);
             int cols = matrix.GetLength(1);
@@ -155,7 +156,7 @@ namespace OptNet
 
             return transposed;
         }
-        public static T[,] ExtractSubarray(T[,] source, uint startRow, uint startCol, uint numRows, uint numCols)
+        public static T[,] ExtractSubarray(in T[,] source, in uint startRow, in uint startCol, in  uint numRows, in uint numCols)
         {
             if (startRow < 0 || startCol < 0 || startRow + numRows > source.GetLength(0) || startCol + numCols > source.GetLength(1))
             {
@@ -175,17 +176,17 @@ namespace OptNet
             return subarray;
         }
 
-        public static UInt32 setFlag(UInt32 Flag, UInt32 mask)
+        public static UInt32 setFlag(ref UInt32 Flag, in UInt32 mask)
         {
             Flag |= mask;
             return Flag;
         }
-        public static UInt32 clrFlag(UInt32 Flag, UInt32 mask)
+        public static UInt32 clrFlag(ref UInt32 Flag, in UInt32 mask)
         {
             Flag &= (UInt32)(~mask);
             return Flag;
         }
-        public static bool isSetFlag(UInt32 Flag, UInt32 mask)
+        public static bool isSetFlag(in UInt32 Flag, in UInt32 mask)
         {
             if ((Flag & mask) == 0)
                 return false;

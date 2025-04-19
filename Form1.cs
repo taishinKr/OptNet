@@ -8,7 +8,7 @@ namespace OptNet
 
             var mObjectJ = new ObjectJClass1D<double>(Opt1D<double>.JTest1D, 11, 0, 1);
             var mConstVars = new OfflineGet<double>((uint)mObjectJ.Js.Length);
-            var mOpt1D = new Opt1D<double>(mObjectJ,mConstVars,"Both");  // "Min", "Max", or "Both"
+            var mOpt1D = new Opt1D<double>(mObjectJ,mConstVars,"Both", null);  // "Min", "Max", or "Both"
             mOpt1D.DisplayResult(DisplayMessage);
 
             var mOptMD = new OptMD<double>(OptMD<double>.JTest1D, 1, [11], [0], [1], "Max");
