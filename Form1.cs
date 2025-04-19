@@ -19,7 +19,6 @@ namespace OptNet
 
             mOptMD = new OptMD<double>(OptMD<double>.JTest3D, 3, [11, 11, 11], [0, 0, 0], [1, 1, 1], "Max");
             mOptMD.DisplayMsg(DisplayMessage);
-
         }
 
         private void Form1_Load(object sender, EventArgs e)
