@@ -47,7 +47,7 @@ namespace OptNet
             }
             dX = dx;
 
-            optimizeMD();            
+            optimizeMD();
         }
         private void optimizeMD()
         {
@@ -64,7 +64,7 @@ namespace OptNet
         }
         private KeyValuePair<T, T> optimizeMD1Axis(in uint axisIdx, in uint idxDim)
         {
-            ObjectJClass1D<T> objectJ;
+            //ObjectJClass1D<T> objectJ;
             Opt1D<T> opt1D;
 
             var prevAxisIdx = (int)(axisIdx - 1) < 0 ? dimN - 1 : (axisIdx - 1);
@@ -94,7 +94,7 @@ namespace OptNet
                 }
             }
 
-            objectJ = new ObjectJClass1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim]);
+            //objectJ = new ObjectJClass1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim]);
 
             OfflineGet<T> constVar;
             if (lutConstant.ContainsKey(Ns[idxDim]))
@@ -105,19 +105,21 @@ namespace OptNet
                 lutConstant.Add(Ns[idxDim], constVar);
             }
 
-            if ( (axisIdx != 0) && (idxDim == axisIdx))
-                opt1D = new Opt1D<T>(objectJ, constVar, mode, optIdx[idxDim]);
-            else                
-                opt1D = new Opt1D<T>(objectJ, constVar, mode, null);
+            if ((axisIdx != 0) && (idxDim == axisIdx))
+                //opt1D = new Opt1D<T>(objectJ, constVar, mode, optIdx[idxDim]);
+                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, optIdx[idxDim]);
+            else
+                //opt1D = new Opt1D<T>(objectJ, constVar, mode, null);
+                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
 
             if (mode == "Max")
             {
-                if(axisIdx ==0)
+                if (axisIdx == 0)
                 {
                     var curOptIdx = uint.CreateChecked((opt1D.Max.Key - minX[idxDim]) / dX[idxDim]);
                     optIdx = optIdxCandidate[curOptIdx];
                     optIdx[idxDim] = curOptIdx;
-                }                
+                }
                 return opt1D.Max;
             }
             else

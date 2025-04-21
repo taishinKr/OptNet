@@ -25,8 +25,6 @@ namespace OptNet
         private string fileNameCsv;
         private string fileNameBin;
 
-        //test
-
         public T[,] P { get; }
         public T[,] Ra { get; }
         public T[,] Rb { get; }
@@ -122,15 +120,15 @@ namespace OptNet
                         rc[i, j] = row[j];
                 }
 
-                p = new T[ M + 1, M + 1];
-                for (uint i = 0; i < M+1; i++)
+                p = new T[M + 1, M + 1];
+                for (uint i = 0; i < M + 1; i++)
                 {
                     convOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
                         rc[i, j] = row[j];
                 }
             }
-                
+
         }
         private void convOneLine(in StreamReader sr, out T[] lowD)
         {
@@ -187,9 +185,9 @@ namespace OptNet
                         fwriter.Write(Rc[i, j].ToString() + ',');
                     fwriter.Write(Environment.NewLine);
                 }
-                for (uint i = 0; i < M+1; i++)
+                for (uint i = 0; i < M + 1; i++)
                 {
-                    for (uint j = 0; j < M+1; j++)
+                    for (uint j = 0; j < M + 1; j++)
                         fwriter.Write(P[i, j].ToString() + ',');
                     fwriter.Write(Environment.NewLine);
                 }
@@ -218,8 +216,8 @@ namespace OptNet
                 uint dpLength = convOneVar(freader, out dp);
 
                 ra = new T[dpLength - 1, M + 1];
-                convOneVar(freader, out T[] obj);                
-                for ( uint i = 0; i < dpLength-1; i++)
+                convOneVar(freader, out T[] obj);
+                for (uint i = 0; i < dpLength - 1; i++)
                 {
                     for (uint j = 0; j < M + 1; j++)
                         ra[i, j] = obj[i * (M + 1) + j];
@@ -273,7 +271,7 @@ namespace OptNet
                     fwriter.Write(bytes);
                 }
                 obj = Ra;
-                fwriter.Write(Unsafe.SizeOf<T>() * Ra.GetLength(0) * Ra.GetLength(1) );
+                fwriter.Write(Unsafe.SizeOf<T>() * Ra.GetLength(0) * Ra.GetLength(1));
                 foreach (var item in obj)
                 {
                     byte[] bytes = BitConverter.GetBytes(item);

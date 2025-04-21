@@ -12,66 +12,21 @@ using System.Runtime.Intrinsics.Arm;
 
 namespace OptNet
 {
-    internal class ObjectJClass1D<T> where T : struct, INumber<T>
+    internal class Opt1D<T> where T : struct, INumber<T>
     {
+        private readonly T[] W;
+        //private readonly T[] omegaW;
+        private readonly T[] A;
+        private readonly T[] B;
+        private readonly T[] C;
+
         private readonly T minX;
         private readonly T maxX;
         private readonly T dX;
         private readonly T dXHalf;
         private readonly uint Ns;
-        //private ImmutableArray<T> sampleJs;
         private readonly T[] sampleJs;
-        
 
-        public T MinX => minX;
-        public T MaxX => maxX;
-        //public ImmutableArray<T> Js => sampleJs;
-        public T[] Js => sampleJs;
-
-        public Func<T, T>? J;
-        public ObjectJClass1D(in Func<T, T> j, in uint Ns, in T minX, in T maxX)
-        {
-            this.Ns = Ns;
-            this.minX = minX;
-            this.maxX = maxX;
-            dX = (maxX - minX) / T.CreateChecked((Ns - 1));
-            dXHalf = dX / T.CreateChecked(2);
-            sampleJs = getSamples(j);
-            J = j;
-        }
-        public ObjectJClass1D(in T[] sampleJs, in uint Ns, in T minX, in T maxX)
-        {
-            this.Ns = Ns;
-            this.minX = minX;
-            this.maxX = maxX;
-            dX = (maxX - minX) / T.CreateChecked((Ns - 1));
-            dXHalf = dX / T.CreateChecked(2);
-            this.sampleJs = sampleJs;
-            J = null;
-        }
-        private T[] getSamples(in Func<T, T> j)
-        {
-            var tmpJs = new T[Ns];
-            for (uint n = 0; n < Ns; n++)
-                tmpJs[n] = j(minX + T.CreateChecked(n) * dX);
-            return tmpJs;
-        }
-        public T calcRealX(in T projX) => (maxX - minX + dX) * projX + minX - dXHalf; 
-        public T calcProjX(in T realX) => (realX - minX + dXHalf) / (maxX - minX + dX);        
-    }
-
-    internal class Opt1D<T> where T : struct, INumber<T>
-    {
-        private readonly uint Ns;
-        private readonly T[] W;
-        //private readonly T[] omegaW;
-        private readonly T[] A;
-        private readonly T[] B;
-        private readonly T[] C;        
-
-        private readonly ObjectJClass1D<T> objectJ;
-        //private readonly ImmutableArray<T> sampleJs;
-        private readonly T[] sampleJs;
         private readonly OfflineGet<T> constVars;
         private readonly uint? optIdx;
         private readonly uint minDpK;
@@ -83,15 +38,12 @@ namespace OptNet
         private T[] calcW(in T[] Js) => GeneralMath<T>.LinearTransform(constVars.P, Js, 0, constVars.P.GetLength(1) - 1);
         //private T[] calcOmegaW(in T[] Js) => GeneralMath<T>.LinearTransform(constVars.P, Js);
 
-        public uint NumOfSample => Ns;
-        //public ImmutableArray<T> Js => sampleJs;
         public T[] Js => sampleJs;
-        public ObjectJClass1D<T> ObjectJ => objectJ;
         public KeyValuePair<T, T> Max { get; }
         public KeyValuePair<T, T> Min { get; }
         public Dictionary<T, T> Lo { get; }
 
-        public Opt1D(in ObjectJClass1D<T> argObjectJ, in OfflineGet<T> constvars, in string mode, in uint? optidx)
+        public Opt1D(in T[] sampleJs, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode, in uint? optidx)
         {
             if (mode == "Max") setSysFlag(staMaskEnum.Max);
             else clrSysFlag(staMaskEnum.Max);
@@ -99,9 +51,13 @@ namespace OptNet
             else clrSysFlag(staMaskEnum.Min);
             if (mode == "Both") setSysFlag(staMaskEnum.Max | staMaskEnum.Min);
 
-            objectJ = argObjectJ;
-            Ns = (uint)objectJ.Js.Length;
-            sampleJs = objectJ.Js;
+            this.Ns = Ns;
+            this.sampleJs = sampleJs;
+            this.minX = minX;
+            this.maxX = maxX;
+            dX = (maxX - minX) / T.CreateChecked((Ns - 1));
+            dXHalf = dX / T.CreateChecked(2);
+
             this.optIdx = optidx;
 
             if (constvars == null)
@@ -121,7 +77,47 @@ namespace OptNet
             if (isSetSysFlag(staMaskEnum.Max)) Max = Lo.MaxBy(x => x.Value);
             if (isSetSysFlag(staMaskEnum.Min)) Min = Lo.MinBy(x => x.Value);
         }
+        public Opt1D(in Func<T, T> j, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode, in uint? optidx)
+        {
+            if (mode == "Max") setSysFlag(staMaskEnum.Max);
+            else clrSysFlag(staMaskEnum.Max);
+            if (mode == "Min") setSysFlag(staMaskEnum.Min);
+            else clrSysFlag(staMaskEnum.Min);
+            if (mode == "Both") setSysFlag(staMaskEnum.Max | staMaskEnum.Min);
 
+            this.Ns = Ns;
+            this.minX = minX;
+            this.maxX = maxX;
+            dX = (maxX - minX) / T.CreateChecked((Ns - 1));
+            dXHalf = dX / T.CreateChecked(2);
+            sampleJs = getSamples(j);
+
+            this.optIdx = optidx;
+
+            if (constvars == null)
+                constVars = new OfflineGet<T>(Ns);
+            else
+                constVars = constvars;
+
+            W = calcW(Js);
+            //omegaW = calcOmegaW(Js);
+
+            calOptCIntv(out minDpK, out maxDpK);
+            A = GeneralMath<T>.LinearTransform(constVars.Ra, Js, (int)minDpK, (int)maxDpK);
+            B = GeneralMath<T>.LinearTransform(constVars.Rb, Js, (int)minDpK, (int)maxDpK);
+            C = GeneralMath<T>.LinearTransform(constVars.Rc, Js, (int)minDpK, (int)maxDpK);
+
+            Lo = getLo();
+            if (isSetSysFlag(staMaskEnum.Max)) Max = Lo.MaxBy(x => x.Value);
+            if (isSetSysFlag(staMaskEnum.Min)) Min = Lo.MinBy(x => x.Value);
+        }
+        private T[] getSamples(in Func<T, T> j)
+        {
+            var tmpJs = new T[Ns];
+            for (uint n = 0; n < Ns; n++)
+                tmpJs[n] = j(minX + T.CreateChecked(n) * dX);
+            return tmpJs;
+        }
         private Dictionary<T, T> getLo()
         {
             var lo = new Dictionary<T, T>();
@@ -132,10 +128,11 @@ namespace OptNet
                 T x;
 
                 //uint modK = k + minDpK;
-                if (A[k] == T.Zero) {
+                if (A[k] == T.Zero)
+                {
                     if (B[k] == T.Zero) // Constant equation
                     {
-                        if(C[k] == T.Zero) // All x are solution
+                        if (C[k] == T.Zero) // All x are solution
                             lo.Add(constVars.Dp[k], T.Zero);
                     }
                     else // Linear equation
@@ -182,17 +179,17 @@ namespace OptNet
             {
                 var dx = (T.One - T.Zero) / T.CreateChecked((Ns - 1));
                 var xmin = T.Zero + dx * T.CreateChecked(optIdx.Value);
-                var xmax = T.Zero + dx * T.CreateChecked(optIdx.Value+1);
+                var xmax = T.Zero + dx * T.CreateChecked(optIdx.Value + 1);
                 var dpsize = constVars.Dp.Length;
-                for (uint i=0; i< dpsize; i++)
+                for (uint i = 0; i < dpsize; i++)
                 {
-                    if  ( (constVars.Dp[i] <= xmin) && ( xmin < constVars.Dp[i+1] ) )
+                    if ((constVars.Dp[i] <= xmin) && (xmin < constVars.Dp[i + 1]))
                     {
                         minK = i;
                     }
                     else if ((constVars.Dp[i] <= xmax) && (xmax < constVars.Dp[i + 1]))
                     {
-                        maxK = i+1;
+                        maxK = i + 1;
                         break;
                     }
                 }
@@ -200,7 +197,7 @@ namespace OptNet
             else
             {
                 minK = 0;
-                maxK = (uint)constVars.Dp.Length-1-1;
+                maxK = (uint)constVars.Dp.Length - 1 - 1;
             }
         }
         private bool IsInCi(in T x, in uint k)
@@ -234,11 +231,11 @@ namespace OptNet
         public T Jw(in T x)
         {
             T sum = T.Zero;
-            for (uint n = 0; n <= Ns-1; n++)
-                sum += W[n] * T.CreateChecked( Math.Cos(n * Math.PI * double.CreateChecked(x))); // Convert T to double    
+            for (uint n = 0; n <= Ns - 1; n++)
+                sum += W[n] * T.CreateChecked(Math.Cos(n * Math.PI * double.CreateChecked(x))); // Convert T to double    
             return sum;
         }
-        static public T JTest1D( T xT)
+        static public T JTest1D(T xT)
         {
             double x = double.CreateChecked(xT);
             return T.CreateChecked(Math.Exp(x) * Math.Sin(5.5 * Math.PI * x));
