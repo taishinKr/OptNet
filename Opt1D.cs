@@ -235,6 +235,8 @@ namespace OptNet
                 sum += W[n] * T.CreateChecked(Math.Cos(n * Math.PI * double.CreateChecked(x))); // Convert T to double    
             return sum;
         }
+        public T calcRealX(in T projX) => (maxX - minX + dX) * projX + minX - dXHalf;
+        public T calcProjX(in T realX) => (realX - minX + dXHalf) / (maxX - minX + dX);
         static public T JTest1D(T xT)
         {
             double x = double.CreateChecked(xT);
