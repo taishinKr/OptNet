@@ -35,10 +35,10 @@
             // 
             textBoxMsg.BackColor = SystemColors.Desktop;
             textBoxMsg.ForeColor = Color.Khaki;
-            textBoxMsg.Location = new Point(440, 12);
+            textBoxMsg.Location = new Point(12, 12);
             textBoxMsg.Multiline = true;
             textBoxMsg.Name = "textBoxMsg";
-            textBoxMsg.Size = new Size(348, 426);
+            textBoxMsg.Size = new Size(776, 426);
             textBoxMsg.TabIndex = 0;
             // 
             // Form1

@@ -214,17 +214,17 @@ namespace OptNet
             string s;
             foreach (KeyValuePair<T, T> kv in Lo)
             {
-                s = string.Format(msgTemplate, kv.Key, kv.Value);
+                s = string.Format(msgTemplate, calcRealX(kv.Key), kv.Value);
                 DisplayMessage("Lo  " + s);
             }
             if (isSetSysFlag(staMaskEnum.Max))
             {
-                s = string.Format(msgTemplate, Max.Key, Max.Value);
+                s = string.Format(msgTemplate, calcRealX(Max.Key), Max.Value);
                 DisplayMessage("Max:  " + s);
             }
             if (isSetSysFlag(staMaskEnum.Min))
             {
-                s = string.Format(msgTemplate, Min.Key, Min.Value);
+                s = string.Format(msgTemplate, calcRealX(Min.Key), Min.Value);
                 DisplayMessage("Min:  " + s);
             }
         }
