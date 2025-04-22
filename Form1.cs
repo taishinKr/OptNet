@@ -12,11 +12,38 @@ namespace OptNet
 
             var mOptMD = new OptMD<double>(OptMD<double>.JTest1D, 1, [11], [0], [1], "Max");
             mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.shrinkBy(0.5);
+            mOptMD.optimizeMD();
+            mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.shrinkBy(0.5);
+            mOptMD.optimizeMD();
+            mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.shrinkBy(0.5);
+            mOptMD.optimizeMD();
+            mOptMD.DisplayMsg(DisplayMessage);
 
             mOptMD = new OptMD<double>(OptMD<double>.JTest2D, 2, [11, 11], [0, 0], [1, 1], "Max");
             mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.shrinkBy(0.5);
+            mOptMD.optimizeMD();
+            mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.shrinkBy(0.5);
+            mOptMD.optimizeMD();
+            mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.shrinkBy(0.5);
+            mOptMD.optimizeMD();
+            mOptMD.DisplayMsg(DisplayMessage);
 
             mOptMD = new OptMD<double>(OptMD<double>.JTest3D, 3, [11, 11, 11], [0, 0, 0], [1, 1, 1], "Max");
+            mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.shrinkBy(0.5);
+            mOptMD.optimizeMD();
+            mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.shrinkBy(0.5);
+            mOptMD.optimizeMD();
+            mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.shrinkBy(0.5);
+            mOptMD.optimizeMD();
             mOptMD.DisplayMsg(DisplayMessage);
         }
 

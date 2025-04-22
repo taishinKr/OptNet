@@ -48,50 +48,54 @@ namespace OptNet
                 dX[i] = (maxX[i] - minX[i]) / T.CreateChecked((Ns[i] - 1));
                 dXHalf[i] = dX[i] / T.CreateChecked(2);
             }
+            getSample(0);
             optimizeMD();
 
-            shrinkBy(0.5);
+            /*shrinkBy(0.5);
             optimizeMD();
             shrinkBy(0.5);
             optimizeMD();
             shrinkBy(0.5);
             optimizeMD();
             shrinkBy(0.5);
-            optimizeMD();
+            optimizeMD();*/
         }
-        private void shrinkBy(double ratio) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
+        public void shrinkBy(double ratio) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
-            for (int i = 0; i < dimN; i++)
+            for (int idxDim = 0; idxDim < dimN; idxDim++)
             {
-                int dxIdx = (int)(Ns[i] - 1.0);
+                int dxIdx = (int)(Ns[idxDim] - 1.0);
                 int rdxIdx = (int)(ratio * dxIdx);
-                int minIdx = (int)(optIdx[i] - rdxIdx / 2);
+                int minIdx = (int)(optIdx[idxDim] - rdxIdx / 2);
                 if (minIdx < 0)
                     minIdx = 0;
                 int maxIdx = minIdx + rdxIdx;
-                if (maxIdx >= Ns[i] - 1)
+                if (maxIdx >= Ns[idxDim] - 1)
                 {
-                    maxIdx = (int)(Ns[i] - 1);
+                    maxIdx = (int)(Ns[idxDim] - 1);
                     minIdx = maxIdx - rdxIdx;
                 }
-                T minx = minX[i] + T.CreateChecked(minIdx) * dX[i];
-                T maxx = minX[i] + T.CreateChecked(maxIdx) * dX[i];
+                T minx = minX[idxDim] + T.CreateChecked(minIdx) * dX[idxDim];
+                T maxx = minX[idxDim] + T.CreateChecked(maxIdx) * dX[idxDim];
                 uint ns = (uint)(rdxIdx * 2 + 1);
-                T dx = dX[i] / (T.One + T.One);
+                T dx = dX[idxDim] / (T.One + T.One);
                 T dxhalf = dx / (T.One + T.One);
 
-                minX[i] = minx;
-                maxX[i] = maxx;
-                dX[i] = dx;
-                dXHalf[i] = dxhalf;
-                Ns[i] = ns;
-
-                sampleJtot = new List<T>();
+                inputIndex[idxDim] = (uint)minIdx;
+                minX[idxDim] = minx;
+                maxX[idxDim] = maxx;
+                dX[idxDim] = dx;
+                dXHalf[idxDim] = dxhalf;
+                Ns[idxDim] = ns;
             }
+            var samplejtot = new List<T>();
+            reSample(0, ref samplejtot, true);
+            sampleJtot = samplejtot;
         }
-        private void optimizeMD()
+        public void optimizeMD()
         {
-            getSample(0);
+            //sampleJtot = new List<T>();
+            //getSample(0);          // resetting "sampleJtot" is always needed before getSample(0) !!!!
             var optx = new KeyValuePair<T, T>(T.Zero, T.Zero);
             var tmpkey = new T[dimN];
 
@@ -182,6 +186,36 @@ namespace OptNet
                     getSample(idxDim + 1);
             }
         }
+        private void reSample(in uint idxDim, ref List<T> samplejtot, bool isEven)
+        {
+            uint tmpInputIdx = inputIndex[idxDim];
+
+            for (uint n = 0; n < Ns[idxDim]; n++)
+            {
+                bool iseven = isEven && (n % 2 == 0);
+
+                inputX[idxDim] = minX[idxDim] + T.CreateChecked(n) * dX[idxDim];
+                if (idxDim == dimN - 1)
+                {
+                    if (iseven)
+                    {
+                        samplejtot.Add(sampleJtot[(int)getIdTot()]);
+                        inputIndex[idxDim]++;
+                        //samplejtot.Add(J(inputX));
+                    }
+                    else
+                        samplejtot.Add(J(inputX));
+                }
+                else
+                {
+                    reSample(idxDim + 1, ref samplejtot, iseven);
+                    if (iseven)
+                        inputIndex[idxDim]++;
+                }
+
+            }
+            inputIndex[idxDim] = tmpInputIdx;
+        }
         private uint getIdTot()
         {
             /*uint idTot = inputIndex[0];
@@ -252,9 +286,9 @@ namespace OptNet
             DisplayMessage(msgOptX);
 
             /*string msgTest = "";
-            for (uint i = 0; i < Ns[0]-1; i++)
+            for (uint i = 0; i < Ns[0]; i++)
             {
-                for (uint j = 0; j < Ns[1]-1; j++)
+                for (uint j = 0; j < Ns[1]; j++)
                 {
                     inputIndex[0] = i;
                     inputIndex[1] = j;
