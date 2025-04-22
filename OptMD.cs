@@ -50,42 +50,44 @@ namespace OptNet
             }
             optimizeMD();
 
-            shrinkBy(0.58M);
+            shrinkBy(0.5);
             optimizeMD();
-            shrinkBy(0.58M);
+            shrinkBy(0.5);
             optimizeMD();
-            shrinkBy(0.58M);
+            shrinkBy(0.5);
             optimizeMD();
-            shrinkBy(0.58M);
+            shrinkBy(0.5);
             optimizeMD();
         }
-        private void shrinkBy(decimal raitio) // ratio should be lager enouph than the rate of the sampling period decreasing (0.5) 
+        private void shrinkBy(double ratio) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
-            for (uint i = 0; i < dimN; i++)
+            for (int i = 0; i < dimN; i++)
             {
-                decimal minx = decimal.CreateChecked(minX[i]);
-                decimal maxx = decimal.CreateChecked(maxX[i]);
-                decimal centerx = decimal.CreateChecked(calcRealX(optXY.Key[i], i));
-                decimal dx = decimal.CreateChecked(dX[i]);
+                int dxIdx = (int)(Ns[i] - 1.0);
+                int rdxIdx = (int)(ratio * dxIdx);
+                int minIdx = (int)(optIdx[i] - rdxIdx / 2);
+                if (minIdx < 0)
+                    minIdx = 0;
+                int maxIdx = minIdx + rdxIdx;
+                if (maxIdx >= Ns[i] - 1)
+                {
+                    maxIdx = (int)(Ns[i] - 1);
+                    minIdx = maxIdx - rdxIdx;
+                }
+                T minx = minX[i] + T.CreateChecked(minIdx) * dX[i];
+                T maxx = minX[i] + T.CreateChecked(maxIdx) * dX[i];
+                uint ns = (uint)(rdxIdx * 2 + 1);
+                T dx = dX[i] / (T.One + T.One);
+                T dxhalf = dx / (T.One + T.One);
 
-                decimal tmpM = centerx - raitio * (maxx - minx) / 2.0M;
-                if (minx < tmpM)
-                    minx = (uint)((tmpM - minx) / dx) * dx + minx;
-                tmpM = centerx + raitio * (maxx - minx) / 2.0M;
-                if (maxx > tmpM)
-                    maxx = (uint)((tmpM - minx) / dx) * dx + minx;
+                minX[i] = minx;
+                maxX[i] = maxx;
+                dX[i] = dx;
+                dXHalf[i] = dxhalf;
+                Ns[i] = ns;
 
-                dx /= 2.0M;
-                decimal dxhalf = dx / 2.0M;
-                decimal ns = (uint)((maxx - minx) / dx) + 1.0M;
-
-                minX[i] = T.CreateChecked(minx);
-                maxX[i] = T.CreateChecked(maxx);
-                dX[i] = T.CreateChecked(dx);
-                dXHalf[i] = T.CreateChecked(dxhalf);
-                Ns[i] = uint.CreateChecked(ns);
+                sampleJtot = new List<T>();
             }
-            sampleJtot = new List<T>();
         }
         private void optimizeMD()
         {
@@ -160,7 +162,8 @@ namespace OptNet
             {
                 if (axisIdx == 0)
                 {
-                    var curOptIdx = uint.CreateChecked((opt1D.Min.Key - minX[idxDim]) / dX[idxDim]);
+                    //var curOptIdx = uint.CreateChecked((opt1D.Min.Key - minX[idxDim]) / dX[idxDim]);
+                    var curOptIdx = (uint)(double.CreateChecked(opt1D.Max.Key) * (Ns[idxDim] - 1));
                     optIdx = optIdxCandidate[curOptIdx];
                     optIdx[idxDim] = curOptIdx;
                 }
