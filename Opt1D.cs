@@ -29,13 +29,13 @@ namespace OptNet
 
         private readonly OfflineGet<T> constVars;
         private readonly uint? optIdx;
-        private readonly uint minDpK;
-        private readonly uint maxDpK;
+        private readonly int minDpK;
+        private readonly int maxDpK;
         [Flags]
         public enum staMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3 }
         private UInt32 mState = 0;
 
-        private T[] calcW(in T[] Js) => GeneralMath<T>.LinearTransform(constVars.P, Js, 0, constVars.P.GetLength(1) - 1);
+        private T[] calcW(in T[] Js) => GeneralMath<T>.LinearTransform(constVars.P.Data, Js, 0, constVars.P.GetLength(1) - 1);
         //private T[] calcOmegaW(in T[] Js) => GeneralMath<T>.LinearTransform(constVars.P, Js);
 
         public T[] Js => sampleJs;
@@ -69,9 +69,9 @@ namespace OptNet
             //omegaW = calcOmegaW(Js);
 
             calOptCIntv(out minDpK, out maxDpK);
-            A = GeneralMath<T>.LinearTransform(constVars.Ra, Js, (int)minDpK, (int)maxDpK);
-            B = GeneralMath<T>.LinearTransform(constVars.Rb, Js, (int)minDpK, (int)maxDpK);
-            C = GeneralMath<T>.LinearTransform(constVars.Rc, Js, (int)minDpK, (int)maxDpK);
+            A = GeneralMath<T>.LinearTransform(constVars.Ra.Data, Js, (int)minDpK, (int)maxDpK);
+            B = GeneralMath<T>.LinearTransform(constVars.Rb.Data, Js, (int)minDpK, (int)maxDpK);
+            C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, (int)minDpK, (int)maxDpK);
 
             Lo = getLo();
             if (isSetSysFlag(staMaskEnum.Max)) Max = Lo.MaxBy(x => x.Value);
@@ -103,9 +103,9 @@ namespace OptNet
             //omegaW = calcOmegaW(Js);
 
             calOptCIntv(out minDpK, out maxDpK);
-            A = GeneralMath<T>.LinearTransform(constVars.Ra, Js, (int)minDpK, (int)maxDpK);
-            B = GeneralMath<T>.LinearTransform(constVars.Rb, Js, (int)minDpK, (int)maxDpK);
-            C = GeneralMath<T>.LinearTransform(constVars.Rc, Js, (int)minDpK, (int)maxDpK);
+            A = GeneralMath<T>.LinearTransform(constVars.Ra.Data, Js, (int)minDpK, (int)maxDpK);
+            B = GeneralMath<T>.LinearTransform(constVars.Rb.Data, Js, (int)minDpK, (int)maxDpK);
+            C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, (int)minDpK, (int)maxDpK);
 
             Lo = getLo();
             if (isSetSysFlag(staMaskEnum.Max)) Max = Lo.MaxBy(x => x.Value);
@@ -121,7 +121,7 @@ namespace OptNet
         private Dictionary<T, T> getLo()
         {
             var lo = new Dictionary<T, T>();
-            for (uint k = 0; k < A.Length; k++)
+            for (int k = 0; k < A.Length; k++)
             {
                 T tmpD2 = B[k] * B[k] - A[k] * C[k] * (T.One + T.One + T.One + T.One);
                 T sqrtTmpD2 = T.CreateChecked(Math.Sqrt(double.CreateChecked(tmpD2)));
@@ -171,7 +171,7 @@ namespace OptNet
             }
             return lo;
         }
-        private void calOptCIntv(out uint minK, out uint maxK)
+        private void calOptCIntv(out int minK, out int maxK)
         {
             minK = 0;
             maxK = 0;
@@ -181,7 +181,7 @@ namespace OptNet
                 var xmin = T.Zero + dx * T.CreateChecked(optIdx.Value);
                 var xmax = T.Zero + dx * T.CreateChecked(optIdx.Value + 1);
                 var dpsize = constVars.Dp.Length;
-                for (uint i = 0; i < dpsize; i++)
+                for (int i = 0; i < dpsize; i++)
                 {
                     if ((constVars.Dp[i] <= xmin) && (xmin < constVars.Dp[i + 1]))
                     {
@@ -197,10 +197,10 @@ namespace OptNet
             else
             {
                 minK = 0;
-                maxK = (uint)constVars.Dp.Length - 1 - 1;
+                maxK = (int)constVars.Dp.Length - 1 - 1;
             }
         }
-        private bool IsInCi(in T x, in uint k)
+        private bool IsInCi(in T x, in int k)
         {
 
             if ((x >= constVars.Dp[k]) && (x < constVars.Dp[k + 1]))

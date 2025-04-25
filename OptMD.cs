@@ -11,20 +11,18 @@ namespace OptNet
     internal class OptMD<T> where T : struct, INumber<T>
     {
         private readonly uint dimN;
-
         private ImmutableArray<uint> Ns;
         private ImmutableArray<T> minX;
         private ImmutableArray<T> maxX;
         private ImmutableArray<T> dX;
         private ImmutableArray<T> dXHalf;
+        private ImmutableList<T> sampleJtot;
+        private ImmutableArray<uint> optIdx;
         private readonly string mode;
 
         private Dictionary<uint, OfflineGet<T>> lutConstant;
 
         private T[] inputX;
-        private uint[] inputIndex;
-        private List<T> sampleJtot;
-        private uint[] optIdx;
         private KeyValuePair<T[], T> optXY;
 
         public Func<T[], T> J;
@@ -38,9 +36,6 @@ namespace OptNet
             this.maxX = ImmutableArray.Create(maxX);
             this.mode = mode;
             inputX = new T[dimN];
-            inputIndex = new uint[dimN];
-            sampleJtot = new List<T>();
-            optIdx = new uint[dimN];
             lutConstant = new Dictionary<uint, OfflineGet<T>>();
 
             var dx = new T[dimN];
@@ -53,7 +48,9 @@ namespace OptNet
             dX = ImmutableArray.Create(dx);
             dXHalf = ImmutableArray.Create(dxhalf);
 
-            getSample(0);
+            var samplejtot = new List<T>();
+            getSample(0, ref samplejtot);
+            sampleJtot = samplejtot.ToImmutableList();
             optimizeMD();
 
             /*shrinkBy(0.5);
@@ -72,6 +69,7 @@ namespace OptNet
             var dx = new T[dimN];
             var dxhalf = new T[dimN];
             var ns = new uint[dimN];
+            var inputIndex = new uint[dimN];
 
             for (int idxDim = 0; idxDim < dimN; idxDim++)
             {
@@ -102,8 +100,8 @@ namespace OptNet
             Ns = ImmutableArray.Create(ns);
 
             var samplejtot = new List<T>();
-            reSample(0, ref samplejtot, true);
-            sampleJtot = samplejtot;
+            reSample(0, ref samplejtot, true, inputIndex);
+            sampleJtot = samplejtot.ToImmutableList();
         }
         public void optimizeMD()
         {
@@ -111,15 +109,21 @@ namespace OptNet
             //getSample(0);          // resetting "sampleJtot" is always needed before getSample(0) !!!!
             var optx = new KeyValuePair<T, T>(T.Zero, T.Zero);
             var tmpkey = new T[dimN];
+            var inputIndex = new uint[dimN];
 
             for (int i = 0; i < dimN; i++)
             {
-                optx = optimizeMD1Axis(i, i);
+                var optidx = new uint[dimN];
+                optx = optimizeMD1Axis(i, i, inputIndex, ref optidx);
+                if(i == 0)
+                    optIdx = ImmutableArray.Create(optidx);
+                //else
+                    //optIdx = optIdx.AddRange(optidx);   
                 tmpkey[i] = optx.Key;
             }
             optXY = new KeyValuePair<T[], T>(tmpkey, optx.Value);
         }
-        private KeyValuePair<T, T> optimizeMD1Axis(in int axisIdx, in int idxDim)
+        private KeyValuePair<T, T> optimizeMD1Axis(in int axisIdx, in int idxDim, in uint[] inputIndex, ref uint[] optidx)
         {
             Opt1D<T> opt1D;
 
@@ -137,16 +141,16 @@ namespace OptNet
 
                 if (idxDim == prevAxisIdx)
                 {
-                    sampleJs[n] = sampleJtot[(int)getIdTot()];
+                    sampleJs[n] = sampleJtot[(int)getIdTot(inputIndex)];
                     if (axisIdx == 0)
                         optIdxCandidate[n] = new uint[dimN];
                 }
                 else
                 {
-                    sampleOpt = optimizeMD1Axis(axisIdx, nextIdx);
+                    sampleOpt = optimizeMD1Axis(axisIdx, nextIdx, inputIndex, ref optidx);
                     sampleJs[n] = sampleOpt.Value;
                     if (axisIdx == 0)
-                        optIdxCandidate[n] = optIdx;
+                        optIdxCandidate[n] = optidx;
                 }
             }
 
@@ -170,8 +174,8 @@ namespace OptNet
                 if (axisIdx == 0)
                 {
                     var curOptIdx = (uint)(double.CreateChecked(opt1D.Max.Key) * (Ns[idxDim] - 1));
-                    optIdx = optIdxCandidate[curOptIdx];
-                    optIdx[idxDim] = curOptIdx;
+                    optidx = optIdxCandidate[curOptIdx];
+                    optidx[idxDim] = curOptIdx;
                 }
                 return opt1D.Max;
             }
@@ -181,28 +185,26 @@ namespace OptNet
                 {
                     //var curOptIdx = uint.CreateChecked((opt1D.Min.Key - minX[idxDim]) / dX[idxDim]);
                     var curOptIdx = (uint)(double.CreateChecked(opt1D.Max.Key) * (Ns[idxDim] - 1));
-                    optIdx = optIdxCandidate[curOptIdx];
-                    optIdx[idxDim] = curOptIdx;
+                    optidx = optIdxCandidate[curOptIdx];
+                    optidx[idxDim] = curOptIdx;
                 }
                 return opt1D.Min;
             }
         }
-
-        private void getSample(in int idxDim)
+        private void getSample(in int idxDim, ref List<T> samplejtot)
         {
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
                 inputX[idxDim] = minX[idxDim] + T.CreateChecked(n) * dX[idxDim];
                 if (idxDim == dimN - 1)
-                    sampleJtot.Add(J(inputX));
+                    samplejtot.Add(J(inputX));
                 else
-                    getSample(idxDim + 1);
+                    getSample(idxDim + 1, ref samplejtot);
             }
         }
-        private void reSample(in int idxDim, ref List<T> samplejtot, bool isEven)
+        private void reSample(in int idxDim, ref List<T> samplejtot, bool isEven, in uint[] inputIndex)
         {
             uint tmpInputIdx = inputIndex[idxDim];
-
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
                 bool iseven = isEven && (n % 2 == 0);
@@ -212,7 +214,7 @@ namespace OptNet
                 {
                     if (iseven)
                     {
-                        samplejtot.Add(sampleJtot[(int)getIdTot()]);
+                        samplejtot.Add(sampleJtot[(int)getIdTot(inputIndex)]);
                         inputIndex[idxDim]++;
                         //samplejtot.Add(J(inputX));
                     }
@@ -221,7 +223,7 @@ namespace OptNet
                 }
                 else
                 {
-                    reSample(idxDim + 1, ref samplejtot, iseven);
+                    reSample(idxDim + 1, ref samplejtot, iseven, inputIndex);
                     if (iseven)
                         inputIndex[idxDim]++;
                 }
@@ -229,7 +231,7 @@ namespace OptNet
             }
             inputIndex[idxDim] = tmpInputIdx;
         }
-        private uint getIdTot()
+        private uint getIdTot(in uint[] inputIndex)
         {
             /*uint idTot = inputIndex[0];
             for (uint i = 1; i < dimN; i++)
@@ -250,14 +252,9 @@ namespace OptNet
 
             return idTot;
         }
-        public T J1D(in T x)
-        {
-            inputX[dimN - 1] = x;
-            return J(inputX);
-        }
+        
         public T calcRealX(in T projX, in int idxDim) => (maxX[idxDim] - minX[idxDim] + dX[idxDim]) * projX + minX[idxDim] - dXHalf[idxDim];
         public T calcProjX(in T realX, in int idxDim) => (realX - minX[idxDim] + dXHalf[idxDim]) / (maxX[idxDim] - minX[idxDim] + dX[idxDim]);
-
         public static T JTest1D(T[] xT)
         {
             double[] x = new double[1]; ;

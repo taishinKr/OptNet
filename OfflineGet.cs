@@ -9,126 +9,145 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Runtime.CompilerServices;
 using System.Drawing.Design;
+using System.Collections.Immutable;
+using System.Collections;
 
 namespace OptNet
 {
+    public class ImmutableArray2D<TValue> : IEnumerable<TValue>
+    {
+        private readonly TValue[,] _data;
+        public TValue[,] Data { get { return _data; } }
+        private ImmutableArray2D(TValue[,] data)
+        {
+            _data = data;
+        }
+        public TValue this[int row, int col] => _data[row, col];
+        public int GetLength(int dimension) => _data.GetLength(dimension);
+        public static ImmutableArray2D<TValue> Create(TValue[,] data)
+        {
+            return new ImmutableArray2D<TValue>((TValue[,])data.Clone());
+        }
+        // Implement IEnumerable<TValue>
+        public IEnumerator<TValue> GetEnumerator()
+        {
+            for (int i = 0; i < _data.GetLength(0); i++)
+            {
+                for (int j = 0; j < _data.GetLength(1); j++)
+                {
+                    yield return _data[i, j];
+                }
+            }
+        }
+
+        // Explicit implementation for non-generic IEnumerable
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
+        }
+    }
     internal class OfflineGet<T> where T : struct, INumber<T>
     {
-        private readonly uint M;
-        private readonly uint tildM;
-        private readonly uint Ns;
-        private readonly T[,] Q;
-        private readonly T[,] Rw;
-        private readonly T[,] A;
-        private readonly T[,] B;
-        private readonly T[,] C;
+        // Immutable fields
+        public uint M { get; }
+        public uint TildM { get; }
+        public uint Ns { get; }
+        public ImmutableArray<T> Dp { get; }
+        public ImmutableArray2D<T> P { get; }
+        public ImmutableArray2D<T> Ra { get; }
+        public ImmutableArray2D<T> Rb { get; }
+        public ImmutableArray2D<T> Rc { get; }
+
         private string fileNameCsv;
         private string fileNameBin;
 
-        public T[,] P { get; }
-        public T[,] Ra { get; }
-        public T[,] Rb { get; }
-        public T[,] Rc { get; }
-        public T[] Dp { get; }
-        public OfflineGet(in uint Ns)
+        public OfflineGet(in uint ns)
         {
-            this.M = Ns - 1;
-            this.tildM = M * 100;
-            this.Ns = M + 1;
+            M = ns - 1;
+            TildM = M * 100;
+            Ns = M + 1;
 
             string baseFolder = AppDomain.CurrentDomain.BaseDirectory;
-            string fileNameBase = Path.Combine(baseFolder, "OptNetConst" + M.ToString() + "_" + tildM.ToString());
+            string fileNameBase = Path.Combine(baseFolder, "OptNetConst" + M.ToString() + "_" + TildM.ToString());
             fileNameCsv = fileNameBase + ".csv";
             fileNameBin = fileNameBase + ".bin";
 
 
             if (File.Exists(fileNameBin))
             {
-                FileReadBin(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc, out T[,] p);
-                Dp = dp;
-                Ra = ra;
-                Rb = rb;
-                Rc = rc;
-                P = p;
-                Q = new T[M, tildM];
-                Rw = new T[M, M];
-                A = new T[M, M];
-                B = new T[M, M];
-                C = new T[M, M];
+                (Dp, Ra, Rb, Rc, P) = FileReadBin(fileNameBin);
             }
             else if (File.Exists(fileNameCsv))
             {
-                FileReadCsv(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc, out T[,] p);
-                Dp = dp;
-                Ra = ra;
-                Rb = rb;
-                Rc = rc;
-                P = p;
-                Q = new T[M, tildM];
-                Rw = new T[M, M];
-                A = new T[M, M];
-                B = new T[M, M];
-                C = new T[M, M];
+                (Dp, Ra, Rb, Rc, P) = FileReadCsv(fileNameCsv);
             }
             else
             {
+                Dp = ImmutableArray.Create<T>(CalculateDp());
+                P = ImmutableArray2D<T>.Create(CalculateP());
+                var Q = ImmutableArray2D<T>.Create(CalculateQ());
+                var rw = ImmutableArray2D<T>.Create(CalculateRw(Q.Data));
+                Ra = ImmutableArray2D<T>.Create(
+                    GeneralMath<T>.MultiplyMatrices(CalculateABC(anx), rw.Data));
+                Rb = ImmutableArray2D<T>.Create(
+                    GeneralMath<T>.MultiplyMatrices(CalculateABC(bnx), rw.Data));
+                Rc = ImmutableArray2D<T>.Create(
+                    GeneralMath<T>.MultiplyMatrices(CalculateABC(cnx), rw.Data));
 
-                Dp = calcDp();
-                P = calcP();
-                Q = calcQ();
-                Rw = calcRw();
-                A = calcABC(anx);
-                B = calcABC(bnx);
-                C = calcABC(cnx);
-                Ra = GeneralMath<T>.MultiplyMatrices(A, Rw);
-                Rb = GeneralMath<T>.MultiplyMatrices(B, Rw);
-                Rc = GeneralMath<T>.MultiplyMatrices(C, Rw);
-                // Save the data to a binary file
                 FileWriteCsv();
                 FileWriteBin();
             }
         }
-        private void FileReadCsv(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc, out T[,] p)
+        private (ImmutableArray<T>, ImmutableArray2D<T>, ImmutableArray2D<T>, ImmutableArray2D<T>, ImmutableArray2D<T>) FileReadCsv(string fileName)
         {
+            ImmutableArray<T> dp;
+            ImmutableArray2D<T> p;
+            ImmutableArray2D<T> ra;
+            ImmutableArray2D<T> rb;
+            ImmutableArray2D<T> rc;
+
             using (FileStream fs = new FileStream(fileNameCsv, FileMode.Open, FileAccess.Read))
             using (StreamReader sr = new StreamReader(fs))
             {
-                convOneLine(sr, out dp);
-                uint rowLength = (uint)(dp.Length - 1);
+                convOneLine(sr, out T[] dptmp);
+                uint rowLength = (uint)(dptmp.Length - 1);
+                dp = ImmutableArray.Create(dptmp);
 
-                ra = new T[rowLength, M + 1];
+                var rabctmp = new T[rowLength, M + 1];
                 for (uint i = 0; i < rowLength; i++)
                 {
                     convOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
-                        ra[i, j] = row[j];
+                        rabctmp[i, j] = row[j];
                 }
+                ra = ImmutableArray2D<T>.Create(rabctmp);
 
-                rb = new T[rowLength, M + 1];
                 for (uint i = 0; i < rowLength; i++)
                 {
                     convOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
-                        rb[i, j] = row[j];
+                        rabctmp[i, j] = row[j];
                 }
+                rb = ImmutableArray2D<T>.Create(rabctmp);
 
-                rc = new T[rowLength, M + 1];
                 for (uint i = 0; i < rowLength; i++)
                 {
                     convOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
-                        rc[i, j] = row[j];
+                        rabctmp[i, j] = row[j];
                 }
+                rc = ImmutableArray2D<T>.Create(rabctmp);
 
-                p = new T[M + 1, M + 1];
+                var ptmp = new T[M + 1, M + 1];
                 for (uint i = 0; i < M + 1; i++)
                 {
                     convOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
-                        rc[i, j] = row[j];
+                        ptmp[i, j] = row[j];
                 }
+                p = ImmutableArray2D<T>.Create(ptmp);
             }
-
+            return (dp, ra, rb, rc, p);
         }
         private void convOneLine(in StreamReader sr, out T[] lowD)
         {
@@ -167,27 +186,27 @@ namespace OptNet
                 uint rowLength = (uint)Ra.GetLength(0);
                 uint lcolumns = (uint)Ra.GetLength(1);
 
-                for (uint i = 0; i < rowLength; i++)
+                for (int i = 0; i < rowLength; i++)
                 {
-                    for (uint j = 0; j < lcolumns; j++)
+                    for (int j = 0; j < lcolumns; j++)
                         fwriter.Write(Ra[i, j].ToString() + ',');
                     fwriter.Write(Environment.NewLine);
                 }
-                for (uint i = 0; i < rowLength; i++)
+                for (int i = 0; i < rowLength; i++)
                 {
-                    for (uint j = 0; j < lcolumns; j++)
+                    for (int j = 0; j < lcolumns; j++)
                         fwriter.Write(Rb[i, j].ToString() + ',');
                     fwriter.Write(Environment.NewLine);
                 }
-                for (uint i = 0; i < rowLength; i++)
+                for (int i = 0; i < rowLength; i++)
                 {
-                    for (uint j = 0; j < lcolumns; j++)
+                    for (int j = 0; j < lcolumns; j++)
                         fwriter.Write(Rc[i, j].ToString() + ',');
                     fwriter.Write(Environment.NewLine);
                 }
-                for (uint i = 0; i < M + 1; i++)
+                for (int i = 0; i < M + 1; i++)
                 {
-                    for (uint j = 0; j < M + 1; j++)
+                    for (int j = 0; j < M + 1; j++)
                         fwriter.Write(P[i, j].ToString() + ',');
                     fwriter.Write(Environment.NewLine);
                 }
@@ -196,57 +215,57 @@ namespace OptNet
                 fs.Position = 0;
             }
         }
-        /*private void FileReadBin(string fileNameBin, out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc)
+        private (ImmutableArray<T>, ImmutableArray2D<T>, ImmutableArray2D<T>, ImmutableArray2D<T>, ImmutableArray2D<T>) FileReadBin(string fileName)
         {
-            using (FileStream fs = new FileStream(fileNameBin, FileMode.Open, FileAccess.Read))
-            using (BinaryReader freader = new BinaryReader(fs))
-            {
-                // Deserialize the object from a binary file
-                int size = freader.ReadInt32();
-                byte[] bytes = freader.ReadBytes(size);
-                dp = new T[size / Unsafe.SizeOf<T>()];
-                Buffer.BlockCopy(bytes, 0, dp, 0, size);
-            }
-        }*/
-        private void FileReadBin(out T[] dp, out T[,] ra, out T[,] rb, out T[,] rc, out T[,] p)
-        {
-            using (FileStream fs = new FileStream(fileNameBin, FileMode.Open, FileAccess.Read))
-            using (BinaryReader freader = new BinaryReader(fs))
-            {
-                uint dpLength = convOneVar(freader, out dp);
+            ImmutableArray<T> dp;
+            ImmutableArray2D<T> p;
+            ImmutableArray2D<T> ra;
+            ImmutableArray2D<T> rb;
+            ImmutableArray2D<T> rc;
 
-                ra = new T[dpLength - 1, M + 1];
+            using (FileStream fs = new FileStream(fileNameBin, FileMode.Open, FileAccess.Read))
+            using (BinaryReader freader = new BinaryReader(fs))
+            {
+                uint dpLength = convOneVar(freader, out T[] dptmp);
+
+
+                dp = ImmutableArray.Create(dptmp);
+
+                var rabctmp = new T[dpLength - 1, M + 1];
                 convOneVar(freader, out T[] obj);
                 for (uint i = 0; i < dpLength - 1; i++)
                 {
                     for (uint j = 0; j < M + 1; j++)
-                        ra[i, j] = obj[i * (M + 1) + j];
+                        rabctmp[i, j] = obj[i * (M + 1) + j];
                 }
+                ra = ImmutableArray2D<T>.Create(rabctmp);
 
-                rb = new T[dpLength - 1, M + 1];
                 convOneVar(freader, out obj);
                 for (uint i = 0; i < dpLength - 1; i++)
                 {
                     for (uint j = 0; j < M + 1; j++)
-                        rb[i, j] = obj[i * (M + 1) + j];
+                        rabctmp[i, j] = obj[i * (M + 1) + j];
                 }
+                rb = ImmutableArray2D<T>.Create(rabctmp);
 
-                rc = new T[dpLength - 1, M + 1];
                 convOneVar(freader, out obj);
                 for (uint i = 0; i < dpLength - 1; i++)
                 {
                     for (uint j = 0; j < M + 1; j++)
-                        rc[i, j] = obj[i * (M + 1) + j];
+                        rabctmp[i, j] = obj[i * (M + 1) + j];
                 }
+                rc = ImmutableArray2D<T>.Create(rabctmp);
 
-                p = new T[M + 1, M + 1];
+                var ptmp = new T[M + 1, M + 1];
                 convOneVar(freader, out obj);
                 for (uint i = 0; i < M + 1; i++)
                 {
                     for (uint j = 0; j < M + 1; j++)
-                        p[i, j] = obj[i * (M + 1) + j];
+                        ptmp[i, j] = obj[i * (M + 1) + j];
                 }
+                p = ImmutableArray2D<T>.Create(ptmp);
             }
+            return (dp, ra, rb, rc, p);
         }
         private uint convOneVar(in BinaryReader br, out T[] oneVar)
         {
@@ -302,8 +321,7 @@ namespace OptNet
                 fs.Position = 0;
             }
         }
-
-        private T[] calcDp()
+        private T[] CalculateDp()
         {
             T[] dp = new T[M + 1];
             T tmpoffset = T.CreateChecked(1.0 / 2.0 / Ns);
@@ -314,7 +332,7 @@ namespace OptNet
             dp = dpSet.ToArray();
             return dp;
         }
-        private T[,] calcP()
+        private T[,] CalculateP()
         {
             var p = new T[M + 1, M + 1];
             for (uint i = 1; i <= M + 1; i++)
@@ -341,17 +359,17 @@ namespace OptNet
                     return T.CreateChecked(32 / Math.Pow(Math.PI * div, 3));
             }
         }
-        private T[,] calcQ()
+        private T[,] CalculateQ()
         {
-            var q = new T[M, tildM];
+            var q = new T[M, TildM];
             for (uint i = 0; i < M; i++)
-                for (uint j = 0; j < tildM; j++)
+                for (uint j = 0; j < TildM; j++)
                 {
                     q[i, j] = Qmn(i + 1, j + 1);
                 }
             return q;
         }
-        private T[,] calcRw()
+        private T[,] CalculateRw(T[,] Q)
         {
             var Qa = GeneralMath<T>.ExtractSubarray(Q, 0, 0, M, M);
             var Ka = new T[M, M];
@@ -363,7 +381,7 @@ namespace OptNet
                     else
                         Ka[i - 1, j - 1] = T.Zero;
                 }
-            var Pbar = GeneralMath<T>.ExtractSubarray(P, 1, 0, M, M + 1);
+            var Pbar = GeneralMath<T>.ExtractSubarray(P.Data, 1, 0, M, M + 1);
 
             var tmpQt = GeneralMath<T>.TransposeMatrix(Q);
             var tmpQQt = GeneralMath<T>.MultiplyMatrices(Q, tmpQt);
@@ -398,17 +416,15 @@ namespace OptNet
             else
                 return T.CreateChecked(4 * k * (k + 1));
         }
-        private T[,] calcABC(in Func<uint, T, T> abc)
+        private T[,] CalculateABC(in Func<uint, T, T> abc)
         {
             var ABC = new T[Dp.Length - 1, M];
             for (uint n = 1; n <= M; n++)
-                for (uint k = 1; k <= Dp.Length - 1; k++)
+                for (int k = 1; k <= Dp.Length - 1; k++)
                 {
                     ABC[k - 1, n - 1] = abc(n, Dp[k - 1]);
                 }
             return ABC;
         }
-        //var tmpAaRw=GeneralMath<T>.MultiplyMatrices(Aa,Rw);
-
     }
 }
