@@ -103,7 +103,7 @@ namespace OptNet
             reSample(0, ref samplejtot, true, inputIndex);
             sampleJtot = samplejtot.ToImmutableList();
         }
-        public void optimizeMD()
+        public async void optimizeMD()
         {
             //sampleJtot = new List<T>();
             //getSample(0);          // resetting "sampleJtot" is always needed before getSample(0) !!!!
@@ -111,19 +111,51 @@ namespace OptNet
             var tmpkey = new T[dimN];
             var inputIndex = new uint[dimN];
 
+            var tasks = new List<Task>();
+
             for (int i = 0; i < dimN; i++)
             {
                 var optidx = new uint[dimN];
-                optx = optimizeMD1Axis(i, i, inputIndex, ref optidx);
-                if(i == 0)
+
+                if (i == 0)
+                {
+                    optx = optimizeMD1Axis(i, i, inputIndex, ref optidx);
                     optIdx = ImmutableArray.Create(optidx);
-                //else
-                    //optIdx = optIdx.AddRange(optidx);   
-                tmpkey[i] = optx.Key;
+                    tmpkey[i] = optx.Key;
+                }
+                else
+                {
+                    /*int coreCount = Environment.ProcessorCount;
+                    var pcQ = new PCQueue(coreCount);
+                    //var _uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+                    var idx = i;
+                    var task = pcQ.Enqueue<KeyValuePair<T, T>>(
+                        () => optimizeMD1Axis(idx, idx, inputIndex, ref optidx)
+                    );
+                    var task2 = task.ContinueWith(
+                        t =>
+                        {
+                            optx = t.Result;
+                            optIdx = ImmutableArray.Create(optidx);
+                            tmpkey[idx] = optx.Key;
+                        }
+                        //,_uiScheduler
+                        //,TaskContinuationOptions.ExecuteSynchronously
+                    );
+
+                    tasks.Add(task2);
+                    //optIdx = ImmutableArray.Create(optidx);
+                    //tmpkey[idx] = optx.Key;*/
+                    optx = optimizeMD1Axis(i, i, inputIndex, ref optidx);
+                    //optIdx = ImmutableArray.Create(optidx);
+                    tmpkey[i] = optx.Key;
+                }
+                //tmpkey[i] = optx.Key;
             }
+            await Task.WhenAll(tasks);
             optXY = new KeyValuePair<T[], T>(tmpkey, optx.Value);
         }
-        private KeyValuePair<T, T> optimizeMD1Axis(in int axisIdx, in int idxDim, in uint[] inputIndex, ref uint[] optidx)
+        private KeyValuePair<T, T> optimizeMD1Axis(int axisIdx, int idxDim, uint[] inputIndex, ref uint[] optidx)
         {
             Opt1D<T> opt1D;
 

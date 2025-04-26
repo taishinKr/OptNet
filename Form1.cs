@@ -6,7 +6,7 @@ namespace OptNet
         {
             InitializeComponent();
 
-            var mConstVars = new OfflineGet<double>(11);
+            /*var mConstVars = new OfflineGet<double>(11);
             var mOpt1D = new Opt1D<double>(Opt1D<double>.JTest1D, 11, 0, 1, mConstVars, "Both", null);  // "Min", "Max", or "Both"
             mOpt1D.DisplayResult(DisplayMessage);
 
@@ -20,11 +20,11 @@ namespace OptNet
             mOptMD.DisplayMsg(DisplayMessage);
             mOptMD.shrinkBy(0.5);
             mOptMD.optimizeMD();
-            mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.DisplayMsg(DisplayMessage);*/
 
-            mOptMD = new OptMD<double>(OptMD<double>.JTest2D, 2, [11, 11], [0, 0], [1, 1], "Max");
+            var mOptMD = new OptMD<double>(OptMD<double>.JTest2D, 2, [11, 11], [0, 0], [1, 1], "Max");
             mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
+            /*mOptMD.shrinkBy(0.5);
             mOptMD.optimizeMD();
             mOptMD.DisplayMsg(DisplayMessage);
             mOptMD.shrinkBy(0.5);
@@ -44,7 +44,7 @@ namespace OptNet
             mOptMD.DisplayMsg(DisplayMessage);
             mOptMD.shrinkBy(0.5);
             mOptMD.optimizeMD();
-            mOptMD.DisplayMsg(DisplayMessage);
+            mOptMD.DisplayMsg(DisplayMessage);*/
         }
 
         private void Form1_Load(object sender, EventArgs e)
