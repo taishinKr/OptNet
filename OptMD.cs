@@ -22,9 +22,9 @@ namespace OptNet
         private ImmutableDictionary<uint, OfflineGet<T>> lutConstant;
 
         static EventWaitHandle sigManu = new EventWaitHandle(false, EventResetMode.ManualReset);
+        static PCQueue pcQ = new PCQueue(Environment.ProcessorCount);
 
         private T[] inputX;
-        private PCQueue pcQ;
         private KeyValuePair<T[], T> optXY;
 
         public Func<T[], T> J;
@@ -54,9 +54,6 @@ namespace OptNet
             var samplejtot = new List<T>();
             getSample(0, ref samplejtot);
             sampleJtot = samplejtot.ToImmutableList();
-
-            int coreCount = Environment.ProcessorCount;
-            pcQ = new PCQueue(coreCount);
         }
         public void shrinkBy(double ratio) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
@@ -130,29 +127,22 @@ namespace OptNet
                 tmpkey[i] = optx.Key;*/
             }
 
-            if (dimN <= 1)
-            {
-                optXY = new KeyValuePair<T[], T>(tmpkey, optx.Value);
-                DisplayMsg();
-            }
-            else
-            {
-                var _uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
-                await Task.WhenAll(tasks).ContinueWith(
-                    t =>
-                    {
-                        optXY = new KeyValuePair<T[], T>(tmpkey, optx.Value);
-                        DisplayMsg();
-                        sigManu.Reset();
-                    }
-                    , _uiScheduler
-                );
+            var _uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+            await Task.WhenAll(tasks).ContinueWith(
+                t =>
+                {
+                    optXY = new KeyValuePair<T[], T>(tmpkey, optx.Value);
+                    DisplayMsg();
+                    sigManu.Reset();
+                }
+                , _uiScheduler
+            );
 
-                /*  for serial running ***************************************/
-                /*optXY = new KeyValuePair<T[], T>(tmpkey, optx.Value);
-                DisplayMsg();*/
+            /*  for serial running ***************************************/
+            /*optXY = new KeyValuePair<T[], T>(tmpkey, optx.Value);
+            DisplayMsg();*/
 
-            }
+
         }
         private KeyValuePair<T, T> optimizeMD1Axis(int idx)
         {
@@ -162,9 +152,9 @@ namespace OptNet
 
             KeyValuePair<T, T> optx;
             optx = optimizeMD1AxisRecur(idx, idx, inputIndex, ref optidx);
-            if (idx == 0)                
+            if (idx == 0)
                 optIdx = ImmutableArray.Create(optidx);
-            
+
             return optx;
         }
         private KeyValuePair<T, T> optimizeMD1AxisRecur(int axisIdx, int idxDim, uint[] inputIndex, ref uint[] optidx)

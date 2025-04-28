@@ -3,54 +3,24 @@ namespace OptNet
     public partial class Form1 : Form
     {
         OptMD<double> mOptMD;
+        OptMD<double> mOptMD1D;
+        OptMD<double> mOptMD2D;
+        OptMD<double> mOptMD3D;
+        Opt1D<double> mOpt1D;
+
         public Form1()
         {
             InitializeComponent();
 
+            mOpt1D = new Opt1D<double>(Opt1D<double>.JTest1D, 11, 0, 1, new OfflineGet<double>(11), "Both", null);  // "Min", "Max", or "Both"
 
-            /*var mConstVars = new OfflineGet<double>(11);
-            var mOpt1D = new Opt1D<double>(Opt1D<double>.JTest1D, 11, 0, 1, mConstVars, "Both", null);  // "Min", "Max", or "Both"
-            mOpt1D.DisplayResult(DisplayMessage);*/
+            mOptMD1D = new OptMD<double>(OptMD<double>.JTest1D, 1, [11], [0], [1], "Max") { DisplayMsgFunc = DisplayMessage };
+            mOptMD2D = new OptMD<double>(OptMD<double>.JTest2D, 2, [11, 11], [0, 0], [1, 1], "Max") { DisplayMsgFunc = DisplayMessage };
+            mOptMD3D = new OptMD<double>(OptMD<double>.JTest3D, 3, [11, 11, 11], [0, 0, 0], [1, 1, 1], "Max") { DisplayMsgFunc = DisplayMessage };
 
-            /*mOptMD = new OptMD<double>(OptMD<double>.JTest1D, 1, [11], [0], [1], "Max") { DisplayMsgFunc = DisplayMessage };
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);*/
-
-            //mOptMD = new OptMD<double>(OptMD<double>.JTest2D, 2, [11, 11], [0, 0], [1, 1], "Max") { DisplayMsgFunc = DisplayMessage };
-            //mOptMD.optimizeMD();
-            /*//mOptMD.DisplayMsg(DisplayMessage);
-            // mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);*/
-
-            mOptMD = new OptMD<double>(OptMD<double>.JTest3D, 3, [11, 11, 11], [0, 0, 0], [1, 1, 1], "Max") { DisplayMsgFunc = DisplayMessage };
-
-            /*//mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);
-            mOptMD.shrinkBy(0.5);
-            mOptMD.optimizeMD();
-            //mOptMD.DisplayMsg(DisplayMessage);*/
+            mOptMD = mOptMD2D;
+            buttonMD2D.FlatStyle = FlatStyle.Popup;
+            buttonShrink.Enabled = false;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -77,6 +47,51 @@ namespace OptNet
         {
             buttonShrink.Enabled = false;
             mOptMD.shrinkBy(0.5);
+        }
+
+        private void buttonMD1D_Click(object sender, EventArgs e)
+        {
+            mOptMD = mOptMD1D;
+            buttonMD1D.FlatStyle = FlatStyle.Popup;
+            buttonMD2D.FlatStyle = FlatStyle.Standard;
+            buttonMD3D.FlatStyle = FlatStyle.Standard;
+            buttonShrink.Enabled = false;
+        }
+
+        private void buttonMD2D_Click(object sender, EventArgs e)
+        {
+            mOptMD = mOptMD2D;
+            buttonMD2D.FlatStyle = FlatStyle.Popup;
+            buttonMD1D.FlatStyle = FlatStyle.Standard;
+            buttonMD3D.FlatStyle = FlatStyle.Standard;
+            buttonShrink.Enabled = false;
+        }
+
+        private void buttonMD3D_Click(object sender, EventArgs e)
+        {
+            mOptMD = mOptMD3D;
+            buttonMD3D.FlatStyle = FlatStyle.Popup;
+            buttonMD1D.FlatStyle = FlatStyle.Standard;
+            buttonMD2D.FlatStyle = FlatStyle.Standard;
+            buttonShrink.Enabled = false;
+        }
+
+        private void buttonResetAll_Click(object sender, EventArgs e)
+        {
+            mOptMD1D = new OptMD<double>(OptMD<double>.JTest1D, 1, [11], [0], [1], "Max") { DisplayMsgFunc = DisplayMessage };
+            mOptMD2D = new OptMD<double>(OptMD<double>.JTest2D, 2, [11, 11], [0, 0], [1, 1], "Max") { DisplayMsgFunc = DisplayMessage };
+            mOptMD3D = new OptMD<double>(OptMD<double>.JTest3D, 3, [11, 11, 11], [0, 0, 0], [1, 1, 1], "Max") { DisplayMsgFunc = DisplayMessage };
+            mOptMD = mOptMD2D;
+            buttonMD2D.FlatStyle = FlatStyle.Popup;
+            buttonMD1D.FlatStyle = FlatStyle.Standard;
+            buttonMD3D.FlatStyle = FlatStyle.Standard;
+            buttonShrink.Enabled = false;
+        }
+
+        private void button1DOnly_Click(object sender, EventArgs e)
+        {
+            mOpt1D.DisplayResult(DisplayMessage);
+            buttonShrink.Enabled = false;
         }
     }
 }
