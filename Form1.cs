@@ -12,7 +12,7 @@ namespace OptNet
         {
             InitializeComponent();
 
-            mOpt1D = new Opt1D<double>(Opt1D<double>.JTest1D, 11, 0, 1, new OfflineGet<double>(11), "Both", null);  // "Min", "Max", or "Both"
+            mOpt1D = new Opt1D<double>(Opt1D<double>.JTest1D, 11, 0, 1, new OfflineGet<double>(11), "Both");  // "Min", "Max", or "Both"
 
             mOptMD1D = new OptMD<double>(OptMD<double>.JTest1D, 1, [11], [0], [1], "Max") { DisplayMsgFunc = DisplayMessage };
             mOptMD2D = new OptMD<double>(OptMD<double>.JTest2D, 2, [11, 11], [0, 0], [1, 1], "Max") { DisplayMsgFunc = DisplayMessage };

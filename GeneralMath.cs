@@ -54,6 +54,10 @@ namespace OptNet
 
             return result;
         }
+        public static T[] LinearTransform(in T[,] matrix, in T[] vector)
+        {
+            return LinearTransform(matrix, vector, 0, matrix.GetLength(0) - 1);
+        }
         public static T[] LinearTransform(in T[,] matrix, in T[] vector, in int minK, in int maxK)
         {
             int rows = matrix.GetLength(0);

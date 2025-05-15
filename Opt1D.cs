@@ -28,7 +28,6 @@ namespace OptNet
         private readonly T[] sampleJs;
 
         private readonly OfflineGet<T> constVars;
-        private readonly uint? optIdx;
         private readonly int minDpK;
         private readonly int maxDpK;
         [Flags]
@@ -43,7 +42,7 @@ namespace OptNet
         public KeyValuePair<T, T> Min { get; }
         public Dictionary<T, T> Lo { get; }
 
-        public Opt1D(in T[] sampleJs, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode, in uint? optidx)
+        public Opt1D(in T[] sampleJs, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode)
         {
             if (mode == "Max") setSysFlag(staMaskEnum.Max);
             else clrSysFlag(staMaskEnum.Max);
@@ -57,8 +56,6 @@ namespace OptNet
             this.maxX = maxX;
             dX = (maxX - minX) / T.CreateChecked((Ns - 1));
             dXHalf = dX / T.CreateChecked(2);
-
-            this.optIdx = optidx;
 
             if (constvars == null)
                 constVars = new OfflineGet<T>(Ns);
@@ -77,7 +74,7 @@ namespace OptNet
             if (isSetSysFlag(staMaskEnum.Max)) Max = Lo.MaxBy(x => x.Value);
             if (isSetSysFlag(staMaskEnum.Min)) Min = Lo.MinBy(x => x.Value);
         }
-        public Opt1D(in Func<T, T> j, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode, in uint? optidx)
+        public Opt1D(in Func<T, T> j, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode)
         {
             if (mode == "Max") setSysFlag(staMaskEnum.Max);
             else clrSysFlag(staMaskEnum.Max);
@@ -91,8 +88,6 @@ namespace OptNet
             dX = (maxX - minX) / T.CreateChecked((Ns - 1));
             dXHalf = dX / T.CreateChecked(2);
             sampleJs = getSamples(j);
-
-            this.optIdx = optidx;
 
             if (constvars == null)
                 constVars = new OfflineGet<T>(Ns);
@@ -173,32 +168,8 @@ namespace OptNet
         }
         private void calOptCIntv(out int minK, out int maxK)
         {
-            minK = 0;
-            maxK = 0;
-            if (optIdx.HasValue) // Ensure optIdx is not null
-            {
-                var dx = (T.One - T.Zero) / T.CreateChecked((Ns - 1));
-                var xmin = T.Zero + dx * T.CreateChecked(optIdx.Value);
-                var xmax = T.Zero + dx * T.CreateChecked(optIdx.Value + 1);
-                var dpsize = constVars.Dp.Length;
-                for (int i = 0; i < dpsize; i++)
-                {
-                    if ((constVars.Dp[i] <= xmin) && (xmin < constVars.Dp[i + 1]))
-                    {
-                        minK = i;
-                    }
-                    else if ((constVars.Dp[i] <= xmax) && (xmax < constVars.Dp[i + 1]))
-                    {
-                        maxK = i + 1;
-                        break;
-                    }
-                }
-            }
-            else
-            {
                 minK = 0;
                 maxK = (int)constVars.Dp.Length - 1 - 1;
-            }
         }
         private bool IsInCi(in T x, in int k)
         {
