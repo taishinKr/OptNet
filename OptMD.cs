@@ -27,7 +27,8 @@ namespace OptNet
 
         private T[] inputX;
         private KeyValuePair<T[], T> optXY;
-
+        
+        public double[][] IntvX { get; set; } // minX, maxX
         public Func<T[], T> J;
         public Action<string> DisplayMsgFunc;
 
@@ -55,6 +56,8 @@ namespace OptNet
             var samplejtot = new List<T>();
             getSample(0, ref samplejtot);
             sampleJtot = samplejtot.ToImmutableList();
+
+            IntvX = new double[2][]; // minX, maxX
         }
         public void shrinkBy(double ratio) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
@@ -98,42 +101,59 @@ namespace OptNet
             upSample(0, ref samplejtot, true, inputIndex);
             sampleJtot = samplejtot.ToImmutableList();
         }
+
         public async void optimizeMD()
-        {
-            var optx = new KeyValuePair<T, T>(T.Zero, T.Zero);
+        {            
+            var optRes = (X:T.Zero, optJ:T.Zero, intvX: new double[2][]);
             var tmpkey = new T[dimN];
-            var samplejtot = sampleJtot.ToImmutableList();
+            var samplejtot = sampleJtot; // sampleJtot.ToImmutableList();
 
             for (int i = 0; i < dimN; i++)
             {
                 if (i != 0)
                 {
-                    List<T> newSample = new List<T>();
+                    List<T> newSample = []; // new List<T>()
                     var inputIdx = new uint[dimN];
-                    reSample(optx.Key, i, i, ref inputIdx, ref samplejtot, ref newSample);
-                    samplejtot = newSample.ToImmutableList();
+                    reSample(optRes.X, i, i, ref inputIdx, ref samplejtot, ref newSample);
+                    samplejtot = [.. newSample]; // newSample.ToImmutableList();
                 }
 
                 // for Parallel running ***************************************/
-                await optimizeMD1AxisAsync(samplejtot, i).ContinueWith(t => { optx = t.Result; });
+                await optimizeMD1AxisAsync(samplejtot, i).ContinueWith(
+                        t => { 
+                            optRes = t.Result; 
+                        }
+                    );
 
                 // for Serial running ***************************************/
-                // optx = optimizeMD1Axis(samplejtot, i);
+                //optRes = optimizeMD1Axis(samplejtot, i);
 
-                tmpkey[i] = optx.Key;
+
+                if(i == 0)
+                    IntvX = optRes.intvX;
+
+                tmpkey[i] = optRes.X;
             }
 
-            optXY = new KeyValuePair<T[], T>(tmpkey, optx.Value);
+            optXY = new KeyValuePair<T[], T>(tmpkey, optRes.optJ);
             DisplayMsg();
         }
 
-        private async Task<KeyValuePair<T, T>> optimizeMD1AxisAsync(ImmutableList<T> samplejtot, int idxDim)
+        private async Task<(T optX, T optJ, double[][] optIntv)> optimizeMD1AxisAsync(ImmutableList<T> samplejtot, int idxDim)
         {
             Opt1D<T> opt1D;
             var sampleJs = new T[Ns[idxDim]];
+            var minXs = new double[Ns[idxDim]][];
+            var maxXs = new double[Ns[idxDim]][];
+            var dx = 1.0 / Ns[idxDim]; // caution!!! not (1.0 / (Ns[idxDim] - 1.0))
+            double[][]? optIntv =
+                [
+                    new double[dimN], // minX
+                    new double[dimN]  // maxX
+                ];
 
             var axisIdx = idxDim;
-            var tasks = new List<Task<KeyValuePair<T, T>>>();
+            var tasks = new List<Task<(T optX, T optJ, double[][] optIntv)>>();
 
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
@@ -143,24 +163,34 @@ namespace OptNet
                 if (idxDim == dimN - 1)
                 {
                     sampleJs[n] = samplejtot[(int)getIdTot(inputIndex)];
+                    // optmal value is definitive.
+                    if (axisIdx == 0)
+                    {
+                        minXs[n] = new double[dimN];
+                        maxXs[n] = new double[dimN];
+                        minXs[n][idxDim] = dx * (n + 0.5);
+                        maxXs[n][idxDim] = dx * (n + 0.5);
+                    }
                 }
                 else
                 {
-                    var task = pcQ.Enqueue<KeyValuePair<T, T>>(
-                        () => optimizeMD1AxisRecur(samplejtot, axisIdx, idxDim+1, inputIndex)
+                    var task = pcQ.Enqueue<(T optX, T optJ, double[][] optIntv)>(
+                        () => optimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex)
                     );
                     tasks.Add(task);
                 }
             }
             if (tasks.Count > 0)
             {
-                var _uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
+                //var _uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
                 await Task.WhenAll(tasks).ContinueWith(
                     t =>
-                    {
-                        sampleJs = t.Result.Select(x => x.Value).ToArray();
+                    {                        
+                        sampleJs = [.. t.Result.Select(x => x.optJ)]; // t.Result.Select(x => x.optJ).ToArray();
+                        minXs = [.. t.Result.Select(x => x.optIntv[0])]; // t.Result.Select(x => x.optIntv[0]).ToArray();
+                        maxXs = [.. t.Result.Select(x => x.optIntv[1])]; // t.Result.Select(x => x.optIntv[1]).ToArray();
                     }
-                    , _uiScheduler
+                   // , _uiScheduler
                 );
             }
 
@@ -178,27 +208,60 @@ namespace OptNet
 
             if ((axisIdx != 0) && (idxDim == axisIdx))
             {
-                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode);
+                var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
+                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, optIntV1D);
+                //opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
             }
             else
-                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode); // meantime let it be as it is
+            {
+                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
+                var optidx = (int)(double.CreateChecked(opt1D.OptOut.Key) / dx);
 
-            if (mode == "Max") return opt1D.Max;
-            else return opt1D.Min;            
+                if (axisIdx == 0)
+                {
+                    for (int i = idxDim + 1; i < dimN; i++)
+                    {
+                        optIntv[0][i] = Math.Min(minXs[optidx][i], minXs[optidx + 1][i]);
+                        optIntv[1][i] = Math.Max(maxXs[optidx][i], maxXs[optidx + 1][i]);
+                    }
+
+                    var marginDx = 0.1 * dx;
+                    optIntv[0][idxDim] = double.CreateChecked(opt1D.OptOut.Key) - marginDx;
+                    if (optIntv[0][idxDim] < 0.0)
+                    {
+                        optIntv[0][idxDim] = 0.0;
+                        optIntv[1][idxDim] = 2 * marginDx;
+                    }
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.OptOut.Key) + marginDx;
+                    if (optIntv[1][idxDim] > 1.0)
+                    {
+                        optIntv[0][idxDim] = 1.0 - 2 * marginDx;
+                        optIntv[1][idxDim] = 1.0;
+                    }
+                }
+            }
+
+            return (opt1D.OptOut.Key, opt1D.OptOut.Value, optIntv);
         }
-        private KeyValuePair<T, T> optimizeMD1Axis(ImmutableList<T> samplejtot, int idx)
+        private (T optX, T optJ, double[][] optIntv) optimizeMD1Axis(ImmutableList<T> samplejtot, int idx)
         {
             var inputIndex = new uint[dimN];
+            (T optX, T optJ, double[][] optIntv) = optimizeMD1AxisRecur(samplejtot, idx, idx, inputIndex);
 
-            KeyValuePair<T, T> optx;
-            optx = optimizeMD1AxisRecur(samplejtot, idx, idx, inputIndex);
-
-            return optx;
+            return (optX, optJ, optIntv);
         }
-        private KeyValuePair<T, T> optimizeMD1AxisRecur(ImmutableList<T> samplejtot, int axisIdx, int idxDim, uint[] inputIndex)
+        private (T optX, T optJ, double[][] optIntv) optimizeMD1AxisRecur(ImmutableList<T> samplejtot, int axisIdx, int idxDim, uint[] inputIndex)
         {
             Opt1D<T> opt1D;
             var sampleJs = new T[Ns[idxDim]];
+            var minXs = new double[Ns[idxDim]][];
+            var maxXs = new double[Ns[idxDim]][];
+            var dx = 1.0 / Ns[idxDim]; // caution!!! not (1.0 / (Ns[idxDim] - 1.0))
+            double[][]? optIntv =
+                [
+                    new double[dimN], // minX
+                    new double[dimN]  // maxX
+                ];
 
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
@@ -207,12 +270,23 @@ namespace OptNet
                 if (idxDim == dimN - 1)
                 {
                     sampleJs[n] = samplejtot[(int)getIdTot(inputIndex)];
+                    // optmal value is definitive.
+                    if (axisIdx == 0)
+                    {
+                        minXs[n] = new double[dimN];
+                        maxXs[n] = new double[dimN];
+                        minXs[n][idxDim] = dx * (n + 0.5);
+                        maxXs[n][idxDim] = dx * (n + 0.5);
+                    }                    
                 }
                 else
                 {
-                    KeyValuePair<T, T> sampleOpt;
-                    sampleOpt = optimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex);
-                    sampleJs[n] = sampleOpt.Value;
+                    (_, sampleJs[n], optIntv) = optimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex);
+                    if (axisIdx == 0)
+                    {
+                        minXs[n] = optIntv[0];
+                        maxXs[n] = optIntv[1];
+                    }
                 }
             }
 
@@ -226,17 +300,43 @@ namespace OptNet
                     constVar = new OfflineGet<T>(Ns[idxDim]);
                     lutConstant = lutConstant.Add(Ns[idxDim], constVar);
                 }
-            }
+            }            
 
             if ((axisIdx != 0) && (idxDim == axisIdx))
             {
-                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode);
+                var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
+                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, optIntV1D);
+                //opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
             }
             else
-                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode); // meantime let it be as it is
+            {
+                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
+                var optidx = (int)(double.CreateChecked(opt1D.OptOut.Key) / dx);
 
-            if (mode == "Max") return opt1D.Max;
-            else return opt1D.Min;
+                if (axisIdx == 0)
+                {
+                    for (int i = idxDim + 1; i < dimN; i++)
+                    {
+                        optIntv[0][i] = Math.Min(minXs[optidx][i], minXs[optidx + 1][i]);
+                        optIntv[1][i] = Math.Max(maxXs[optidx][i], maxXs[optidx + 1][i]);
+                    }
+
+                    var marginDx = 0.1 * dx;
+                    optIntv[0][idxDim] = double.CreateChecked(opt1D.OptOut.Key) - marginDx;
+                    if (optIntv[0][idxDim] < 0.0)
+                    {
+                        optIntv[0][idxDim] = 0.0;
+                        optIntv[1][idxDim] = 2 * marginDx;
+                    }
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.OptOut.Key) + marginDx;
+                    if (optIntv[1][idxDim] > 1.0)
+                    {
+                        optIntv[0][idxDim] = 1.0 - 2 * marginDx;
+                        optIntv[1][idxDim] = 1.0;
+                    }
+                }
+            }
+            return (opt1D.OptOut.Key, opt1D.OptOut.Value, optIntv);
         }
         private void getSample(int idxDim, ref List<T> samplejtot)
         {
@@ -303,6 +403,14 @@ namespace OptNet
             }
             inputIndex[idxDim] = tmpInputIdx;
         }
+        /// <summary>
+        /// get an index for the sampleJtot array from the dimN dimensional inputIndex array.
+        /// resample() makes the dimension to decrease by 1 and reduces the size of sampleJtot array,
+        /// but, the index of the reduced demension, which is assumed to be zero, does no effect on the calculation.
+        /// then, use the same getIdTot() method without any modification even after resample().
+        /// </summary>
+        /// <param name="inputIndex"></param>
+        /// <returns></returns>
         private uint getIdTot(in uint[] inputIndex)
         {
             /*uint idTot = inputIndex[0];

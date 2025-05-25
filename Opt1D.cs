@@ -30,6 +30,8 @@ namespace OptNet
         private readonly OfflineGet<T> constVars;
         private readonly int minDpK;
         private readonly int maxDpK;
+
+        private readonly double[]? optIntv;
         [Flags]
         public enum staMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3 }
         private UInt32 mState = 0;
@@ -38,11 +40,10 @@ namespace OptNet
         //private T[] calcOmegaW(in T[] Js) => GeneralMath<T>.LinearTransform(constVars.P, Js);
 
         public T[] Js => sampleJs;
-        public KeyValuePair<T, T> Max { get; }
-        public KeyValuePair<T, T> Min { get; }
+        public KeyValuePair<T, T> OptOut { get; }
         public Dictionary<T, T> Lo { get; }
 
-        public Opt1D(in T[] sampleJs, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode)
+        public Opt1D(in T[] sampleJs, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode, double[]? optIntv)
         {
             if (mode == "Max") setSysFlag(staMaskEnum.Max);
             else clrSysFlag(staMaskEnum.Max);
@@ -56,6 +57,8 @@ namespace OptNet
             this.maxX = maxX;
             dX = (maxX - minX) / T.CreateChecked((Ns - 1));
             dXHalf = dX / T.CreateChecked(2);
+
+            this.optIntv = optIntv;
 
             if (constvars == null)
                 constVars = new OfflineGet<T>(Ns);
@@ -71,10 +74,10 @@ namespace OptNet
             C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, (int)minDpK, (int)maxDpK);
 
             Lo = getLo();
-            if (isSetSysFlag(staMaskEnum.Max)) Max = Lo.MaxBy(x => x.Value);
-            if (isSetSysFlag(staMaskEnum.Min)) Min = Lo.MinBy(x => x.Value);
+            if (isSetSysFlag(staMaskEnum.Max)) OptOut = Lo.MaxBy(x => x.Value);
+            if (isSetSysFlag(staMaskEnum.Min)) OptOut = Lo.MinBy(x => x.Value);
         }
-        public Opt1D(in Func<T, T> j, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode)
+        public Opt1D(in Func<T, T> j, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode, double[]? optIntv)
         {
             if (mode == "Max") setSysFlag(staMaskEnum.Max);
             else clrSysFlag(staMaskEnum.Max);
@@ -87,6 +90,9 @@ namespace OptNet
             this.maxX = maxX;
             dX = (maxX - minX) / T.CreateChecked((Ns - 1));
             dXHalf = dX / T.CreateChecked(2);
+
+            this.optIntv = optIntv;
+
             sampleJs = getSamples(j);
 
             if (constvars == null)
@@ -103,8 +109,8 @@ namespace OptNet
             C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, (int)minDpK, (int)maxDpK);
 
             Lo = getLo();
-            if (isSetSysFlag(staMaskEnum.Max)) Max = Lo.MaxBy(x => x.Value);
-            if (isSetSysFlag(staMaskEnum.Min)) Min = Lo.MinBy(x => x.Value);
+            if (isSetSysFlag(staMaskEnum.Max)) OptOut = Lo.MaxBy(x => x.Value);
+            if (isSetSysFlag(staMaskEnum.Min)) OptOut = Lo.MinBy(x => x.Value);
         }
         private T[] getSamples(in Func<T, T> j)
         {
@@ -168,8 +174,31 @@ namespace OptNet
         }
         private void calOptCIntv(out int minK, out int maxK)
         {
+            minK = 0;
+            maxK = 0;
+            if (optIntv!=null) // Ensure optIdx is not null
+            {
+                var xmin = T.CreateChecked(optIntv[0]);
+                var xmax = T.CreateChecked(optIntv[1]);
+                var dpsize = constVars.Dp.Length;
+                for (int i = 0; i < dpsize; i++)
+                {
+                    if ((constVars.Dp[i] <= xmin) && (xmin < constVars.Dp[i + 1]))
+                    {
+                        minK = i;
+                    }
+                    if ((constVars.Dp[i] <= xmax) && (xmax < constVars.Dp[i + 1]))
+                    {
+                        maxK = i + 1;
+                        break;
+                    }
+                }
+            }
+            else
+            {
                 minK = 0;
                 maxK = (int)constVars.Dp.Length - 1 - 1;
+            }
         }
         private bool IsInCi(in T x, in int k)
         {
@@ -190,12 +219,12 @@ namespace OptNet
             }
             if (isSetSysFlag(staMaskEnum.Max))
             {
-                s = string.Format(msgTemplate, calcRealX(Max.Key), Max.Value);
+                s = string.Format(msgTemplate, calcRealX(OptOut.Key), OptOut.Value);
                 DisplayMessage("Max:  " + s);
             }
             if (isSetSysFlag(staMaskEnum.Min))
             {
-                s = string.Format(msgTemplate, calcRealX(Min.Key), Min.Value);
+                s = string.Format(msgTemplate, calcRealX(OptOut.Key), OptOut.Value);
                 DisplayMessage("Min:  " + s);
             }
         }
