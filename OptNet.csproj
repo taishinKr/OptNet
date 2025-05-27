@@ -8,4 +8,23 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="OptNetApp\**" />
+    <Compile Remove="OptNetLib\**" />
+    <EmbeddedResource Remove="OptNetApp\**" />
+    <EmbeddedResource Remove="OptNetLib\**" />
+    <None Remove="OptNetApp\**" />
+    <None Remove="OptNetLib\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Opt1D - 복사본.cs" />
+    <Compile Remove="OptMD - 복사본.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="OptMD - 복사본.cs.bak" />
+    <None Remove="OptMD.cs.bak" />
+  </ItemGroup>
+
 </Project>

@@ -7,7 +7,7 @@ using System.Numerics;
 
 namespace OptNet
 {
-    internal static class GeneralMath<T> where T : struct, INumber<T>
+    public static class GeneralMath<T> where T : struct, INumber<T>
     {
         public  static T[,] MultiplyMatrices(in T[,] matrixA,in T[,] matrixB)
         {

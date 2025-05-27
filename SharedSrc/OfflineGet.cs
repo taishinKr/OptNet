@@ -46,7 +46,7 @@ namespace OptNet
             return GetEnumerator();
         }
     }
-    internal class OfflineGet<T> where T : struct, INumber<T>
+    public class OfflineGet<T> where T : struct, INumber<T>
     {
         // Immutable fields
         public uint M { get; }

@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            components = new System.ComponentModel.Container();
             textBoxMsg = new TextBox();
             buttonOptimzeMD = new Button();
             buttonShrink = new Button();
@@ -36,16 +37,19 @@
             buttonMD3D = new Button();
             buttonResetAll = new Button();
             button1DOnly = new Button();
+            timer1 = new System.Windows.Forms.Timer(components);
+            buttonClearMsgs = new Button();
             SuspendLayout();
             // 
             // textBoxMsg
             // 
             textBoxMsg.BackColor = SystemColors.Desktop;
             textBoxMsg.ForeColor = Color.Khaki;
-            textBoxMsg.Location = new Point(12, 167);
+            textBoxMsg.Location = new Point(12, 110);
             textBoxMsg.Multiline = true;
             textBoxMsg.Name = "textBoxMsg";
-            textBoxMsg.Size = new Size(776, 426);
+            textBoxMsg.ScrollBars = ScrollBars.Vertical;
+            textBoxMsg.Size = new Size(776, 483);
             textBoxMsg.TabIndex = 0;
             // 
             // buttonOptimzeMD
@@ -118,11 +122,28 @@
             button1DOnly.UseVisualStyleBackColor = true;
             button1DOnly.Click += button1DOnly_Click;
             // 
+            // timer1
+            // 
+            timer1.Enabled = true;
+            timer1.Interval = 300;
+            timer1.Tick += timer1_Tick;
+            // 
+            // buttonClearMsgs
+            // 
+            buttonClearMsgs.Location = new Point(266, 81);
+            buttonClearMsgs.Name = "buttonClearMsgs";
+            buttonClearMsgs.Size = new Size(94, 23);
+            buttonClearMsgs.TabIndex = 8;
+            buttonClearMsgs.Text = "ClearMsgs";
+            buttonClearMsgs.UseVisualStyleBackColor = true;
+            buttonClearMsgs.Click += buttonClearMsgs_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(800, 632);
+            Controls.Add(buttonClearMsgs);
             Controls.Add(button1DOnly);
             Controls.Add(buttonResetAll);
             Controls.Add(buttonMD3D);
@@ -147,5 +168,7 @@
         private Button buttonMD3D;
         private Button buttonResetAll;
         private Button button1DOnly;
+        private System.Windows.Forms.Timer timer1;
+        private Button buttonClearMsgs;
     }
 }

@@ -1,0 +1,18 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>67a0d004-b3b3-46de-b725-4153d7cd8c53</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>SharedSrc</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="$(MSBuildThisFileDirectory)GeneralMath.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)OfflineGet.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Opt1D.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)OptMD.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)PCQueue.cs" />
+  </ItemGroup>
+</Project>

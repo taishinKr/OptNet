@@ -1,14 +1,18 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
+using System.Security.Cryptography.Xml;
 using System.Text;
 using System.Threading.Tasks;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace OptNet
 {
-    internal class OptMD<T> where T : struct, INumber<T>
+    public class OptMD<T> where T : struct, INumber<T>
     {
         private readonly uint dimN;
         private ImmutableArray<uint> Ns;
@@ -17,29 +21,36 @@ namespace OptNet
         private ImmutableArray<T> dX;
         private ImmutableArray<T> dXHalf;
         private ImmutableList<T> sampleJtot;
-        private readonly string mode;
+        private readonly staMaskEnum mode;
         private ImmutableDictionary<uint, OfflineGet<T>> lutConstant;
 
-        static readonly object _locker = new object();
-
-        static EventWaitHandle sigManu = new EventWaitHandle(false, EventResetMode.ManualReset);
-        static PCQueue pcQ = new PCQueue(Environment.ProcessorCount);
+        private static readonly Lock _locker = new ();//new Lock();
+        private static readonly PCQueue pcQ = new(Environment.ProcessorCount); // new PCQueue(Environment.ProcessorCount);
 
         private T[] inputX;
-        private KeyValuePair<T[], T> optXY;
-        
+        private (T[][] Xlist, T J) optResult;
+
         public double[][] IntvX { get; set; } // minX, maxX
         public Func<T[], T> J;
-        public Action<string> DisplayMsgFunc;
+        //public Action<string> DisplayMsgFunc;
+        public ConcurrentQueue<string> DisplayMsgQueue;
+        [Flags]
+        public enum staMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, Verbose = 1 << 4 }
+        private UInt32 mState = 0;
 
-        public OptMD(in Func<T[], T> j, in uint dimN, in uint[] Ns, in T[] minX, in T[] maxX, in string mode)
+        public OptMD(in Func<T[], T> j, in uint dimN, in uint[] Ns, in T[] minX, in T[] maxX, in staMaskEnum mode)
         {
             J = j;
             this.dimN = dimN;
             this.Ns = ImmutableArray.Create(Ns);
             this.minX = ImmutableArray.Create(minX);
             this.maxX = ImmutableArray.Create(maxX);
+
             this.mode = mode;
+            if (mode == (staMaskEnum.Max | staMaskEnum.Min))
+                this.mode = staMaskEnum.Max;
+            // throw new ArgumentException("staMaskEnum must be Max, Min, or Both.");
+
             inputX = new T[dimN];
             lutConstant = ImmutableDictionary<uint, OfflineGet<T>>.Empty;
 
@@ -58,6 +69,9 @@ namespace OptNet
             sampleJtot = samplejtot.ToImmutableList();
 
             IntvX = new double[2][]; // minX, maxX
+
+            DisplayMsgQueue = new(); // new ConcurrentQueue<string>();
+            setSysFlag(staMaskEnum.Verbose);
         }
         public void shrinkBy(double ratio) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
@@ -72,8 +86,8 @@ namespace OptNet
             {
                 int dxIdx = (int)(Ns[idxDim] - 1.0);
                 int rdxIdx = (int)(ratio * dxIdx);
-                double optidx = ( double.CreateChecked(optXY.Key[idxDim]) * dxIdx);
-                int minIdx = (int)( optidx - rdxIdx / 2.0);
+                double optidx = (double.CreateChecked(optResult.Xlist[0][idxDim]) * dxIdx);
+                int minIdx = (int)(optidx - rdxIdx / 2.0);
                 if (minIdx < 0)
                     minIdx = 0;
                 int maxIdx = minIdx + rdxIdx;
@@ -103,43 +117,104 @@ namespace OptNet
         }
 
         public async void optimizeMD()
-        {            
-            var optRes = (X:T.Zero, optJ:T.Zero, intvX: new double[2][]);
-            var tmpkey = new T[dimN];
-            var samplejtot = sampleJtot; // sampleJtot.ToImmutableList();
+        {
+            var xOpt = new T[dimN];
 
-            for (int i = 0; i < dimN; i++)
+            // for Parallel running ***************************************
+            await optimaizeMdRecurAsync(0, sampleJtot, xOpt).ContinueWith(
+                t =>
+                {
+                    var (Xlist, J) = t.Result;
+                    optResult = (Xlist.ToArray(), J);
+                }
+            );
+
+            // for Serial running ***************************************
+            /*var (Xlist, J) = optimaizeMdRecur(0, sampleJtot, xOpt);
+            optResult = (Xlist.ToArray(), J);*/
+
+            addDispMsg(resultMsg());
+        }
+        private (List<T[]> Xlist, T J) optimaizeMdRecur(int axisIdx, ImmutableList<T> samplejtot, T[] xOpt)
+        {
+            addDispMsg(string.Format("MdReur({0,0:G3})" + Environment.NewLine, axisIdx));
+
+            var Xlist = new List<T[]>();
+            T J = T.Zero;
+
+            var opt1Axis = optimizeMD1Axis(samplejtot, axisIdx);
+
+            if (axisIdx == 0)
+                IntvX = opt1Axis.optIntv;
+
+            foreach (var optx in opt1Axis.Xlist1Axis)
             {
-                if (i != 0)
+                xOpt[axisIdx] = optx;
+
+                if (axisIdx == dimN - 1)
+                {
+                    Xlist.Add(xOpt);
+                    J = opt1Axis.J;
+                }
+                else
                 {
                     List<T> newSample = []; // new List<T>()
                     var inputIdx = new uint[dimN];
-                    reSample(optRes.X, i, i, ref inputIdx, ref samplejtot, ref newSample);
-                    samplejtot = [.. newSample]; // newSample.ToImmutableList();
-                }
+                    reSample(optx, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
 
-                // for Parallel running ***************************************/
-                await optimizeMD1AxisAsync(samplejtot, i).ContinueWith(
-                        t => { 
-                            optRes = t.Result; 
+                    //[.. newSample]; // newSample.ToImmutableList();
+                    (var XlistNew, J) = optimaizeMdRecur(axisIdx + 1, [.. newSample], xOpt);
+                    Xlist.AddRange(XlistNew);
+                }
+            }
+            return (Xlist, J);
+        }
+        private async Task<(List<T[]> Xlist, T J)> optimaizeMdRecurAsync(int axisIdx, ImmutableList<T> samplejtot, T[] xOpt)
+        {
+            addDispMsg(string.Format("MdReur({0,0:G3})" + Environment.NewLine, axisIdx));
+
+            var Xlist = new List<T[]>();
+            T J = T.Zero;
+
+            (T[] Xlist1Axis, T J, double[][] optIntv) opt1Axis = ([], T.Zero, []);
+            await optimizeMD1AxisAsync(samplejtot, axisIdx).ContinueWith(
+                    t =>
+                    {
+                        opt1Axis = t.Result;
+                    }
+                );
+
+            if (axisIdx == 0)
+                IntvX = opt1Axis.optIntv;
+
+            foreach (var optx in opt1Axis.Xlist1Axis)
+            {
+                xOpt[axisIdx] = optx;
+
+                if (axisIdx == dimN - 1)
+                {
+                    Xlist.Add(xOpt);
+                    J = opt1Axis.J;
+                }
+                else
+                {
+                    List<T> newSample = []; // new List<T>()
+                    var inputIdx = new uint[dimN];
+                    reSample(optx, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
+
+                    //[.. newSample]; // newSample.ToImmutableList();
+                    await optimaizeMdRecurAsync(axisIdx + 1, [.. newSample], xOpt).ContinueWith(
+                        t =>
+                        {
+                            (var XlistNew, J) = t.Result;
+                            Xlist.AddRange(XlistNew);
                         }
                     );
-
-                // for Serial running ***************************************/
-                //optRes = optimizeMD1Axis(samplejtot, i);
-
-
-                if(i == 0)
-                    IntvX = optRes.intvX;
-
-                tmpkey[i] = optRes.X;
+                }
             }
-
-            optXY = new KeyValuePair<T[], T>(tmpkey, optRes.optJ);
-            DisplayMsg();
+            return (Xlist, J);
         }
-
-        private async Task<(T optX, T optJ, double[][] optIntv)> optimizeMD1AxisAsync(ImmutableList<T> samplejtot, int idxDim)
+        private async Task<(T[] Xlist1Axis, T J, double[][] optIntv)> optimizeMD1AxisAsync(ImmutableList<T> samplejtot, int idxDim)
         {
             Opt1D<T> opt1D;
             var sampleJs = new T[Ns[idxDim]];
@@ -149,11 +224,11 @@ namespace OptNet
             double[][]? optIntv =
                 [
                     new double[dimN], // minX
-                    new double[dimN]  // maxX
+            new double[dimN]  // maxX
                 ];
 
             var axisIdx = idxDim;
-            var tasks = new List<Task<(T optX, T optJ, double[][] optIntv)>>();
+            var tasks = new List<Task<(T[] Xlist1Axis, T J, double[][] optIntv)>>();
 
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
@@ -174,10 +249,13 @@ namespace OptNet
                 }
                 else
                 {
-                    var task = pcQ.Enqueue<(T optX, T optJ, double[][] optIntv)>(
+                    addDispMsg(string.Format("    task: Md1Axis({0,0:G3},{1,0:G3})" + Environment.NewLine, idxDim, n));
+
+                    var task = pcQ.Enqueue<(T[] Xlist1Axis, T J, double[][] optIntv)>(
                         () => optimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex)
                     );
                     tasks.Add(task);
+
                 }
             }
             if (tasks.Count > 0)
@@ -185,12 +263,12 @@ namespace OptNet
                 //var _uiScheduler = TaskScheduler.FromCurrentSynchronizationContext();
                 await Task.WhenAll(tasks).ContinueWith(
                     t =>
-                    {                        
-                        sampleJs = [.. t.Result.Select(x => x.optJ)]; // t.Result.Select(x => x.optJ).ToArray();
+                    {
+                        sampleJs = [.. t.Result.Select(x => x.J)]; // t.Result.Select(x => x.optJ).ToArray();
                         minXs = [.. t.Result.Select(x => x.optIntv[0])]; // t.Result.Select(x => x.optIntv[0]).ToArray();
                         maxXs = [.. t.Result.Select(x => x.optIntv[1])]; // t.Result.Select(x => x.optIntv[1]).ToArray();
                     }
-                   // , _uiScheduler
+                // , _uiScheduler
                 );
             }
 
@@ -209,30 +287,51 @@ namespace OptNet
             if ((axisIdx != 0) && (idxDim == axisIdx))
             {
                 var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
-                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, optIntV1D);
+                opt1D = new Opt1D<T>(sampleJs, 0.001, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, optIntV1D);
                 //opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
             }
             else
             {
-                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
-                var optidx = (int)(double.CreateChecked(opt1D.OptOut.Key) / dx);
-
+                opt1D = new Opt1D<T>(sampleJs, 0.001, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, null);
                 if (axisIdx == 0)
                 {
                     for (int i = idxDim + 1; i < dimN; i++)
                     {
-                        optIntv[0][i] = Math.Min(minXs[optidx][i], minXs[optidx + 1][i]);
-                        optIntv[1][i] = Math.Max(maxXs[optidx][i], maxXs[optidx + 1][i]);
+                        var intvMin = double.MaxValue;
+                        var intvMax = double.MinValue;
+
+                        foreach (var optX in opt1D.OptVal.Xlist)
+                        {
+                            var optidx = (int)(double.CreateChecked(optX) / dx);
+                            intvMin = Math.Min(
+                                intvMin,
+                                Math.Min(
+                                    minXs[optidx][i],
+                                    minXs[optidx + 1][i]
+                                )
+                            );
+                            intvMax = Math.Max(
+                                intvMax,
+                                Math.Max(
+                                    maxXs[optidx][i],
+                                    maxXs[optidx + 1][i]
+                                )
+                            );
+                        }
+                        optIntv[0][i] = intvMin;
+                        optIntv[1][i] = intvMax;
                     }
 
                     var marginDx = 0.1 * dx;
-                    optIntv[0][idxDim] = double.CreateChecked(opt1D.OptOut.Key) - marginDx;
+
+                    optIntv[0][idxDim] = double.CreateChecked(opt1D.OptVal.Xlist.Min()) - marginDx;
                     if (optIntv[0][idxDim] < 0.0)
                     {
                         optIntv[0][idxDim] = 0.0;
                         optIntv[1][idxDim] = 2 * marginDx;
                     }
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.OptOut.Key) + marginDx;
+
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.OptVal.Xlist.Max()) + marginDx;
                     if (optIntv[1][idxDim] > 1.0)
                     {
                         optIntv[0][idxDim] = 1.0 - 2 * marginDx;
@@ -240,17 +339,16 @@ namespace OptNet
                     }
                 }
             }
-
-            return (opt1D.OptOut.Key, opt1D.OptOut.Value, optIntv);
+            return (opt1D.OptVal.Xlist, opt1D.OptVal.J, optIntv);
         }
-        private (T optX, T optJ, double[][] optIntv) optimizeMD1Axis(ImmutableList<T> samplejtot, int idx)
+        private (T[] Xlist1Axis, T J, double[][] optIntv) optimizeMD1Axis(ImmutableList<T> samplejtot, int idx)
         {
             var inputIndex = new uint[dimN];
-            (T optX, T optJ, double[][] optIntv) = optimizeMD1AxisRecur(samplejtot, idx, idx, inputIndex);
+            (T[] Xlist1Axis, T J, double[][] optIntv) = optimizeMD1AxisRecur(samplejtot, idx, idx, inputIndex);
 
-            return (optX, optJ, optIntv);
+            return (Xlist1Axis, J, optIntv);
         }
-        private (T optX, T optJ, double[][] optIntv) optimizeMD1AxisRecur(ImmutableList<T> samplejtot, int axisIdx, int idxDim, uint[] inputIndex)
+        private (T[] Xlist1Axis, T J, double[][] optIntv) optimizeMD1AxisRecur(ImmutableList<T> samplejtot, int axisIdx, int idxDim, uint[] inputIndex)
         {
             Opt1D<T> opt1D;
             var sampleJs = new T[Ns[idxDim]];
@@ -277,10 +375,11 @@ namespace OptNet
                         maxXs[n] = new double[dimN];
                         minXs[n][idxDim] = dx * (n + 0.5);
                         maxXs[n][idxDim] = dx * (n + 0.5);
-                    }                    
+                    }
                 }
                 else
                 {
+                    addDispMsg(string.Format("        Md1Axis({0,0:G3},{1,0:G3},{2,0:G3})" + Environment.NewLine, axisIdx, idxDim, n));
                     (_, sampleJs[n], optIntv) = optimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex);
                     if (axisIdx == 0)
                     {
@@ -300,35 +399,56 @@ namespace OptNet
                     constVar = new OfflineGet<T>(Ns[idxDim]);
                     lutConstant = lutConstant.Add(Ns[idxDim], constVar);
                 }
-            }            
+            }
 
             if ((axisIdx != 0) && (idxDim == axisIdx))
             {
                 var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
-                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, optIntV1D);
+                opt1D = new Opt1D<T>(sampleJs, 0.001, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, optIntV1D);
                 //opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
             }
             else
             {
-                opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
-                var optidx = (int)(double.CreateChecked(opt1D.OptOut.Key) / dx);
-
+                opt1D = new Opt1D<T>(sampleJs, 0.001, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, null);
                 if (axisIdx == 0)
                 {
                     for (int i = idxDim + 1; i < dimN; i++)
                     {
-                        optIntv[0][i] = Math.Min(minXs[optidx][i], minXs[optidx + 1][i]);
-                        optIntv[1][i] = Math.Max(maxXs[optidx][i], maxXs[optidx + 1][i]);
+                        var intvMin = double.MaxValue;
+                        var intvMax = double.MinValue;
+
+                        foreach (var optX in opt1D.OptVal.Xlist)
+                        {
+                            var optidx = (int)(double.CreateChecked(optX) / dx);
+                            intvMin = Math.Min(
+                                intvMin,
+                                Math.Min(
+                                    minXs[optidx][i],
+                                    minXs[optidx + 1][i]
+                                )
+                            );
+                            intvMax = Math.Max(
+                                intvMax,
+                                Math.Max(
+                                    maxXs[optidx][i],
+                                    maxXs[optidx + 1][i]
+                                )
+                            );
+                        }
+                        optIntv[0][i] = intvMin;
+                        optIntv[1][i] = intvMax;
                     }
 
                     var marginDx = 0.1 * dx;
-                    optIntv[0][idxDim] = double.CreateChecked(opt1D.OptOut.Key) - marginDx;
+
+                    optIntv[0][idxDim] = double.CreateChecked(opt1D.OptVal.Xlist.Min()) - marginDx;
                     if (optIntv[0][idxDim] < 0.0)
                     {
                         optIntv[0][idxDim] = 0.0;
                         optIntv[1][idxDim] = 2 * marginDx;
                     }
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.OptOut.Key) + marginDx;
+
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.OptVal.Xlist.Max()) + marginDx;
                     if (optIntv[1][idxDim] > 1.0)
                     {
                         optIntv[0][idxDim] = 1.0 - 2 * marginDx;
@@ -336,7 +456,7 @@ namespace OptNet
                     }
                 }
             }
-            return (opt1D.OptOut.Key, opt1D.OptOut.Value, optIntv);
+            return (opt1D.OptVal.Xlist, opt1D.OptVal.J, optIntv);
         }
         private void getSample(int idxDim, ref List<T> samplejtot)
         {
@@ -464,60 +584,64 @@ namespace OptNet
                 * Math.Sin(Math.PI * x[2])
             );
         }
-        public void DisplayMsg(Action<string> DisplayMessage)
+        
+        public void addDispMsg(string msg)
+        {
+            if(isSetSysFlag(staMaskEnum.Verbose) && !string.IsNullOrEmpty(msg))
+            {
+                DisplayMsgQueue.Enqueue(msg);
+            }
+            
+        }
+        public string getDispMsg()
+        {
+            if ( isSetSysFlag(staMaskEnum.Verbose) && DisplayMsgQueue.TryDequeue(out string? msg))
+                return msg;
+            else
+                return string.Empty;
+        }
+        /*public void DisplayMsg(Action<string> DisplayMessage)
         {
             string msgOptX = "Optimum ";
-            msgOptX += string.Format("{0,8:G5} at ", optXY.Value); ;
+            msgOptX += string.Format("{0,8:G5} at ", optResult.J); ;
 
             for (int i = 0; i < dimN; i++)
             {
-                msgOptX += string.Format("{0,8:G5} ", calcRealX(optXY.Key[i], i)); ;
+                msgOptX += string.Format("{0,8:G5} ", calcRealX(optResult.Xlist[0][i], i)); ;
             }
             DisplayMessage(msgOptX);
-
-            /*string msgTest = "";
-            for (uint i = 0; i < Ns[0]; i++)
-            {
-                for (uint j = 0; j < Ns[1]; j++)
-                {
-                    inputIndex[0] = i;
-                    inputIndex[1] = j;
-                    //msgTest += string.Format("{0,8:G5} ", inputIndex[i]);
-                    var tmpIndex = (int)getIdTot();
-                    msgTest += string.Format("{0,10:F4} ", sampleJtot[tmpIndex]);
-
-                }
-                msgTest += Environment.NewLine;
-            }
-            DisplayMessage(msgTest);*/
-        }
-        public string DisplayMsg()
+        }*/
+        public string resultMsg()
         {
-            string msgOptX = "Optimum ";
-            msgOptX += string.Format("{0,8:G5} at ", optXY.Value); ;
-
-            for (int i = 0; i < dimN; i++)
+            string msgOptX = "";
+            foreach (var x in optResult.Xlist)
             {
-                msgOptX += string.Format("{0,8:G5} ", calcRealX(optXY.Key[i], i)); ;
-            }
+                string msgOptX1 = "Optimum ";
+                msgOptX1 += string.Format("{0,8:G5} at ", optResult.J);
 
-            DisplayMsgFunc(msgOptX);
-            return msgOptX;
-            /*string msgTest = "";
-            for (uint i = 0; i < Ns[0]; i++)
-            {
-                for (uint j = 0; j < Ns[1]; j++)
+                for (int i = 0; i < dimN; i++)
                 {
-                    inputIndex[0] = i;
-                    inputIndex[1] = j;
-                    //msgTest += string.Format("{0,8:G5} ", inputIndex[i]);
-                    var tmpIndex = (int)getIdTot();
-                    msgTest += string.Format("{0,10:F4} ", sampleJtot[tmpIndex]);
-
+                    msgOptX1 += string.Format("{0,8:G5} ", calcRealX( x[i], i)); ;
                 }
-                msgTest += Environment.NewLine;
+                msgOptX += msgOptX1 + Environment.NewLine;
             }
-            DisplayMessage(msgTest);*/
+
+            //DisplayMsgFunc(msgOptX);
+            return msgOptX;
+        }
+
+        public void setSysFlag(in staMaskEnum mask)
+        {
+            mState = GeneralMath<T>.setFlag(ref mState, (UInt32)mask);
+
+        }
+        public void clrSysFlag(in staMaskEnum mask)
+        {
+            mState = GeneralMath<T>.clrFlag(ref mState, (UInt32)mask);
+        }
+        public bool isSetSysFlag(in staMaskEnum mask)
+        {
+            return GeneralMath<T>.isSetFlag(mState, (UInt32)mask);
         }
     }
 }

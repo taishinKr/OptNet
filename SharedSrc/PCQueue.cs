@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace OptNet
 {
-    internal class PCQueue : IDisposable
+    public class PCQueue : IDisposable
     {
         BlockingCollection<Task> _taskQ = new BlockingCollection<Task>();
         public PCQueue(int workerCount)
