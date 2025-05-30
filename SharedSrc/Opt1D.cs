@@ -1,18 +1,18 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel;
+using System.Drawing.Design;
 using System.Linq;
+using System.Numerics;
+using System.Runtime.Intrinsics.Arm;
 using System.Text;
 using System.Threading.Tasks;
-using System.Numerics;
-using System.Collections.Immutable;
-using System.Drawing.Design;
-using static System.Windows.Forms.AxHost;
-using System.Runtime.Intrinsics.Arm;
 
 namespace OptNet
 {
-    internal class Opt1D<T> where T : struct, INumber<T>
+    public class Opt1D<T> where T : struct, INumber<T>
     {
         private readonly T[] W;
         //private readonly T[] omegaW;
@@ -32,24 +32,27 @@ namespace OptNet
         private readonly int maxDpK;
 
         private readonly double[]? optIntv;
+        public ConcurrentQueue<string> DisplayMsgQueue;
         [Flags]
-        public enum staMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3 }
+        public  enum staMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, Verbose = 1 << 4 }
         private UInt32 mState = 0;
 
         private T[] calcW(in T[] Js) => GeneralMath<T>.LinearTransform(constVars.P.Data, Js, 0, constVars.P.GetLength(1) - 1);
         //private T[] calcOmegaW(in T[] Js) => GeneralMath<T>.LinearTransform(constVars.P, Js);
 
         public T[] Js => sampleJs;
-        public KeyValuePair<T, T> OptOut { get; }
-        public Dictionary<T, T> Lo { get; }
+        public (T[] Xlist, T J) OptVal { get; }
+        //public Dictionary<T, T> Lo { get; }
+        public List<(T X, T J)> Lo { get; }
 
-        public Opt1D(in T[] sampleJs, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode, double[]? optIntv)
+        public Opt1D(in T[] sampleJs, double tolJs, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in staMaskEnum mode, double[]? optIntv)
         {
-            if (mode == "Max") setSysFlag(staMaskEnum.Max);
-            else clrSysFlag(staMaskEnum.Max);
-            if (mode == "Min") setSysFlag(staMaskEnum.Min);
-            else clrSysFlag(staMaskEnum.Min);
-            if (mode == "Both") setSysFlag(staMaskEnum.Max | staMaskEnum.Min);
+            clrSysFlag(staMaskEnum.Max);
+            clrSysFlag(staMaskEnum.Min);
+            var modetmp = mode;
+            if (mode == (staMaskEnum.Max | staMaskEnum.Min))
+                modetmp = staMaskEnum.Max;
+            setSysFlag(modetmp);
 
             this.Ns = Ns;
             this.sampleJs = sampleJs;
@@ -74,16 +77,33 @@ namespace OptNet
             C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, (int)minDpK, (int)maxDpK);
 
             Lo = getLo();
-            if (isSetSysFlag(staMaskEnum.Max)) OptOut = Lo.MaxBy(x => x.Value);
-            if (isSetSysFlag(staMaskEnum.Min)) OptOut = Lo.MinBy(x => x.Value);
+            if (isSetSysFlag(staMaskEnum.Max))
+            {
+                var maxJ = Lo.Max(item => item.J);
+                var xlist = Lo.Where(item => Math.Abs(double.CreateChecked(item.J - maxJ)) <= tolJs)
+                            .Select(item => item.X)
+                            .ToArray();
+                OptVal = (xlist, maxJ);
+            }
+            if (isSetSysFlag(staMaskEnum.Min))
+            {
+                var minJ = Lo.Min(item => item.J);
+                var xlist = Lo.Where(item => Math.Abs(double.CreateChecked(item.J - minJ)) <= tolJs)
+                            .Select(item => item.X)
+                            .ToArray();
+                OptVal = (xlist, minJ);
+            }
+
+            DisplayMsgQueue = new();
+            clrSysFlag(staMaskEnum.Verbose);
+            addDispMsg(resultMsg());
+            setSysFlag(staMaskEnum.Verbose);
         }
-        public Opt1D(in Func<T, T> j, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in string mode, double[]? optIntv)
+        public Opt1D(in Func<T, T> j, double tolJs, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in staMaskEnum mode, double[]? optIntv)
         {
-            if (mode == "Max") setSysFlag(staMaskEnum.Max);
-            else clrSysFlag(staMaskEnum.Max);
-            if (mode == "Min") setSysFlag(staMaskEnum.Min);
-            else clrSysFlag(staMaskEnum.Min);
-            if (mode == "Both") setSysFlag(staMaskEnum.Max | staMaskEnum.Min);
+            clrSysFlag(staMaskEnum.Max);
+            clrSysFlag(staMaskEnum.Min);
+            setSysFlag(mode);
 
             this.Ns = Ns;
             this.minX = minX;
@@ -104,13 +124,32 @@ namespace OptNet
             //omegaW = calcOmegaW(Js);
 
             calOptCIntv(out minDpK, out maxDpK);
-            A = GeneralMath<T>.LinearTransform(constVars.Ra.Data, Js, (int)minDpK, (int)maxDpK);
-            B = GeneralMath<T>.LinearTransform(constVars.Rb.Data, Js, (int)minDpK, (int)maxDpK);
-            C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, (int)minDpK, (int)maxDpK);
+            A = GeneralMath<T>.LinearTransform(constVars.Ra.Data, Js, minDpK, maxDpK);
+            B = GeneralMath<T>.LinearTransform(constVars.Rb.Data, Js, minDpK, maxDpK);
+            C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, minDpK, maxDpK);
 
             Lo = getLo();
-            if (isSetSysFlag(staMaskEnum.Max)) OptOut = Lo.MaxBy(x => x.Value);
-            if (isSetSysFlag(staMaskEnum.Min)) OptOut = Lo.MinBy(x => x.Value);
+            if (isSetSysFlag(staMaskEnum.Max))
+            {
+                var maxJ = Lo.Max(item => item.J);
+                var xlist = Lo.Where(item => Math.Abs(double.CreateChecked(item.J - maxJ)) <= tolJs)
+                            .Select(item => item.X)
+                            .ToArray();
+                OptVal = (xlist, maxJ);
+            }
+            if (isSetSysFlag(staMaskEnum.Min))
+            {
+                var minJ = Lo.Min(item => item.J);
+                var xlist = Lo.Where(item => Math.Abs(double.CreateChecked(item.J - minJ)) <= tolJs)
+                            .Select(item => item.X)
+                            .ToArray();
+                OptVal = (xlist, minJ);
+            }
+
+            DisplayMsgQueue = new();
+            clrSysFlag(staMaskEnum.Verbose);
+            addDispMsg(resultMsg());
+            setSysFlag(staMaskEnum.Verbose);
         }
         private T[] getSamples(in Func<T, T> j)
         {
@@ -119,9 +158,9 @@ namespace OptNet
                 tmpJs[n] = j(minX + T.CreateChecked(n) * dX);
             return tmpJs;
         }
-        private Dictionary<T, T> getLo()
+        private List<(T X, T J)> getLo()
         {
-            var lo = new Dictionary<T, T>();
+            var lo = new List<(T X, T J)>();
             for (int k = 0; k < A.Length; k++)
             {
                 T tmpD2 = B[k] * B[k] - A[k] * C[k] * (T.One + T.One + T.One + T.One);
@@ -134,14 +173,14 @@ namespace OptNet
                     if (B[k] == T.Zero) // Constant equation
                     {
                         if (C[k] == T.Zero) // All x are solution
-                            lo.Add(constVars.Dp[k], T.Zero);
+                            lo.Add((constVars.Dp[k], T.Zero));
                     }
                     else // Linear equation
                     {
                         x = -C[k] / B[k];
                         if (IsInCi(x, k))
                             //lo.Add(x, objectJ.J(x));
-                            lo.Add(x, Jw(x));
+                            lo.Add((x, Jw(x)));
                         else
                             continue;
                     }
@@ -153,7 +192,7 @@ namespace OptNet
                         x = -B[k] / A[k] / (T.One + T.One);
                         if (IsInCi(x, k))
                             //lo.Add(x, objectJ.J(x));
-                            lo.Add(x, Jw(x));
+                            lo.Add((x, Jw(x)));
                         else
                             continue;
                     }
@@ -162,11 +201,11 @@ namespace OptNet
                         x = (-B[k] - sqrtTmpD2) / A[k] / (T.One + T.One);
                         if (IsInCi(x, k))
                             //lo.Add(x, objectJ.J(x));
-                            lo.Add(x, Jw(x));
+                            lo.Add((x, Jw(x)));
                         x = (-B[k] + sqrtTmpD2) / A[k] / (T.One + T.One);
                         if (IsInCi(x, k))
                             //lo.Add(x, objectJ.J(x));
-                            lo.Add(x, Jw(x));
+                            lo.Add((x, Jw(x)));
                     }
                 }
             }
@@ -208,25 +247,29 @@ namespace OptNet
             else
                 return false;
         }
-        public void DisplayResult(in Action<string> DisplayMessage)
+        public string resultMsg()
         {
             string msgTemplate = "Key = {0,8:G5},   Value = {1,8:G5}";
-            string s;
-            foreach (KeyValuePair<T, T> kv in Lo)
+            string s=string.Empty;
+            foreach ( (T X, T J) lo in Lo)
             {
-                s = string.Format(msgTemplate, calcRealX(kv.Key), kv.Value);
-                DisplayMessage("Lo  " + s);
+                s += "Lo  " + string.Format(msgTemplate, calcRealX(lo.X), lo.J) + Environment.NewLine;
             }
             if (isSetSysFlag(staMaskEnum.Max))
             {
-                s = string.Format(msgTemplate, calcRealX(OptOut.Key), OptOut.Value);
-                DisplayMessage("Max:  " + s);
+                foreach ( T optx in OptVal.Xlist)
+                {
+                    s += "Max:  " + string.Format(msgTemplate, calcRealX(optx), OptVal.J ) + Environment.NewLine;
+                }
             }
             if (isSetSysFlag(staMaskEnum.Min))
             {
-                s = string.Format(msgTemplate, calcRealX(OptOut.Key), OptOut.Value);
-                DisplayMessage("Min:  " + s);
+                foreach ( T optx in OptVal.Xlist)
+                {
+                    s += "Min:  " + string.Format(msgTemplate, calcRealX(optx), OptVal.J) + Environment.NewLine;
+                }
             }
+            return s;
         }
         public T Jw(in T x)
         {
@@ -241,6 +284,21 @@ namespace OptNet
         {
             double x = double.CreateChecked(xT);
             return T.CreateChecked(Math.Exp(x) * Math.Sin(5.5 * Math.PI * x));
+        }
+        public void addDispMsg(string msg)
+        {
+            if (isSetSysFlag(staMaskEnum.Verbose) && !string.IsNullOrEmpty(msg))
+            {
+                DisplayMsgQueue.Enqueue(msg);
+            }
+
+        }
+        public string getDispMsg()
+        {
+            if (isSetSysFlag(staMaskEnum.Verbose) && DisplayMsgQueue.TryDequeue(out string? msg))
+                return msg;
+            else
+                return string.Empty;
         }
 
         public void setSysFlag(in staMaskEnum mask)

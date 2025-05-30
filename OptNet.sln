@@ -1,9 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35931.197 d17.13
+VisualStudioVersion = 17.13.35931.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptNet", "OptNet.csproj", "{79CFFBE0-25C9-4A8A-A711-6497F4D7842D}"
+EndProject
+Project("{D954291E-2A0B-460D-934E-DC6B0785DB48}") = "SharedSrc", "SharedSrc\SharedSrc.shproj", "{67A0D004-B3B3-46DE-B725-4153D7CD8C53}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OptNetLib", "OptNetLib\OptNetLib.csproj", "{259ACAE6-618B-428E-A750-DC0C2DA5C371}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,11 +19,19 @@ Global
 		{79CFFBE0-25C9-4A8A-A711-6497F4D7842D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{79CFFBE0-25C9-4A8A-A711-6497F4D7842D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{79CFFBE0-25C9-4A8A-A711-6497F4D7842D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{259ACAE6-618B-428E-A750-DC0C2DA5C371}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{259ACAE6-618B-428E-A750-DC0C2DA5C371}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{259ACAE6-618B-428E-A750-DC0C2DA5C371}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{259ACAE6-618B-428E-A750-DC0C2DA5C371}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {CDDA277C-CA49-41E0-85FA-5F58E84B8623}
+	EndGlobalSection
+	GlobalSection(SharedMSBuildProjectFiles) = preSolution
+		SharedSrc\SharedSrc.projitems*{259acae6-618b-428e-a750-dc0c2da5c371}*SharedItemsImports = 5
+		SharedSrc\SharedSrc.projitems*{67a0d004-b3b3-46de-b725-4153d7cd8c53}*SharedItemsImports = 13
 	EndGlobalSection
 EndGlobal

@@ -8,4 +8,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Compile Remove="OptNetApp\**" />
+    <Compile Remove="OptNetLib\**" />
+    <EmbeddedResource Remove="OptNetApp\**" />
+    <EmbeddedResource Remove="OptNetLib\**" />
+    <None Remove="OptNetApp\**" />
+    <None Remove="OptNetLib\**" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="WinformSrc.zip" />
+  </ItemGroup>
+
 </Project>
