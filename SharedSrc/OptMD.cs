@@ -12,6 +12,49 @@ using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace OptNet
 {
+    public class OptParam<T> where T : struct, INumber<T>
+    {
+        public Func<T[], T> J { get; set; }
+        public double TolJ { get; set; }
+        public double TolX { get; set; }
+        public uint DimN { get; set; }
+        public uint[] Ns { get; set; }
+        public T[] MinX { get; set; }
+        public T[] MaxX { get; set; }
+        public OptMD<T>.staMaskEnum Mode { get; set; }
+
+        public OptParam()
+        {
+            var testFcn = new TestFcn<T>();
+            J = testFcn.JTest2D;
+            TolJ = 0.001;
+            TolX = 0.001;
+            DimN = 2;
+            Ns = [11, 11];
+            MinX = [T.Zero, T.Zero];
+            MaxX = [T.One, T.One];
+            Mode = OptMD<T>.staMaskEnum.Done; // Default value, should be set properly later.            
+        }
+        public OptParam(
+            in Func<T[], T> J, 
+            in double TolJ, 
+            in double TolX,
+            in uint DimN, 
+            in uint[] Ns, 
+            in T[] MinX, 
+            in T[] MaxX, 
+            in OptMD<T>.staMaskEnum Mode)
+        {
+            this.J = J;
+            this.TolJ = TolJ;
+            this.TolX = TolX < 0.0 ? 0.001 : TolX; // default value if tolX is negative
+            this.DimN = DimN;
+            this.Ns = Ns;
+            this.MinX = MinX;
+            this.MaxX = MaxX;
+            this.Mode = Mode;
+        }
+    }
     public class OptMD<T> where T : struct, INumber<T>
     {
         private readonly uint dimN;
@@ -28,35 +71,56 @@ namespace OptNet
         private static readonly PCQueue pcQ = new(Environment.ProcessorCount); // new PCQueue(Environment.ProcessorCount);
 
         private T[] inputX;
-        private (T[][] Xlist, T J) optResult;
+        public (T[] X, T J)[] optResult= Array.Empty<(T[] X, T J)>();
+        public (T[] X, T J)[] optResultReal = Array.Empty<(T[] X, T J)>();
+
+        public double TolJ { get; set; } = 0.1; // tolerance(ratio) for the objective function, J, to be considered as converged.
+        private double spanJ = 0.0; // span of the objective function, J, from the initial sampling. 
+        public double TolJReal => spanJ * TolJ; // tolerance for the objective function, J, to be considered as converged.
+        public double TolX { get; set; } = 0.1; // tolerance(ratio) for the input vector, X, to be considered as converged.
+        public T[] MinX => [.. minX]; // minX.ToArray();
+        public T[] MaxX => [.. maxX]; // maxX.ToArray();
+        public T[] DXHalf => [.. dXHalf]; // dXHalf.ToArray();
+        public uint DimN => dimN;
 
         public double[][] IntvX { get; set; } // minX, maxX
         public Func<T[], T> J;
-        //public Action<string> DisplayMsgFunc;
         public ConcurrentQueue<string> DisplayMsgQueue;
         [Flags]
         public enum staMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, Verbose = 1 << 4 }
         private UInt32 mState = 0;
-
-        public OptMD(in Func<T[], T> j, in uint dimN, in uint[] Ns, in T[] minX, in T[] maxX, in staMaskEnum mode)
+        /// <summary>
+        /// Initializes a new instance of the <see cref="OptMD{T}"/> class with the specified optimization parameters.
+        /// </summary>
+        /// <remarks>This constructor initializes the optimization model based on the provided parameters.
+        /// It validates the input dimensions and precomputes step sizes and other necessary data for
+        /// optimization.</remarks>
+        /// <param name="optParam">The optimization parameters used to configure the instance. This includes the objective function,
+        /// tolerances, dimensionality, bounds, and mode.</param>
+        /// <exception cref="ArgumentException">Thrown if the lengths of <paramref name="optParam.Ns"/>, <paramref name="optParam.MinX"/>, and <paramref
+        /// name="optParam.MaxX"/> do not match the specified dimensionality (<paramref name="optParam.DimN"/>), or if
+        /// the mode is invalid.</exception>
+        public OptMD(OptParam<T> optParam)
         {
-            J = j;
-            this.dimN = dimN;
-            this.Ns = ImmutableArray.Create(Ns);
-            this.minX = ImmutableArray.Create(minX);
-            this.maxX = ImmutableArray.Create(maxX);
-
-            this.mode = mode;
+            J = optParam.J;
+            this.TolX = optParam.TolX < 0.0 ? 0.001 : optParam.TolX; // default value if tolX is negative
+            this.TolJ = optParam.TolJ < 0.0 ? 0.001 : optParam.TolJ; // default value if tolJ is negative
+            this.dimN = optParam.DimN;
+            this.Ns = ImmutableArray.Create(optParam.Ns);
+            this.minX = ImmutableArray.Create(optParam.MinX);
+            this.maxX = ImmutableArray.Create(optParam.MaxX);
+            this.mode = optParam.Mode;
+            if (Ns.Length != dimN || minX.Length != dimN || maxX.Length != dimN)
+                throw new ArgumentException("The lengths of Ns, minX, and maxX must match the dimension dimN.");
             if (mode == (staMaskEnum.Max | staMaskEnum.Min))
-                this.mode = staMaskEnum.Max;
-            // throw new ArgumentException("staMaskEnum must be Max, Min, or Both.");
+                this.mode = staMaskEnum.Max;            
 
             inputX = new T[dimN];
             lutConstant = ImmutableDictionary<uint, OfflineGet<T>>.Empty;
 
             var dx = new T[dimN];
             var dxhalf = new T[dimN];
-            for (uint i = 0; i < dimN; i++)
+            for (int i = 0; i < dimN; i++)
             {
                 dx[i] = (maxX[i] - minX[i]) / T.CreateChecked((Ns[i] - 1));
                 dxhalf[i] = dx[i] / T.CreateChecked(2);
@@ -66,14 +130,28 @@ namespace OptNet
 
             var samplejtot = new List<T>();
             getSample(0, ref samplejtot);
+            spanJ = double.CreateChecked(samplejtot.Max() - samplejtot.Min());            
+
             sampleJtot = samplejtot.ToImmutableList();
 
             IntvX = new double[2][]; // minX, maxX
 
             DisplayMsgQueue = new(); // new ConcurrentQueue<string>();
+
             setSysFlag(staMaskEnum.Verbose);
+            clrSysFlag(staMaskEnum.Done);
         }
-        public void shrinkBy(double ratio) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
+        /// <summary>
+        /// Adjusts the range and resolution of the data grid by shrinking it around a specified point.
+        /// </summary>
+        /// <remarks>This method recalculates the minimum and maximum bounds, step sizes, and sample
+        /// counts for each dimension based on the specified shrink ratio and target point. The grid is then updated to
+        /// reflect the new bounds and resolution. Note that the shrink ratio directly influences the number of samples
+        /// in the grid.</remarks>
+        /// <param name="ratio">The shrink ratio to apply. A value of 0.5 maintains the current sample count, while other values may change
+        /// the number of samples.</param>
+        /// <param name="idxXlist">The index of the target point in the list of optimization results around which the grid will be shrunk.</param>
+        public void shrinkBy(double ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
             var minx = new T[dimN];
             var maxx = new T[dimN];
@@ -86,7 +164,10 @@ namespace OptNet
             {
                 int dxIdx = (int)(Ns[idxDim] - 1.0);
                 int rdxIdx = (int)(ratio * dxIdx);
-                double optidx = (double.CreateChecked(optResult.Xlist[0][idxDim]) * dxIdx);
+                if (rdxIdx <= 0)
+                    throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
+                //double optidx = (double.CreateChecked(optResult.Xlist[idxXlist][idxDim]) * dxIdx);
+                double optidx = (double.CreateChecked(optResult[idxXlist].X[idxDim]) * dxIdx);
                 int minIdx = (int)(optidx - rdxIdx / 2.0);
                 if (minIdx < 0)
                     minIdx = 0;
@@ -105,116 +186,241 @@ namespace OptNet
                 inputIndex[idxDim] = (uint)minIdx;
             }
 
+            uint[] oldNs = [.. Ns]; // Ns.ToArray();
+            Ns = ImmutableArray.Create(ns);
             minX = ImmutableArray.Create(minx);
             maxX = ImmutableArray.Create(maxx);
             dX = ImmutableArray.Create(dx);
             dXHalf = ImmutableArray.Create(dxhalf);
-            Ns = ImmutableArray.Create(ns);
 
             var samplejtot = new List<T>();
-            upSample(0, ref samplejtot, true, inputIndex);
+            upSample(0, ref samplejtot, true, inputIndex, oldNs);
             sampleJtot = samplejtot.ToImmutableList();
-        }
 
+            var adjTolX = TolX / ratio; // adjust the tolerance for the input vector, X, to be considered as converged. 
+                                        // Fix for the problematic line causing multiple errors  
+            TolX = (adjTolX < 1) ? adjTolX : 1; // Adjust the tolerance for the input vector, X, to be considered as converged. 
+
+
+            clrSysFlag(staMaskEnum.Done);
+        }
+        /// <summary>
+        /// Asynchronously optimizes a multi-dimensional dataset and updates the optimization results.
+        /// </summary>
+        /// <remarks>This method performs an asynchronous optimization process over a multi-dimensional
+        /// dataset. The results of the optimization are stored in the <c>optResult</c> field. The method clears and
+        /// sets system flags before and after the optimization process, respectively, and adds a message to the display
+        /// upon completion.</remarks>
         public async void optimizeMD()
         {
-            var xOpt = new T[dimN];
+            //var xOpt = new T[dimN];
+            var Opt = (X: new T[dimN], J: default(T));
 
+            clrSysFlag(staMaskEnum.Done);
             // for Parallel running ***************************************
-            await optimaizeMdRecurAsync(0, sampleJtot, xOpt).ContinueWith(
+            await optimaizeMdRecurAsync(0, sampleJtot, Opt).ContinueWith(
                 t =>
                 {
-                    var (Xlist, J) = t.Result;
-                    optResult = (Xlist.ToArray(), J);
+                    var Optlist = t.Result;
+                    optResult = Optlist.ToArray();
                 }
             );
 
             // for Serial running ***************************************
-            /*var (Xlist, J) = optimaizeMdRecur(0, sampleJtot, xOpt);
-            optResult = (Xlist.ToArray(), J);*/
+            /*var Optlist = optimaizeMdRecur(0, sampleJtot, Opt);
+            optResult = Optlist.ToArray();*/
 
+            calResultReal(); 
+            optResultReal = adjustResult(); // optResultReal = adjustResult().ToArray();
+            calResultPrj();
+
+            setSysFlag(staMaskEnum.Done);
             addDispMsg(resultMsg());
         }
-        private (List<T[]> Xlist, T J) optimaizeMdRecur(int axisIdx, ImmutableList<T> samplejtot, T[] xOpt)
+        /// <summary>
+        /// Adjusts the result by clustering items based on their distance and selecting representative items from each
+        /// cluster according to the specified mode.
+        /// </summary>
+        /// <remarks>This method groups items into clusters using a distance-based algorithm and then
+        /// selects a single representative item from each cluster. The selection is determined by the <see
+        /// cref="staMaskEnum"/> mode: <list type="bullet"> <item> <description>If the mode is <see
+        /// cref="staMaskEnum.Min"/>, the item with the minimum value of <c>J</c> in each cluster is
+        /// selected.</description> </item> <item> <description>If the mode is <see cref="staMaskEnum.Max"/>, the item
+        /// with the maximum value of <c>J</c> in each cluster is selected.</description> </item> </list> Clusters with
+        /// no items are excluded from the result.</remarks>
+        /// <returns>An array of tuples, where each tuple contains: <list type="bullet"> <item> <description><c>X</c>: An array
+        /// representing the clustered items.</description> </item> <item> <description><c>J</c>: The selected
+        /// representative value from the cluster.</description> </item> </list></returns>
+        private (T[] X, T J)[] adjustResult()
+        {
+            var clusters = new List<List<(T[] X, T J)>>();
+            if (TolX < 1.0)
+            {
+                var spanX = 0.0;
+                for (int i = 0; i < dimN; i++)
+                {
+                    spanX += double.CreateChecked(maxX[i] - minX[i]) * double.CreateChecked(maxX[i] - minX[i]);
+                }
+                spanX = Math.Sqrt(spanX);
+
+                clusters = GeneralMath<T>.ClusterByDistance(optResultReal, TolX * spanX);
+            }
+            else
+            {                
+                clusters.Add([.. optResultReal]); //new List<(T[] X, T J)>(optResultReal);
+            }            
+
+            (T[] X, T J)[] newResult = Array.Empty<(T[], T)>();
+            T optj = T.Zero;
+
+            if (mode == staMaskEnum.Min)
+            {
+                newResult = [.. clusters
+                                 .Where(cluster => cluster.Count > 0)
+                                 .Select(cluster => cluster.MinBy(item => item.J))]; //.Select(cluster => cluster.MinBy(item => item.J)).ToArray();
+                optj = newResult.Min(item => item.J);                
+            }
+            if (mode == staMaskEnum.Max)
+            {
+                newResult = [.. clusters
+                                .Where(cluster => cluster.Count > 0)
+                                .Select(cluster => cluster.MaxBy(item => item.J))]; //.Select(cluster => cluster.MaxBy(item => item.J)).ToArray();
+                optj = newResult.Max(item => item.J);
+            }
+            if (newResult.Length != 0)
+            {
+                newResult = [.. newResult.Where(item => Math.Abs(double.CreateChecked(item.J - optj)) <= TolJReal)]; //.ToArray();
+            }
+            return newResult;
+        } 
+        /// <summary>
+        /// Recursively optimizes a multi-dimensional function along each axis and returns a list of optimal solutions.
+        /// </summary>
+        /// <remarks>This method performs a recursive optimization process across multiple dimensions. For
+        /// each axis, it identifies      the optimal values and refines the solution by sampling and optimizing along
+        /// subsequent axes. The recursion      terminates when all dimensions have been processed, at which point the
+        /// optimized solutions are collected and returned.          The method assumes that the input data and
+        /// dimensions are valid and that the optimization process is well-defined      for the given function and
+        /// constraints.</remarks>
+        /// <param name="axisIdx">The index of the current axis being optimized. Must be within the range of valid dimensions.</param>
+        /// <param name="samplejtot">An immutable list representing the current sample data for optimization. Cannot be null.</param>
+        /// <param name="Opt">A tuple containing the current best solution vector <c>X</c> and its corresponding objective value <c>J</c>.</param>
+        /// <returns>A list of tuples, where each tuple contains an optimized solution vector <c>X</c> and its corresponding
+        /// objective value <c>J</c>.</returns>
+        private List<(T[] X, T J)> optimaizeMdRecur(int axisIdx, ImmutableList<T> samplejtot, (T[] X, T J) Opt)
         {
             addDispMsg(string.Format("MdReur({0,0:G3})" + Environment.NewLine, axisIdx));
 
-            var Xlist = new List<T[]>();
-            T J = T.Zero;
+            var Optlist = new List<(T[] X, T J)>();
 
-            var opt1Axis = optimizeMD1Axis(samplejtot, axisIdx);
+            var (optlist1Axis, optintv) = optimizeMD1Axis(samplejtot, axisIdx);
 
             if (axisIdx == 0)
-                IntvX = opt1Axis.optIntv;
+                IntvX = optintv;
 
-            foreach (var optx in opt1Axis.Xlist1Axis)
+            foreach (var opt1Axis in optlist1Axis)
             {
-                xOpt[axisIdx] = optx;
+                Opt.X[axisIdx] = opt1Axis.X;
+                Opt.J = opt1Axis.J;
 
                 if (axisIdx == dimN - 1)
                 {
-                    Xlist.Add(xOpt);
-                    J = opt1Axis.J;
+                    var opt = ( (T[])Opt.X.Clone(), Opt.J);  // Optlist.Add only clones the reference, not the value.
+
+                    Optlist.Add(opt);
                 }
                 else
                 {
                     List<T> newSample = []; // new List<T>()
                     var inputIdx = new uint[dimN];
-                    reSample(optx, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
+                    reSample(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
 
-                    //[.. newSample]; // newSample.ToImmutableList();
-                    (var XlistNew, J) = optimaizeMdRecur(axisIdx + 1, [.. newSample], xOpt);
-                    Xlist.AddRange(XlistNew);
+                    var OptlistNew = optimaizeMdRecur(axisIdx + 1, [.. newSample], Opt); // newSample.ToImmutableList();
+                    Optlist.AddRange(OptlistNew);
                 }
             }
-            return (Xlist, J);
+            return Optlist;
         }
-        private async Task<(List<T[]> Xlist, T J)> optimaizeMdRecurAsync(int axisIdx, ImmutableList<T> samplejtot, T[] xOpt)
+        /// <summary>
+        /// Recursively optimizes a multi-dimensional function along specified axes and returns a list of optimal
+        /// solutions.
+        /// </summary>
+        /// <remarks>This method performs a recursive optimization process by iterating over each axis of
+        /// a multi-dimensional space. For each axis, it computes optimal values and intervals, and then refines the
+        /// optimization by sampling and recursively optimizing along subsequent axes. The process continues until all
+        /// dimensions are optimized.  If the current axis is the last dimension, the method clones the current solution
+        /// and adds it to the result list. Otherwise, it resamples the space and continues the optimization recursively
+        /// for the next axis.  The method uses asynchronous operations to perform optimizations and handle recursive
+        /// calls efficiently.</remarks>
+        /// <param name="axisIdx">The index of the current axis being optimized. Must be within the range of valid axes.</param>
+        /// <param name="samplejtot">An immutable list of samples representing the current state of the optimization process.</param>
+        /// <param name="Opt">A tuple containing the current best solution vector <see langword="X"/> and its corresponding objective
+        /// value <see langword="J"/>.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result is a list of tuples, where each tuple
+        /// contains: <list type="bullet"> <item><description>An array <see langword="X"/> representing a solution
+        /// vector.</description></item> <item><description>The corresponding objective value <see langword="J"/> for
+        /// the solution vector.</description></item> </list></returns>
+        private async Task<List<(T[] X, T J)>> optimaizeMdRecurAsync(int axisIdx, ImmutableList<T> samplejtot, (T[] X, T J) Opt)
         {
             addDispMsg(string.Format("MdReur({0,0:G3})" + Environment.NewLine, axisIdx));
 
-            var Xlist = new List<T[]>();
-            T J = T.Zero;
+            var Optlist = new List<(T[] X, T J)>();
 
-            (T[] Xlist1Axis, T J, double[][] optIntv) opt1Axis = ([], T.Zero, []);
+            (T X, T J)[] optlist1Axis = Array.Empty<(T, T)>();
+            double[][] optintv = Array.Empty<double[]>();
+
             await optimizeMD1AxisAsync(samplejtot, axisIdx).ContinueWith(
                     t =>
                     {
-                        opt1Axis = t.Result;
+                        (optlist1Axis, optintv) = t.Result;
                     }
                 );
 
             if (axisIdx == 0)
-                IntvX = opt1Axis.optIntv;
+                IntvX = optintv;
 
-            foreach (var optx in opt1Axis.Xlist1Axis)
+            foreach (var opt1Axis in optlist1Axis)
             {
-                xOpt[axisIdx] = optx;
+                Opt.X[axisIdx] = opt1Axis.X;
+                Opt.J = opt1Axis.J;
 
                 if (axisIdx == dimN - 1)
                 {
-                    Xlist.Add(xOpt);
-                    J = opt1Axis.J;
+                    var opt = ((T[])Opt.X.Clone(), Opt.J);  // Optlist.Add only clones the reference, not the value.
+
+                    Optlist.Add(opt);
                 }
                 else
                 {
                     List<T> newSample = []; // new List<T>()
                     var inputIdx = new uint[dimN];
-                    reSample(optx, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
+                    reSample(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
 
-                    //[.. newSample]; // newSample.ToImmutableList();
-                    await optimaizeMdRecurAsync(axisIdx + 1, [.. newSample], xOpt).ContinueWith(
+                    await optimaizeMdRecurAsync(axisIdx + 1, [.. newSample], Opt).ContinueWith( // newSample.ToImmutableList();
                         t =>
                         {
-                            (var XlistNew, J) = t.Result;
-                            Xlist.AddRange(XlistNew);
+                            var OptlistNew = t.Result;
+                            Optlist.AddRange(OptlistNew);
                         }
                     );
                 }
             }
-            return (Xlist, J);
+            return Optlist;
         }
-        private async Task<(T[] Xlist1Axis, T J, double[][] optIntv)> optimizeMD1AxisAsync(ImmutableList<T> samplejtot, int idxDim)
+        /// <summary>
+        /// Asynchronously optimizes a single axis of a multi-dimensional optimization problem.
+        /// </summary>
+        /// <remarks>This method performs a recursive optimization process for the specified axis of a
+        /// multi-dimensional problem.  It uses parallel tasks to optimize sub-problems for higher dimensions and
+        /// aggregates the results to compute the optimal values and intervals for the current axis.</remarks>
+        /// <param name="samplejtot">An immutable list of sampled values representing the total objective function values across all dimensions.</param>
+        /// <param name="idxDim">The index of the dimension (axis) to optimize.</param>
+        /// <returns>A tuple containing: <list type="bullet"> <item> <description>An array of tuples, where each tuple contains
+        /// the optimized value <typeparamref name="T"/> (<c>X</c>) and its corresponding objective function value
+        /// (<c>J</c>) for the specified axis.</description> </item> <item> <description>A two-dimensional array
+        /// representing the intervals of the optimized values for the specified axis. The first sub-array contains the
+        /// minimum values, and the second sub-array contains the maximum values.</description> </item> </list></returns>
+        private async Task<((T X, T J)[] Optlist1Axis, double[][] optIntv)> optimizeMD1AxisAsync(ImmutableList<T> samplejtot, int idxDim)
         {
             Opt1D<T> opt1D;
             var sampleJs = new T[Ns[idxDim]];
@@ -228,7 +434,7 @@ namespace OptNet
                 ];
 
             var axisIdx = idxDim;
-            var tasks = new List<Task<(T[] Xlist1Axis, T J, double[][] optIntv)>>();
+            var tasks = new List<Task<((T X, T J)[] Optlist1Axis, double[][] optIntv)>>();
 
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
@@ -251,7 +457,7 @@ namespace OptNet
                 {
                     addDispMsg(string.Format("    task: Md1Axis({0,0:G3},{1,0:G3})" + Environment.NewLine, idxDim, n));
 
-                    var task = pcQ.Enqueue<(T[] Xlist1Axis, T J, double[][] optIntv)>(
+                    var task = pcQ.Enqueue<((T X, T J)[] Optlist1Axis, double[][] optIntv)>(
                         () => optimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex)
                     );
                     tasks.Add(task);
@@ -264,7 +470,10 @@ namespace OptNet
                 await Task.WhenAll(tasks).ContinueWith(
                     t =>
                     {
-                        sampleJs = [.. t.Result.Select(x => x.J)]; // t.Result.Select(x => x.optJ).ToArray();
+                        if(mode == staMaskEnum.Min)                            
+                            sampleJs = [.. t.Result.Select(item => item.Optlist1Axis.Min(opt => opt.J))]; // t.Result.Select(item => item.Optlist1Axis.Min(opt => opt.J)).ToArray();
+                        else if (mode == staMaskEnum.Max)
+                            sampleJs = [.. t.Result.Select(item => item.Optlist1Axis.Max(opt => opt.J))]; // t.Result.Select(item => item.Optlist1Axis.Max(opt => opt.J)).ToArray();
                         minXs = [.. t.Result.Select(x => x.optIntv[0])]; // t.Result.Select(x => x.optIntv[0]).ToArray();
                         maxXs = [.. t.Result.Select(x => x.optIntv[1])]; // t.Result.Select(x => x.optIntv[1]).ToArray();
                     }
@@ -287,12 +496,12 @@ namespace OptNet
             if ((axisIdx != 0) && (idxDim == axisIdx))
             {
                 var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
-                opt1D = new Opt1D<T>(sampleJs, 0.001, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, optIntV1D);
+                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, optIntV1D);
                 //opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
             }
             else
             {
-                opt1D = new Opt1D<T>(sampleJs, 0.001, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, null);
+                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, null);
                 if (axisIdx == 0)
                 {
                     for (int i = idxDim + 1; i < dimN; i++)
@@ -300,23 +509,33 @@ namespace OptNet
                         var intvMin = double.MaxValue;
                         var intvMax = double.MinValue;
 
-                        foreach (var optX in opt1D.OptVal.Xlist)
+                        foreach (var opt in opt1D.Optlist)
                         {
-                            var optidx = (int)(double.CreateChecked(optX) / dx);
-                            intvMin = Math.Min(
-                                intvMin,
-                                Math.Min(
-                                    minXs[optidx][i],
-                                    minXs[optidx + 1][i]
-                                )
-                            );
-                            intvMax = Math.Max(
-                                intvMax,
-                                Math.Max(
-                                    maxXs[optidx][i],
-                                    maxXs[optidx + 1][i]
-                                )
-                            );
+                            var optidx = (int)(double.CreateChecked(opt.X) / dx);
+                            if (optidx >= (Ns[idxDim] - 1))
+                            {
+                                var idxlast = Ns[idxDim] - 1;
+                                intvMin = minXs[idxlast][i];
+                                intvMax = maxXs[idxlast][i];
+                            }
+                            else
+                            {
+                                intvMin = Math.Min(
+                                    intvMin,
+                                    Math.Min(
+                                        minXs[optidx][i],
+                                        minXs[optidx + 1][i]
+                                    )
+                                );
+                                intvMax = Math.Max(
+                                    intvMax,
+                                    Math.Max(
+                                        maxXs[optidx][i],
+                                        maxXs[optidx + 1][i]
+                                    )
+                                );
+                            }
+
                         }
                         optIntv[0][i] = intvMin;
                         optIntv[1][i] = intvMax;
@@ -324,14 +543,14 @@ namespace OptNet
 
                     var marginDx = 0.1 * dx;
 
-                    optIntv[0][idxDim] = double.CreateChecked(opt1D.OptVal.Xlist.Min()) - marginDx;
+                    optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X)) - marginDx;
                     if (optIntv[0][idxDim] < 0.0)
                     {
                         optIntv[0][idxDim] = 0.0;
                         optIntv[1][idxDim] = 2 * marginDx;
                     }
 
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.OptVal.Xlist.Max()) + marginDx;
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
                     if (optIntv[1][idxDim] > 1.0)
                     {
                         optIntv[0][idxDim] = 1.0 - 2 * marginDx;
@@ -339,16 +558,48 @@ namespace OptNet
                     }
                 }
             }
-            return (opt1D.OptVal.Xlist, opt1D.OptVal.J, optIntv);
+
+            return (opt1D.Optlist, optIntv);
+
         }
-        private (T[] Xlist1Axis, T J, double[][] optIntv) optimizeMD1Axis(ImmutableList<T> samplejtot, int idx)
+        /// <summary>
+        /// Optimizes a single axis of a multi-dimensional dataset and returns the results.
+        /// </summary>
+        /// <remarks>This method performs optimization on a single axis of a multi-dimensional dataset by
+        /// invoking a recursive helper method.  The optimization results include both the optimized values and their
+        /// associated intervals.</remarks>
+        /// <param name="samplejtot">An immutable list of sample data points to be used in the optimization process.</param>
+        /// <param name="idx">The index of the axis to optimize.</param>
+        /// <returns>A tuple containing: <list type="bullet"> <item> <description>An array of tuples where each tuple contains
+        /// the optimized value for the axis (<typeparamref name="T"/>) and its corresponding metric (<typeparamref
+        /// name="T"/>).</description> </item> <item> <description>A jagged array of doubles representing the intervals
+        /// associated with the optimization process.</description> </item> </list></returns>
+        private ((T X, T J)[] Optlist1Axis, double[][] optIntv) optimizeMD1Axis(ImmutableList<T> samplejtot, int idx)
         {
             var inputIndex = new uint[dimN];
-            (T[] Xlist1Axis, T J, double[][] optIntv) = optimizeMD1AxisRecur(samplejtot, idx, idx, inputIndex);
 
-            return (Xlist1Axis, J, optIntv);
+            ((T X, T J)[] Optlist1Axis, double[][] optIntv) = optimizeMD1AxisRecur(samplejtot, idx, idx, inputIndex);
+            return (Optlist1Axis, optIntv);
         }
-        private (T[] Xlist1Axis, T J, double[][] optIntv) optimizeMD1AxisRecur(ImmutableList<T> samplejtot, int axisIdx, int idxDim, uint[] inputIndex)
+        /// <summary>
+        /// Recursively optimizes a single axis of a multi-dimensional optimization problem.
+        /// </summary>
+        /// <remarks>This method performs a recursive optimization process for a single axis of a
+        /// multi-dimensional problem. It evaluates the objective function values for the given axis and dimension, and
+        /// computes the optimal values and intervals. <para> The recursion continues until the innermost dimension is
+        /// reached, at which point the objective function values are directly sampled. For higher dimensions, the
+        /// method aggregates results from deeper recursion levels. </para> <para> The method ensures thread safety when
+        /// accessing or creating constant lookup tables for optimization calculations. </para></remarks>
+        /// <param name="samplejtot">A collection of sample values representing the total objective function values for the optimization process.</param>
+        /// <param name="axisIdx">The index of the axis being optimized in the current recursion step.</param>
+        /// <param name="idxDim">The current dimension index being processed in the recursion.</param>
+        /// <param name="inputIndex">An array representing the indices of the current input values for each dimension.</param>
+        /// <returns>A tuple containing: <list type="bullet"> <item> <description> An array of tuples where each tuple contains
+        /// the optimized value for the axis (<c>X</c>) and its corresponding objective function value (<c>J</c>).
+        /// </description> </item> <item> <description> A two-dimensional array representing the intervals of the
+        /// optimization results for each dimension. The first sub-array contains the minimum values, and the second
+        /// sub-array contains the maximum values. </description> </item> </list></returns>
+        private ( (T X, T J)[] Optlist1Axis, double[][] optIntv) optimizeMD1AxisRecur(ImmutableList<T> samplejtot, int axisIdx, int idxDim, uint[] inputIndex)
         {
             Opt1D<T> opt1D;
             var sampleJs = new T[Ns[idxDim]];
@@ -380,7 +631,14 @@ namespace OptNet
                 else
                 {
                     addDispMsg(string.Format("        Md1Axis({0,0:G3},{1,0:G3},{2,0:G3})" + Environment.NewLine, axisIdx, idxDim, n));
-                    (_, sampleJs[n], optIntv) = optimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex);
+                    
+                    ( var optlist, optIntv) = optimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex);
+
+                    if( mode == staMaskEnum.Min )
+                        sampleJs[n] = optlist.Min(item => item.J);
+                    else if( mode == staMaskEnum.Max )
+                        sampleJs[n] = optlist.Max(item => item.J);
+
                     if (axisIdx == 0)
                     {
                         minXs[n] = optIntv[0];
@@ -404,12 +662,12 @@ namespace OptNet
             if ((axisIdx != 0) && (idxDim == axisIdx))
             {
                 var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
-                opt1D = new Opt1D<T>(sampleJs, 0.001, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, optIntV1D);
+                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, optIntV1D);
                 //opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
             }
             else
             {
-                opt1D = new Opt1D<T>(sampleJs, 0.001, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, null);
+                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.staMaskEnum)mode, null);
                 if (axisIdx == 0)
                 {
                     for (int i = idxDim + 1; i < dimN; i++)
@@ -417,23 +675,33 @@ namespace OptNet
                         var intvMin = double.MaxValue;
                         var intvMax = double.MinValue;
 
-                        foreach (var optX in opt1D.OptVal.Xlist)
+                        foreach (var opt in opt1D.Optlist)
                         {
-                            var optidx = (int)(double.CreateChecked(optX) / dx);
-                            intvMin = Math.Min(
-                                intvMin,
-                                Math.Min(
-                                    minXs[optidx][i],
-                                    minXs[optidx + 1][i]
-                                )
-                            );
-                            intvMax = Math.Max(
-                                intvMax,
-                                Math.Max(
-                                    maxXs[optidx][i],
-                                    maxXs[optidx + 1][i]
-                                )
-                            );
+                            var optidx = (int)(double.CreateChecked(opt.X) / dx);
+                            if ( optidx >= (Ns[idxDim] - 1) )
+                            {
+                                var idxlast = Ns[idxDim] - 1;
+                                intvMin = minXs[idxlast][i];
+                                intvMax = maxXs[idxlast][i];
+                            }
+                            else
+                            {
+                                intvMin = Math.Min(
+                                    intvMin,
+                                    Math.Min(
+                                        minXs[optidx][i],
+                                        minXs[optidx + 1][i]
+                                    )
+                                );
+                                intvMax = Math.Max(
+                                    intvMax,
+                                    Math.Max(
+                                        maxXs[optidx][i],
+                                        maxXs[optidx + 1][i]
+                                    )
+                                );
+                            }
+                            
                         }
                         optIntv[0][i] = intvMin;
                         optIntv[1][i] = intvMax;
@@ -441,14 +709,14 @@ namespace OptNet
 
                     var marginDx = 0.1 * dx;
 
-                    optIntv[0][idxDim] = double.CreateChecked(opt1D.OptVal.Xlist.Min()) - marginDx;
+                    optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X)) - marginDx;
                     if (optIntv[0][idxDim] < 0.0)
                     {
                         optIntv[0][idxDim] = 0.0;
                         optIntv[1][idxDim] = 2 * marginDx;
                     }
 
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.OptVal.Xlist.Max()) + marginDx;
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
                     if (optIntv[1][idxDim] > 1.0)
                     {
                         optIntv[0][idxDim] = 1.0 - 2 * marginDx;
@@ -456,8 +724,18 @@ namespace OptNet
                     }
                 }
             }
-            return (opt1D.OptVal.Xlist, opt1D.OptVal.J, optIntv);
+            return (opt1D.Optlist, optIntv);
+
         }
+        /// <summary>
+        /// Recursively generates a sample of values based on the specified dimension index and adds them to the
+        /// provided list.
+        /// </summary>
+        /// <remarks>This method traverses through the specified dimension and computes values based on
+        /// the input range and step size. If the current dimension is the last one, the computed value is added to the
+        /// list. Otherwise, the method recurses into the next dimension.</remarks>
+        /// <param name="idxDim">The current dimension index being processed. Must be within the valid range of dimensions.</param>
+        /// <param name="samplejtot">A reference to the list where the generated sample values will be added. Cannot be null.</param>
         private void getSample(int idxDim, ref List<T> samplejtot)
         {
             for (uint n = 0; n < Ns[idxDim]; n++)
@@ -469,6 +747,18 @@ namespace OptNet
                     getSample(idxDim + 1, ref samplejtot);
             }
         }
+        /// <summary>
+        /// Recursively resamples input data along a specified axis and generates an output sample.
+        /// </summary>
+        /// <remarks>This method performs a recursive traversal of the input dimensions to resample data
+        /// along the specified axis. The resampling process involves applying a linear transformation and a weighted
+        /// sum of cosine functions to generate the output sample values.</remarks>
+        /// <param name="x">The input value used in the resampling process.</param>
+        /// <param name="axisIdx">The index of the axis along which the resampling is performed.</param>
+        /// <param name="idxDim">The current dimension index being processed in the recursion.</param>
+        /// <param name="inputIdx">A reference to an array representing the current indices for each dimension during the resampling process.</param>
+        /// <param name="iSample">A reference to the immutable list of input samples used for resampling.</param>
+        /// <param name="oSample">A reference to the list where the resampled output values will be stored.</param>
         private void reSample(T x, int axisIdx, int idxDim, ref uint[] inputIdx, ref ImmutableList<T> iSample, ref List<T> oSample)
         {
             for (uint n = 0; n < Ns[idxDim]; n++)
@@ -494,7 +784,19 @@ namespace OptNet
                     reSample(x, axisIdx, idxDim + 1, ref inputIdx, ref iSample, ref oSample);
             }
         }
-        private void upSample(int idxDim, ref List<T> samplejtot, bool isEven, in uint[] inputIndex)
+        /// <summary>
+        /// Recursively generates upsampled data points for a multidimensional grid.
+        /// </summary>
+        /// <remarks>This method processes each dimension of a multidimensional grid recursively,
+        /// generating upsampled data points based on the provided parameters.  For the final dimension, it either adds
+        /// precomputed values or computes new values based on the input.  The method ensures that the state of
+        /// <paramref name="inputIndex"/> is restored after processing each dimension.</remarks>
+        /// <param name="idxDim">The current dimension index being processed.</param>
+        /// <param name="samplejtot">A reference to the list where the upsampled data points will be stored.</param>
+        /// <param name="isEven">A boolean value indicating whether the current level of recursion corresponds to an even index.</param>
+        /// <param name="inputIndex">An array of indices representing the current position in the multidimensional grid. This parameter is passed
+        /// by reference to track updates during recursion.</param>
+        private void upSample(int idxDim, ref List<T> samplejtot, bool isEven, in uint[] inputIndex, in uint[] oldNs)
         {
             uint tmpInputIdx = inputIndex[idxDim];
             for (uint n = 0; n < Ns[idxDim]; n++)
@@ -506,7 +808,7 @@ namespace OptNet
                 {
                     if (iseven)
                     {
-                        samplejtot.Add(sampleJtot[(int)getIdTot(inputIndex)]);
+                        samplejtot.Add(sampleJtot[(int)getIdTot(inputIndex, oldNs)]);
                         inputIndex[idxDim]++;
                         //samplejtot.Add(J(inputX));
                     }
@@ -515,7 +817,7 @@ namespace OptNet
                 }
                 else
                 {
-                    upSample(idxDim + 1, ref samplejtot, iseven, inputIndex);
+                    upSample(idxDim + 1, ref samplejtot, iseven, inputIndex, oldNs);
                     if (iseven)
                         inputIndex[idxDim]++;
                 }
@@ -552,39 +854,80 @@ namespace OptNet
 
             return idTot;
         }
+        private uint getIdTot(in uint[] inputIndex, in uint[] ns)
+        {
+            uint idTot = inputIndex[dimN - 1];
+            for (int i = (int)dimN - 2; i >= 0; i--)
+            {
+                uint accumNs = 1;
+                for (int j = (int)dimN - 1; j > i; j--)
+                    accumNs *= ns[j];
+                idTot += inputIndex[i] * accumNs;
+            }
 
+            return idTot;
+        }
+        /// <summary>
+        /// Adjusts the values in the <see cref="optResult"/> collection by converting them to their real-world
+        /// equivalents.
+        /// </summary>
+        /// <remarks>This method iterates through each element in the <see cref="optResult"/> collection
+        /// and updates its values using the <see cref="calcRealX"/> method. The conversion is performed for each
+        /// dimension specified by <see cref="dimN"/>.</remarks>
+        private void calResultReal()
+        {
+            optResultReal = new (T[] X, T J)[optResult.Length];
+            for (int i = 0; i < optResult.Length; i++) // Iterate over the array of tuples
+            {
+                optResultReal[i] = (new T[dimN], optResult[i].J);
+                for (int j = 0; j < dimN; j++) // Iterate over the dimensions
+                {
+                    optResultReal[i].X[j] = calcRealX(optResult[i].X[j], j); // Access the tuple's X array
+                }
+            }
+        }
+        /// <summary>
+        /// Projects the optimization results onto a new coordinate system.
+        /// </summary>
+        /// <remarks>This method transforms the optimization results stored in <see cref="optResultReal"/>
+        /// by applying a projection function to each dimension of the result vectors.  The transformed results are
+        /// stored in the <see cref="optResult"/> array.</remarks>
+        private void calResultPrj()
+        {
+            optResult = new (T[] X, T J)[optResultReal.Length];
+            for (int i = 0; i < optResultReal.Length; i++) // Iterate over the array of tuples
+            {
+                optResult[i] = (new T[dimN], optResultReal[i].J);
+                for (int j = 0; j < dimN; j++) // Iterate over the dimensions
+                {
+                    optResult[i].X[j] = calcProjX(optResultReal[i].X[j], j); // Access the tuple's X array
+                }
+            }
+        }
+        /// <summary>
+        /// Calculates the real-world coordinate along a specified dimension based on a projected coordinate.
+        /// </summary>
+        /// <param name="projX">The projected coordinate value, typically normalized or scaled.</param>
+        /// <param name="idxDim">The index of the dimension for which the real-world coordinate is calculated.</param>
+        /// <returns>The real-world coordinate corresponding to the given projected coordinate along the specified dimension.</returns>
         public T calcRealX(in T projX, in int idxDim) => (maxX[idxDim] - minX[idxDim] + dX[idxDim]) * projX + minX[idxDim] - dXHalf[idxDim];
+        /// <summary>
+        /// Calculates the projected value of a given coordinate along a specified dimension.
+        /// </summary>
+        /// <remarks>The projection is calculated as a normalized value based on the minimum and maximum
+        /// bounds of the specified dimension.</remarks>
+        /// <param name="realX">The real-world coordinate value to be projected.</param>
+        /// <param name="idxDim">The index of the dimension along which the projection is calculated.</param>
+        /// <returns>The projected value of <paramref name="realX"/> as a normalized ratio within the range of the specified
+        /// dimension.</returns>
         public T calcProjX(in T realX, in int idxDim) => (realX - minX[idxDim] + dXHalf[idxDim]) / (maxX[idxDim] - minX[idxDim] + dX[idxDim]);
-        public static T JTest1D(T[] xT)
-        {
-            double[] x = new double[1]; ;
-            x[0] = double.CreateChecked(xT[0]);
-            return T.CreateChecked(Math.Exp(x[0]) * Math.Sin(5.5 * Math.PI * x[0]));
-        }
-        public static T JTest2D(T[] xT)
-        {
-            double[] x = new double[2];
-
-            for (uint i = 0; i < 2; i++)
-                x[i] = double.CreateChecked(xT[i]);
-
-            return T.CreateChecked(
-                1.0E-14 * Math.Exp(-34 * x[0] * x[0] + x[0] * (64 - 60 * x[1]) + (64 - 34 * x[1]) * x[1]) * Math.Sin(6 * Math.Sqrt(2) * (x[0] - x[1]))
-            );
-        }
-        public static T JTest3D(T[] xT)
-        {
-            double[] x = new double[3];
-
-            for (uint i = 0; i < 3; i++)
-                x[i] = double.CreateChecked(xT[i]);
-
-            return T.CreateChecked(
-                (1.0E-14 * Math.Exp(-34 * x[0] * x[0] + x[0] * (64 - 60 * x[1]) + (64 - 34 * x[1]) * x[1]) * Math.Sin(6 * Math.Sqrt(2) * (x[0] - x[1])))
-                * Math.Sin(Math.PI * x[2])
-            );
-        }
-        
+        /// <summary>
+        /// Adds a message to the display message queue if the verbose system flag is set.
+        /// </summary>
+        /// <remarks>The message is added to the queue only if the verbose system flag is enabled, as
+        /// determined by  <see cref="isSetSysFlag(staMaskEnum)"/>. If <paramref name="msg"/> is null or empty, the
+        /// method does nothing.</remarks>
+        /// <param name="msg">The message to enqueue. Must not be null or empty.</param>
         public void addDispMsg(string msg)
         {
             if(isSetSysFlag(staMaskEnum.Verbose) && !string.IsNullOrEmpty(msg))
@@ -593,6 +936,14 @@ namespace OptNet
             }
             
         }
+        /// <summary>
+        /// Retrieves a message from the display message queue if the verbose system flag is set.
+        /// </summary>
+        /// <remarks>This method checks whether the verbose system flag is enabled before attempting to
+        /// dequeue a message.  If no message is available or the verbose flag is not set, it returns an empty
+        /// string.</remarks>
+        /// <returns>The next message in the display message queue if the verbose system flag is set and a message is available; 
+        /// otherwise, an empty string.</returns>
         public string getDispMsg()
         {
             if ( isSetSysFlag(staMaskEnum.Verbose) && DisplayMsgQueue.TryDequeue(out string? msg))
@@ -611,17 +962,25 @@ namespace OptNet
             }
             DisplayMessage(msgOptX);
         }*/
+        /// <summary>
+        /// Generates a formatted message summarizing the optimum results.
+        /// </summary>
+        /// <remarks>The message includes the optimum value and its corresponding parameters for each
+        /// result in the collection. Each result is formatted as a line containing the optimum value followed by the
+        /// parameter values.</remarks>
+        /// <returns>A string containing the formatted message. Each line represents an optimum result,  with the optimum value
+        /// and its associated parameters separated by spaces.</returns>
         public string resultMsg()
         {
             string msgOptX = "";
-            foreach (var x in optResult.Xlist)
+            foreach (var opt in optResultReal)
             {
                 string msgOptX1 = "Optimum ";
-                msgOptX1 += string.Format("{0,8:G5} at ", optResult.J);
+                msgOptX1 += string.Format("{0,8:G5} at ", opt.J);
 
                 for (int i = 0; i < dimN; i++)
                 {
-                    msgOptX1 += string.Format("{0,8:G5} ", calcRealX( x[i], i)); ;
+                    msgOptX1 += string.Format("{0,8:G5} ", opt.X[i] );
                 }
                 msgOptX += msgOptX1 + Environment.NewLine;
             }
@@ -629,16 +988,32 @@ namespace OptNet
             //DisplayMsgFunc(msgOptX);
             return msgOptX;
         }
-
+        /// <summary>
+        /// Sets the specified system flag in the current state.
+        /// </summary>
+        /// <remarks>This method modifies the internal state by enabling the specified flag. The operation
+        /// is performed in-place.</remarks>
+        /// <param name="mask">The flag to set, represented as a value from the <see cref="staMaskEnum"/> enumeration.</param>
         public void setSysFlag(in staMaskEnum mask)
         {
             mState = GeneralMath<T>.setFlag(ref mState, (UInt32)mask);
 
         }
+        /// <summary>
+        /// Clears the specified system flag in the current state.
+        /// </summary>
+        /// <remarks>This method modifies the internal state by clearing the bit corresponding to the
+        /// specified flag.</remarks>
+        /// <param name="mask">The flag to clear, represented as a value from the <see cref="staMaskEnum"/> enumeration.</param>
         public void clrSysFlag(in staMaskEnum mask)
         {
             mState = GeneralMath<T>.clrFlag(ref mState, (UInt32)mask);
         }
+        /// <summary>
+        /// Determines whether the specified system flag is set in the current state.
+        /// </summary>
+        /// <param name="mask">The system flag to check, represented as a <see cref="staMaskEnum"/> value.</param>
+        /// <returns><see langword="true"/> if the specified system flag is set; otherwise, <see langword="false"/>.</returns>
         public bool isSetSysFlag(in staMaskEnum mask)
         {
             return GeneralMath<T>.isSetFlag(mState, (UInt32)mask);

@@ -14,5 +14,6 @@
     <Compile Include="$(MSBuildThisFileDirectory)Opt1D.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)OptMD.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)PCQueue.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)TestFcn.cs" />
   </ItemGroup>
 </Project>

@@ -197,6 +197,56 @@ namespace OptNet
             else
                 return true;
         }
+        /// <summary>
+        /// Groups a set of points into clusters based on a specified minimum distance.
+        /// </summary>
+        /// <remarks>Each point is assigned to exactly one cluster. A cluster is formed by grouping points
+        /// such that every point in the cluster is within the specified minimum distance from at least one other point
+        /// in the cluster.</remarks>
+        /// <param name="optResult">An array of tuples where each tuple contains a point's coordinates and an associated value.</param>
+        /// <param name="xMinDist">The minimum distance required to consider points as part of the same cluster.</param>
+        /// <returns>A list of clusters, where each cluster is a list of tuples containing the coordinates and associated value
+        /// of points that are close to each other based on the specified minimum distance.</returns>
+        public static List<List<(T[] X, T J)>> ClusterByDistance((T[] X, T J)[] optResult, double xMinDist)
+        {
+            var clusters = new List<List<(T[] X, T J)>>();
+            var used = new bool[optResult.Length];
+
+            for (int i = 0; i < optResult.Length; i++)
+            {
+                if (used[i]) continue;
+                var cluster = new List<(T[] X, T J)> { optResult[i] };
+                used[i] = true;
+
+                for (int j = 0; j < optResult.Length; j++)
+                {
+                    if (used[j]) continue;
+                    bool closeToAll = true;
+                    foreach (var member in cluster)
+                    {
+                        double dist = 0;
+                        for (int d = 0; d < member.X.Length; d++)
+                        {
+                            double dx = double.CreateChecked(member.X[d]) - double.CreateChecked(optResult[j].X[d]);
+                            dist += dx * dx;
+                        }
+                        dist = Math.Sqrt(dist);
+                        if (dist >= xMinDist)
+                        {
+                            closeToAll = false;
+                            break;
+                        }
+                    }
+                    if (closeToAll)
+                    {
+                        cluster.Add(optResult[j]);
+                        used[j] = true;
+                    }
+                }
+                clusters.Add(cluster);
+            }
+            return clusters;
+        }
 
         /*public static BigInteger Sqrt(BigInteger value)
         {

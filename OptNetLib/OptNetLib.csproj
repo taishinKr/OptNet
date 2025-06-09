@@ -5,6 +5,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>$(MSBuildProjectName.Replace("Lib", ""))</RootNamespace>
+    <AssemblyName>$(MSBuildProjectName.Replace("Lib", ""))</AssemblyName>
   </PropertyGroup>
 
   <Import Project="..\SharedSrc\SharedSrc.projitems" Label="Shared" />

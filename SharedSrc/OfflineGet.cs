@@ -67,7 +67,11 @@ namespace OptNet
             TildM = M * 100;
             Ns = M + 1;
 
-            string baseFolder = AppDomain.CurrentDomain.BaseDirectory;
+            string baseFolder = AppDomain.CurrentDomain.BaseDirectory + typeof(T).Name;
+            if (!Directory.Exists(baseFolder))
+            {
+                Directory.CreateDirectory(baseFolder);
+            }
             string fileNameBase = Path.Combine(baseFolder, "OptNetConst" + M.ToString() + "_" + TildM.ToString());
             fileNameCsv = fileNameBase + ".csv";
             fileNameBin = fileNameBase + ".bin";
@@ -271,9 +275,33 @@ namespace OptNet
         {
             int size = br.ReadInt32();
             byte[] bytes = br.ReadBytes(size);
-            uint length = (uint)(size / Unsafe.SizeOf<T>());
-            oneVar = new T[length];
-            Buffer.BlockCopy(bytes, 0, oneVar, 0, size);
+            uint length;
+            if (typeof(T) == typeof(decimal))
+            {
+                length = (uint)(size / (sizeof(int) * 4));
+                oneVar = new T[length];
+                for (int i = 0; i < length; i++)
+                {
+                    int startIndex = i * 16;
+                    int[] bits =
+                    [
+                        BitConverter.ToInt32(bytes, startIndex),
+                        BitConverter.ToInt32(bytes, startIndex + 4),
+                        BitConverter.ToInt32(bytes, startIndex + 8),
+                        BitConverter.ToInt32(bytes, startIndex + 12),
+                    ];
+                    oneVar[i] = (T)(object)new decimal(bits);
+                }
+            }
+            else
+            {
+                length = (uint)(size / Unsafe.SizeOf<T>());
+                oneVar = new T[length];
+                for (int i = 0; i < length; i++)
+                {
+                    oneVar[i] = (T)(object)BitConverter.ToDouble(bytes, i * sizeof(double));
+                }
+            }
             return length;
         }
         private void FileWriteBin()
@@ -281,42 +309,37 @@ namespace OptNet
             using (FileStream fs = new FileStream(fileNameBin, FileMode.Create, FileAccess.Write))
             using (BinaryWriter fwriter = new BinaryWriter(fs))
             {
-                // Serialize the object to a binary file
-                dynamic obj = Dp;
-                fwriter.Write(Unsafe.SizeOf<T>() * Dp.Length);
-                foreach (var item in obj)
+                Action<IEnumerable<T>> writeArray = (IEnumerable<T> arr) =>
                 {
-                    byte[] bytes = BitConverter.GetBytes(item);
-                    fwriter.Write(bytes);
-                }
-                obj = Ra;
-                fwriter.Write(Unsafe.SizeOf<T>() * Ra.GetLength(0) * Ra.GetLength(1));
-                foreach (var item in obj)
-                {
-                    byte[] bytes = BitConverter.GetBytes(item);
-                    fwriter.Write(bytes);
-                }
-                obj = Rb;
-                fwriter.Write(Unsafe.SizeOf<T>() * Rb.GetLength(0) * Rb.GetLength(1));
-                foreach (var item in obj)
-                {
-                    byte[] bytes = BitConverter.GetBytes(item);
-                    fwriter.Write(bytes);
-                }
-                obj = Rc;
-                fwriter.Write(Unsafe.SizeOf<T>() * Rc.GetLength(0) * Rc.GetLength(1));
-                foreach (var item in obj)
-                {
-                    byte[] bytes = BitConverter.GetBytes(item);
-                    fwriter.Write(bytes);
-                }
-                obj = P;
-                fwriter.Write(Unsafe.SizeOf<T>() * P.GetLength(0) * P.GetLength(1));
-                foreach (var item in obj)
-                {
-                    byte[] bytes = BitConverter.GetBytes(item);
-                    fwriter.Write(bytes);
-                }
+                    if (typeof(T) == typeof(decimal))
+                    {
+                        var list = arr.Cast<decimal>().ToList();
+                        fwriter.Write(list.Count * sizeof(int) * 4);
+                        foreach (var item in list)
+                        {
+                            int[] bits = decimal.GetBits(item);
+                            foreach (var b in bits)
+                                fwriter.Write(b);
+                        }
+                    }
+                    else
+                    {
+                        var list = arr.ToList();
+                        fwriter.Write(list.Count * Unsafe.SizeOf<T>());
+                        foreach (var item in list)
+                        {
+                            byte[] bytes = BitConverter.GetBytes((double)(object)item);
+                            fwriter.Write(bytes);
+                        }
+                    }
+                };
+
+                writeArray(Dp);
+                writeArray(Ra);
+                writeArray(Rb);
+                writeArray(Rc);
+                writeArray(P);
+
                 fwriter.Flush();
                 fs.Position = 0;
             }
