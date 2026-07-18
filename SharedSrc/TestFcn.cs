@@ -43,11 +43,11 @@ namespace OptNet
                 x[i] = double.CreateChecked(xT[i]);
 
             return T.CreateChecked(
-                Math.Pow(x[0] - x[1], 2) + Math.Exp( Math.Pow(1 - Math.Sin(x[0]), 2)) * Math.Cos(x[1]) + Math.Exp(Math.Pow(1 - Math.Cos(x[1]), 2)) * Math.Sin(x[0])
+                Math.Pow(x[0] - x[1], 2) + Math.Exp(Math.Pow(1 - Math.Sin(x[0]), 2)) * Math.Cos(x[1]) + Math.Exp(Math.Pow(1 - Math.Cos(x[1]), 2)) * Math.Sin(x[0])
             );
         }
 
-        
+
 
         // Test functions for optimization problems, Opt1D ////////////////////
         public T JTest1D(T xT)

@@ -1,5 +1,3 @@
-using System.Windows.Forms;
-
 namespace OptNet
 {
     public partial class Form1 : Form
@@ -19,7 +17,7 @@ namespace OptNet
             InitializeComponent();
 
             mTestFcn = new TestFcn<decimal>();
-            mOpt1D = new Opt1D<decimal>(mTestFcn.JTest1D, 0.01, 11, 0, 1, new OfflineGet<decimal>(11), Opt1D<decimal>.staMaskEnum.Max, null);  // "Min", "Max", or "Both"
+            mOpt1D = new Opt1D<decimal>(mTestFcn.JTest1D, 0.01, 11, 0, 1, new OfflineGet<decimal>(11), Opt1D<decimal>.StaMaskEnum.Max, null);  // "Min", "Max", or "Both"
 
             mParamTst1D = new OptParam<decimal>
             {
@@ -30,7 +28,7 @@ namespace OptNet
                 Ns = [11],
                 MinX = [0],
                 MaxX = [1],
-                Mode = OptMD<decimal>.staMaskEnum.Max
+                Mode = OptMD<decimal>.StaMaskEnum.Max
             };
             mParamTst2D = new OptParam<decimal>
             {
@@ -41,7 +39,7 @@ namespace OptNet
                 Ns = [11, 11],
                 MinX = [0, 0],
                 MaxX = [1, 1],
-                Mode = OptMD<decimal>.staMaskEnum.Max
+                Mode = OptMD<decimal>.StaMaskEnum.Max
             };
             mParamTst3D = new OptParam<decimal>
             {
@@ -52,7 +50,7 @@ namespace OptNet
                 Ns = [11, 11, 11],
                 MinX = [0, 0, 0],
                 MaxX = [1, 1, 1],
-                Mode = OptMD<decimal>.staMaskEnum.Max
+                Mode = OptMD<decimal>.StaMaskEnum.Max
             };
             mParamBird = new OptParam<decimal>
             {
@@ -63,7 +61,7 @@ namespace OptNet
                 Ns = [11, 11],
                 MinX = [-6, -6],
                 MaxX = [6, 6],
-                Mode = OptMD<decimal>.staMaskEnum.Min
+                Mode = OptMD<decimal>.StaMaskEnum.Min
             };
             mOptMD = new OptMD<decimal>(mParamTst2D);
 
@@ -73,9 +71,9 @@ namespace OptNet
         {
             // Form load event handler          
 
-            comboBoxBenchFcn.Items.AddRange(new object[] {
+            comboBoxBenchFcn.Items.AddRange([
                 "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly"
-            });
+            ]);
             comboBoxBenchFcn.SelectedIndex = 1; // Default to the first item
             numericUpDownShrink.Value = 0.5M; // Default value for numericUpDown
             numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
@@ -108,16 +106,16 @@ namespace OptNet
             }
             textBoxMsg.AppendText(message);
         }
-        private void buttonOptimzeMD_Click(object sender, EventArgs e)
+        private void ButtonOptimzeMD_Click(object sender, EventArgs e)
         {
-            mOptMD.optimizeMD();
+            mOptMD.OptimizeMD();
         }
-        private void buttonShrink_Click(object sender, EventArgs e)
+        private void ButtonShrink_Click(object sender, EventArgs e)
         {
             buttonShrink.Enabled = false;
             try
             {
-                mOptMD.shrinkBy((double)(numericUpDownShrink.Value), comboBoxIdxXlist.SelectedIndex);
+                mOptMD.ShrinkBy((double)(numericUpDownShrink.Value), comboBoxIdxXlist.SelectedIndex);
             }
             catch (InvalidOperationException ex)
             {
@@ -142,16 +140,16 @@ namespace OptNet
             comboBoxMinXdX.SelectedIndex = 0; // Set default selected index for comboBoxMinXdX
             comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
         }
-        private void buttonResetAll_Click(object sender, EventArgs e)
+        private void ButtonResetAll_Click(object sender, EventArgs e)
         {
             mOptMD = new OptMD<decimal>(mParamTst2D);
             comboBoxBenchFcn.SelectedIndex = 1;
             buttonShrink.Enabled = false;
         }
-        private void timer1_Tick(object sender, EventArgs e)
+        private void Timer1_Tick(object sender, EventArgs e)
         {
 
-            if (mOptMD.isSetSysFlag(OptMD<decimal>.staMaskEnum.Done))
+            if (mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.Done))
             {
                 comboBoxIdxXlist.Enabled = true;
                 numericUpDownShrink.Enabled = true;
@@ -165,18 +163,18 @@ namespace OptNet
             }
 
             string msg;
-            while ((msg = mOptMD.getDispMsg()) != string.Empty)
+            while ((msg = mOptMD.GetDispMsg()) != string.Empty)
                 DisplayMessage(msg);
             /*if (mOpt1D != null)
                 while ((msg = mOpt1D.getDispMsg()) != string.Empty)
                     DisplayMessage(msg);*/
 
         }
-        private void buttonClearMsgs_Click(object sender, EventArgs e)
+        private void ButtonClearMsgs_Click(object sender, EventArgs e)
         {
             textBoxMsg.Text = "";
         }
-        private void comboBoxIdxXlist_EnabledChanged(object sender, EventArgs e)
+        private void ComboBoxIdxXlist_EnabledChanged(object sender, EventArgs e)
         {
             if (comboBoxIdxXlist.Enabled)
             {
@@ -192,7 +190,7 @@ namespace OptNet
                 comboBoxIdxXlist.Items.Clear();
             }
         }
-        private void comboBoxBenchFcn_SelectedIndexChanged(object sender, EventArgs e)
+        private void ComboBoxBenchFcn_SelectedIndexChanged(object sender, EventArgs e)
         {
             var selectedItem = comboBoxBenchFcn.SelectedItem?.ToString();
             if (selectedItem == null)
@@ -201,7 +199,7 @@ namespace OptNet
                 return;
             }
             else
-                mOptMD.clrSysFlag(OptMD<decimal>.staMaskEnum.Done);
+                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.Done);
 
             switch (selectedItem)
             {
@@ -222,8 +220,8 @@ namespace OptNet
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "1DOnly":
-                    mOpt1D = new Opt1D<decimal>(mTestFcn.JTest1D, 0.001, 11, 0, 1, new OfflineGet<decimal>(11), Opt1D<decimal>.staMaskEnum.Max, null);  // "Min", "Max"
-                    DisplayMessage(mOpt1D.resultMsg());
+                    mOpt1D = new Opt1D<decimal>(mTestFcn.JTest1D, 0.001, 11, 0, 1, new OfflineGet<decimal>(11), Opt1D<decimal>.StaMaskEnum.Max, null);  // "Min", "Max"
+                    DisplayMessage(mOpt1D.ResultMsg());
                     buttonOptimzeMD.Enabled = false;
                     //buttonShrink.Enabled = false;
                     break;
@@ -252,13 +250,13 @@ namespace OptNet
             comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
         }
 
-        private void numericUpDownTolJ_ValueChanged(object sender, EventArgs e)
+        private void NumericUpDownTolJ_ValueChanged(object sender, EventArgs e)
         {
             mOptMD.TolJ = (double)(numericUpDownTolJ.Value / 100);
             labelTolJReal.Text = $"dJ: {mOptMD.TolJReal:F4}";
         }
 
-        private void numericUpDownTolX_ValueChanged(object sender, EventArgs e)
+        private void NumericUpDownTolX_ValueChanged(object sender, EventArgs e)
         {
             mOptMD.TolX = (double)(numericUpDownTolX.Value / 100); // Convert percentage to decimal
         }

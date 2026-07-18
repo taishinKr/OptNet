@@ -1,15 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Numerics;
+﻿using System.Numerics;
 
 namespace OptNet
 {
     public static class GeneralMath<T> where T : struct, INumber<T>
     {
-        public  static T[,] MultiplyMatrices(in T[,] matrixA,in T[,] matrixB)
+        public static T[,] MultiplyMatrices(in T[,] matrixA, in T[,] matrixB)
         {
             int rowsA = matrixA.GetLength(0);
             int colsA = matrixA.GetLength(1);
@@ -71,7 +66,7 @@ namespace OptNet
             T[] result = new T[rows];
 
             //for (int i = 0; i < rows; i++)
-            for (int i = minK; i < maxK+1; i++)
+            for (int i = minK; i < maxK + 1; i++)
             {
                 T sum = T.Zero;
                 for (int j = 0; j < cols; j++)
@@ -160,7 +155,7 @@ namespace OptNet
 
             return transposed;
         }
-        public static T[,] ExtractSubarray(in T[,] source, in uint startRow, in uint startCol, in  uint numRows, in uint numCols)
+        public static T[,] ExtractSubarray(in T[,] source, in uint startRow, in uint startCol, in uint numRows, in uint numCols)
         {
             if (startRow < 0 || startCol < 0 || startRow + numRows > source.GetLength(0) || startCol + numCols > source.GetLength(1))
             {
@@ -180,17 +175,17 @@ namespace OptNet
             return subarray;
         }
 
-        public static UInt32 setFlag(ref UInt32 Flag, in UInt32 mask)
+        public static UInt32 SetFlag(ref UInt32 Flag, in UInt32 mask)
         {
             Flag |= mask;
             return Flag;
         }
-        public static UInt32 clrFlag(ref UInt32 Flag, in UInt32 mask)
+        public static UInt32 ClrFlag(ref UInt32 Flag, in UInt32 mask)
         {
             Flag &= (UInt32)(~mask);
             return Flag;
         }
-        public static bool isSetFlag(in UInt32 Flag, in UInt32 mask)
+        public static bool IsSetFlag(in UInt32 Flag, in UInt32 mask)
         {
             if ((Flag & mask) == 0)
                 return false;
@@ -222,12 +217,12 @@ namespace OptNet
                 {
                     if (used[j]) continue;
                     bool closeToAll = true;
-                    foreach (var member in cluster)
+                    foreach (var (X, J) in cluster)
                     {
                         double dist = 0;
-                        for (int d = 0; d < member.X.Length; d++)
+                        for (int d = 0; d < X.Length; d++)
                         {
-                            double dx = double.CreateChecked(member.X[d]) - double.CreateChecked(optResult[j].X[d]);
+                            double dx = double.CreateChecked(X[d]) - double.CreateChecked(optResult[j].X[d]);
                             dist += dx * dx;
                         }
                         dist = Math.Sqrt(dist);

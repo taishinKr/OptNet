@@ -1,16 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Numerics;
-using System.Runtime.Intrinsics.Arm;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Text;
-using System.Threading.Tasks;
-using System.Runtime.CompilerServices;
-using System.Drawing.Design;
+﻿using System.Collections;
 using System.Collections.Immutable;
-using System.Collections;
+using System.Numerics;
+using System.Runtime.CompilerServices;
 
 namespace OptNet
 {
@@ -92,11 +83,11 @@ namespace OptNet
                 var Q = ImmutableArray2D<T>.Create(CalculateQ());
                 var rw = ImmutableArray2D<T>.Create(CalculateRw(Q.Data));
                 Ra = ImmutableArray2D<T>.Create(
-                    GeneralMath<T>.MultiplyMatrices(CalculateABC(anx), rw.Data));
+                    GeneralMath<T>.MultiplyMatrices(CalculateABC(Anx), rw.Data));
                 Rb = ImmutableArray2D<T>.Create(
-                    GeneralMath<T>.MultiplyMatrices(CalculateABC(bnx), rw.Data));
+                    GeneralMath<T>.MultiplyMatrices(CalculateABC(Bnx), rw.Data));
                 Rc = ImmutableArray2D<T>.Create(
-                    GeneralMath<T>.MultiplyMatrices(CalculateABC(cnx), rw.Data));
+                    GeneralMath<T>.MultiplyMatrices(CalculateABC(Cnx), rw.Data));
 
                 FileWriteCsv();
                 FileWriteBin();
@@ -113,14 +104,14 @@ namespace OptNet
             using (FileStream fs = new FileStream(fileNameCsv, FileMode.Open, FileAccess.Read))
             using (StreamReader sr = new StreamReader(fs))
             {
-                convOneLine(sr, out T[] dptmp);
+                ConvOneLine(sr, out T[] dptmp);
                 uint rowLength = (uint)(dptmp.Length - 1);
                 dp = ImmutableArray.Create(dptmp);
 
                 var rabctmp = new T[rowLength, M + 1];
                 for (uint i = 0; i < rowLength; i++)
                 {
-                    convOneLine(sr, out T[] row);
+                    ConvOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
                         rabctmp[i, j] = row[j];
                 }
@@ -128,7 +119,7 @@ namespace OptNet
 
                 for (uint i = 0; i < rowLength; i++)
                 {
-                    convOneLine(sr, out T[] row);
+                    ConvOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
                         rabctmp[i, j] = row[j];
                 }
@@ -136,7 +127,7 @@ namespace OptNet
 
                 for (uint i = 0; i < rowLength; i++)
                 {
-                    convOneLine(sr, out T[] row);
+                    ConvOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
                         rabctmp[i, j] = row[j];
                 }
@@ -145,7 +136,7 @@ namespace OptNet
                 var ptmp = new T[M + 1, M + 1];
                 for (uint i = 0; i < M + 1; i++)
                 {
-                    convOneLine(sr, out T[] row);
+                    ConvOneLine(sr, out T[] row);
                     for (uint j = 0; j < M + 1; j++)
                         ptmp[i, j] = row[j];
                 }
@@ -153,7 +144,7 @@ namespace OptNet
             }
             return (dp, ra, rb, rc, p);
         }
-        private void convOneLine(in StreamReader sr, out T[] lowD)
+        private void ConvOneLine(in StreamReader sr, out T[] lowD)
         {
             string? line;
             if ((line = sr.ReadLine()) != null)
@@ -230,13 +221,13 @@ namespace OptNet
             using (FileStream fs = new FileStream(fileNameBin, FileMode.Open, FileAccess.Read))
             using (BinaryReader freader = new BinaryReader(fs))
             {
-                uint dpLength = convOneVar(freader, out T[] dptmp);
+                uint dpLength = ConvOneVar(freader, out T[] dptmp);
 
 
                 dp = ImmutableArray.Create(dptmp);
 
                 var rabctmp = new T[dpLength - 1, M + 1];
-                convOneVar(freader, out T[] obj);
+                ConvOneVar(freader, out T[] obj);
                 for (uint i = 0; i < dpLength - 1; i++)
                 {
                     for (uint j = 0; j < M + 1; j++)
@@ -244,7 +235,7 @@ namespace OptNet
                 }
                 ra = ImmutableArray2D<T>.Create(rabctmp);
 
-                convOneVar(freader, out obj);
+                ConvOneVar(freader, out obj);
                 for (uint i = 0; i < dpLength - 1; i++)
                 {
                     for (uint j = 0; j < M + 1; j++)
@@ -252,7 +243,7 @@ namespace OptNet
                 }
                 rb = ImmutableArray2D<T>.Create(rabctmp);
 
-                convOneVar(freader, out obj);
+                ConvOneVar(freader, out obj);
                 for (uint i = 0; i < dpLength - 1; i++)
                 {
                     for (uint j = 0; j < M + 1; j++)
@@ -261,7 +252,7 @@ namespace OptNet
                 rc = ImmutableArray2D<T>.Create(rabctmp);
 
                 var ptmp = new T[M + 1, M + 1];
-                convOneVar(freader, out obj);
+                ConvOneVar(freader, out obj);
                 for (uint i = 0; i < M + 1; i++)
                 {
                     for (uint j = 0; j < M + 1; j++)
@@ -271,7 +262,7 @@ namespace OptNet
             }
             return (dp, ra, rb, rc, p);
         }
-        private uint convOneVar(in BinaryReader br, out T[] oneVar)
+        private uint ConvOneVar(in BinaryReader br, out T[] oneVar)
         {
             int size = br.ReadInt32();
             byte[] bytes = br.ReadBytes(size);
@@ -414,26 +405,26 @@ namespace OptNet
             var tmpInvQQtQaKaPbar = GeneralMath<T>.MultiplyMatrices(tmpInvQQtQaKa, Pbar);
             return tmpInvQQtQaKaPbar;
         }
-        private uint kK(in uint n, T x) => (uint)Math.Floor(n * double.CreateChecked(x));
-        private T anx(uint n, T x)
+        private uint KK(in uint n, T x) => (uint)Math.Floor(n * double.CreateChecked(x));
+        private T Anx(uint n, T x)
         {
-            uint k = kK(n, x);
+            uint k = KK(n, x);
             if (k % 2 == 0)
                 return T.CreateChecked(-4 * n * n);
             else
                 return T.CreateChecked(4 * n * n);
         }
-        private T bnx(uint n, T x)
+        private T Bnx(uint n, T x)
         {
-            uint k = kK(n, x);
+            uint k = KK(n, x);
             if (k % 2 == 0)
                 return T.CreateChecked(4 * n * (2 * k + 1));
             else
                 return T.CreateChecked(-4 * n * (2 * k + 1));
         }
-        private T cnx(uint n, T x)
+        private T Cnx(uint n, T x)
         {
-            uint k = kK(n, x);
+            uint k = KK(n, x);
             if (k % 2 == 0)
                 return T.CreateChecked(-4 * k * (k + 1));
             else

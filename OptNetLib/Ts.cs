@@ -16,7 +16,7 @@ namespace OptNet
         public Ts(in Func<double, double> J, double TolJ, uint Ns, double minX, double maxX, uint mode)
         {
             dlConstVars = new OfflineGet<double>(Ns);
-            dlOpt1D = new Opt1D<double>(J, TolJ, Ns, minX, maxX, dlConstVars, (Opt1D<double>.staMaskEnum)mode, null);
+            dlOpt1D = new Opt1D<double>(J, TolJ, Ns, minX, maxX, dlConstVars, (Opt1D<double>.StaMaskEnum)mode, null);
         }
         /*public Ts(uint dimN, uint[] Ns, double[] minX, double[] maxX, uint mode)
         {
@@ -36,7 +36,7 @@ namespace OptNet
                 Ns = Ns,
                 MinX = minX,
                 MaxX = maxX,
-                Mode = (OptMD<double>.staMaskEnum)mode
+                Mode = (OptMD<double>.StaMaskEnum)mode
             });
         }
         public Ts()

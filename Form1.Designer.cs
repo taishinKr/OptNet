@@ -78,7 +78,7 @@
             buttonOptimzeMD.TabIndex = 0;
             buttonOptimzeMD.Text = "OptimzeMD";
             buttonOptimzeMD.UseVisualStyleBackColor = true;
-            buttonOptimzeMD.Click += buttonOptimzeMD_Click;
+            buttonOptimzeMD.Click += ButtonOptimzeMD_Click;
             // 
             // buttonShrink
             // 
@@ -89,7 +89,7 @@
             buttonShrink.TabIndex = 1;
             buttonShrink.Text = "Shrink";
             buttonShrink.UseVisualStyleBackColor = true;
-            buttonShrink.Click += buttonShrink_Click;
+            buttonShrink.Click += ButtonShrink_Click;
             // 
             // buttonResetAll
             // 
@@ -99,7 +99,7 @@
             buttonResetAll.TabIndex = 4;
             buttonResetAll.Text = "ResetAll";
             buttonResetAll.UseVisualStyleBackColor = true;
-            buttonResetAll.Click += buttonResetAll_Click;
+            buttonResetAll.Click += ButtonResetAll_Click;
             // 
             // buttonClearMsgs
             // 
@@ -109,13 +109,13 @@
             buttonClearMsgs.TabIndex = 5;
             buttonClearMsgs.Text = "ClearMsgs";
             buttonClearMsgs.UseVisualStyleBackColor = true;
-            buttonClearMsgs.Click += buttonClearMsgs_Click;
+            buttonClearMsgs.Click += ButtonClearMsgs_Click;
             // 
             // timer1
             // 
             timer1.Enabled = true;
             timer1.Interval = 300;
-            timer1.Tick += timer1_Tick;
+            timer1.Tick += Timer1_Tick;
             // 
             // comboBoxIdxXlist
             // 
@@ -128,7 +128,7 @@
             comboBoxIdxXlist.Name = "comboBoxIdxXlist";
             comboBoxIdxXlist.Size = new Size(65, 23);
             comboBoxIdxXlist.TabIndex = 3;
-            comboBoxIdxXlist.EnabledChanged += comboBoxIdxXlist_EnabledChanged;
+            comboBoxIdxXlist.EnabledChanged += ComboBoxIdxXlist_EnabledChanged;
             // 
             // comboBoxBenchFcn
             // 
@@ -139,7 +139,7 @@
             comboBoxBenchFcn.Name = "comboBoxBenchFcn";
             comboBoxBenchFcn.Size = new Size(100, 23);
             comboBoxBenchFcn.TabIndex = 11;
-            comboBoxBenchFcn.SelectedIndexChanged += comboBoxBenchFcn_SelectedIndexChanged;
+            comboBoxBenchFcn.SelectedIndexChanged += ComboBoxBenchFcn_SelectedIndexChanged;
             // 
             // numericUpDownShrink
             // 
@@ -162,7 +162,7 @@
             numericUpDownTolX.TabIndex = 13;
             numericUpDownTolX.TextAlign = HorizontalAlignment.Center;
             numericUpDownTolX.Value = new decimal(new int[] { 1, 0, 0, 196608 });
-            numericUpDownTolX.ValueChanged += numericUpDownTolX_ValueChanged;
+            numericUpDownTolX.ValueChanged += NumericUpDownTolX_ValueChanged;
             // 
             // numericUpDownTolJ
             // 
@@ -173,7 +173,7 @@
             numericUpDownTolJ.TabIndex = 14;
             numericUpDownTolJ.TextAlign = HorizontalAlignment.Center;
             numericUpDownTolJ.Value = new decimal(new int[] { 1, 0, 0, 196608 });
-            numericUpDownTolJ.ValueChanged += numericUpDownTolJ_ValueChanged;
+            numericUpDownTolJ.ValueChanged += NumericUpDownTolJ_ValueChanged;
             // 
             // labelIdx
             // 
