@@ -76,7 +76,6 @@ namespace OptNet
                 constVars = constvars;
 
             W = CalcW(Js);
-            //omegaW = calcOmegaW(Js);
 
             CalOptCIntv(out minDpK, out maxDpK);
             A = GeneralMath<T>.LinearTransform(constVars.Ra.Data, Js, (int)minDpK, (int)maxDpK);
@@ -89,15 +88,15 @@ namespace OptNet
 
             var maxJ = Lo.Max(item => item.J);
             var minJ = Lo.Min(item => item.J);
-            var spanJ = maxJ - minJ;
+            
+            //var spanJ = maxJ - minJ;               
+            //if (spanJ == T.Zero)
+            //    throw new InvalidOperationException("The span of J values is zero, countinuous solution!");
 
-            //if ( double.CreateChecked(spanJ) < 0.00001)
-            if (spanJ == T.Zero)
-                throw new InvalidOperationException("The span of J values is zero, countinuous solution!");
-
+            
             if (IsSetSysFlag(StaMaskEnum.Max))
             {
-                //Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked((item.J - maxJ) / spanJ)) <= TolJ)]; //.ToArray();
+                //Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked((item.J - maxJ) / spanJ)) <= TolJ)]; //.ToArray(); 
                 Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked(item.J - maxJ)) <= TolJ)]; //.ToArray();
             }
             if (IsSetSysFlag(StaMaskEnum.Min))

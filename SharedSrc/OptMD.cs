@@ -121,7 +121,7 @@ namespace OptNet
             dXHalf = ImmutableArray.Create(dxhalf);
 
             var samplejtot = new List<T>();
-            GetSample(0, ref samplejtot);
+            GetSampleRecur(0, ref samplejtot);
             spanJ = double.CreateChecked(samplejtot.Max() - samplejtot.Min());
 
             sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
@@ -210,17 +210,17 @@ namespace OptNet
 
             ClrSysFlag(StaMaskEnum.Done);
             // for Parallel running ***************************************
-            await OptimaizeMdRecurAsync(0, sampleJtot, Opt).ContinueWith(
-                t =>
-                {
-                    var Optlist = t.Result;
-                    optResult = [.. Optlist]; //Optlist.ToArray();
-                }
-            );
+            //await OptimaizeMdRecurAsync(0, sampleJtot, Opt).ContinueWith(
+            //    t =>
+            //    {
+            //        var Optlist = t.Result;
+            //        optResult = [.. Optlist]; //Optlist.ToArray();
+            //    }
+            //);
 
             // for Serial running ***************************************
-            /* var Optlist = OptimaizeMdRecur(0, sampleJtot, Opt);
-            optResult = Optlist.ToArray(); */
+            var Optlist = OptimaizeMdRecur(0, sampleJtot, Opt);
+            optResult = Optlist.ToArray();
 
             CalResultReal();
             optResultReal = AdjustResult(); // optResultReal = adjustResult().ToArray();
@@ -305,27 +305,31 @@ namespace OptNet
 
             var Optlist = new List<(T[] X, T J)>();
 
+            // Optimize the current axis and get the optimal values and intervals
             var (optlist1Axis, optintv) = OptimizeMD1Axis(samplejtot, axisIdx);
 
             if (axisIdx == 0)
                 IntvX = optintv;
 
+            // Recursively optimize the next axis if not at the last dimension
             foreach (var opt1Axis in optlist1Axis)
             {
                 Opt.X[axisIdx] = opt1Axis.X;
                 Opt.J = opt1Axis.J;
 
+                // If at the last dimension, clone the current solution and add it to the result list
                 if (axisIdx == dimN - 1)
                 {
                     var opt = ((T[])Opt.X.Clone(), Opt.J);  // Optlist.Add only clones the reference, not the value.
 
                     Optlist.Add(opt);
                 }
+                // If not at the last dimension, resample and continue optimizing recursively
                 else
                 {
                     List<T> newSample = []; // new List<T>()
                     var inputIdx = new uint[dimN];
-                    ReSample(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
+                    ReSampleRecur(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
 
                     var OptlistNew = OptimaizeMdRecur(axisIdx + 1, [.. newSample], Opt); // newSample.ToImmutableList();
                     Optlist.AddRange(OptlistNew);
@@ -386,7 +390,7 @@ namespace OptNet
                 {
                     List<T> newSample = []; // new List<T>()
                     var inputIdx = new uint[dimN];
-                    ReSample(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
+                    ReSampleRecur(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
 
                     await OptimaizeMdRecurAsync(axisIdx + 1, [.. newSample], Opt).ContinueWith( // newSample.ToImmutableList();
                         t =>
@@ -535,17 +539,30 @@ namespace OptNet
 
                     var marginDx = 0.1 * dx;
 
+                    //optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X)) - marginDx;
+                    //if (optIntv[0][idxDim] < 0.0)
+                    //{
+                    //    optIntv[0][idxDim] = 0.0;
+                    //    optIntv[1][idxDim] = 2 * marginDx;
+                    //}
+
+                    //optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
+                    //if (optIntv[1][idxDim] > 1.0)
+                    //{
+                    //    optIntv[0][idxDim] = 1.0 - 2 * marginDx;
+                    //    optIntv[1][idxDim] = 1.0;
+                    //}
+
+                    // Adjust the intervals for the current dimension based on the optimized values and a margin
                     optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X)) - marginDx;
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
+
                     if (optIntv[0][idxDim] < 0.0)
                     {
                         optIntv[0][idxDim] = 0.0;
-                        optIntv[1][idxDim] = 2 * marginDx;
                     }
-
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
                     if (optIntv[1][idxDim] > 1.0)
                     {
-                        optIntv[0][idxDim] = 1.0 - 2 * marginDx;
                         optIntv[1][idxDim] = 1.0;
                     }
                 }
@@ -604,15 +621,17 @@ namespace OptNet
                     new double[dimN]  // maxX
                 ];
 
+            // Recursively sample and optimize the current axis
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
-                inputIndex[idxDim] = n;
+                inputIndex[idxDim] = n; // Set the current index for the dimension being processed
 
+                // If at the last dimension, directly sample the objective function value
                 if (idxDim == dimN - 1)
                 {
                     sampleJs[n] = samplejtot[(int)GetIdTot(inputIndex)];
                     // optmal value is definitive.
-                    if (axisIdx == 0)
+                    if (axisIdx == 0) // No effect for idxDim == dimN - 1, since the minXs and maxXs are not used in that case.
                     {
                         minXs[n] = new double[dimN];
                         maxXs[n] = new double[dimN];
@@ -642,8 +661,10 @@ namespace OptNet
             OfflineGet<T> constVar;
             lock (_locker)
             {
+                // Check if the constant variable for the current dimension already exists in the lookup table
                 if (lutConstant.TryGetValue(Ns[idxDim], out OfflineGet<T>? value))
                     constVar = value;
+                // If not, create a new constant variable and add it to the lookup table
                 else
                 {
                     constVar = new OfflineGet<T>(Ns[idxDim]);
@@ -651,15 +672,17 @@ namespace OptNet
                 }
             }
 
+            // Create an instance of the Opt1D class for the current dimension, using the sampled values and other parameters
             if ((axisIdx != 0) && (idxDim == axisIdx))
             {
                 var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
                 opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, optIntV1D);
-                //opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
             }
+            // If not at the specified axis, create an instance of the Opt1D class without specifying intervals
             else
             {
                 opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, null);
+                // If at the first axis, calculate the minimum and maximum intervals for the remaining dimensions based on the optimized values
                 if (axisIdx == 0)
                 {
                     for (int i = idxDim + 1; i < dimN; i++)
@@ -670,12 +693,14 @@ namespace OptNet
                         foreach (var opt in opt1D.Optlist)
                         {
                             var optidx = (int)(double.CreateChecked(opt.X) / dx);
+                            // If the optimized index is at the last position, use the last intervals for the current dimension
                             if (optidx >= (Ns[idxDim] - 1))
                             {
                                 var idxlast = Ns[idxDim] - 1;
                                 intvMin = minXs[idxlast][i];
                                 intvMax = maxXs[idxlast][i];
                             }
+                            // Calculate the minimum and maximum intervals which are adjacent to the current optimized value
                             else
                             {
                                 intvMin = Math.Min(
@@ -701,17 +726,30 @@ namespace OptNet
 
                     var marginDx = 0.1 * dx;
 
+                    //optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X)) - marginDx;
+                    //if (optIntv[0][idxDim] < 0.0)
+                    //{
+                    //    optIntv[0][idxDim] = 0.0;
+                    //    optIntv[1][idxDim] = 2 * marginDx;
+                    //}
+
+                    //optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
+                    //if (optIntv[1][idxDim] > 1.0)
+                    //{
+                    //    optIntv[0][idxDim] = 1.0 - 2 * marginDx;
+                    //    optIntv[1][idxDim] = 1.0;
+                    //}
+
+                    // Adjust the intervals for the current dimension based on the optimized values and a margin
                     optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X)) - marginDx;
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
+
                     if (optIntv[0][idxDim] < 0.0)
                     {
                         optIntv[0][idxDim] = 0.0;
-                        optIntv[1][idxDim] = 2 * marginDx;
                     }
-
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
                     if (optIntv[1][idxDim] > 1.0)
                     {
-                        optIntv[0][idxDim] = 1.0 - 2 * marginDx;
                         optIntv[1][idxDim] = 1.0;
                     }
                 }
@@ -728,7 +766,7 @@ namespace OptNet
         /// list. Otherwise, the method recurses into the next dimension.</remarks>
         /// <param name="idxDim">The current dimension index being processed. Must be within the valid range of dimensions.</param>
         /// <param name="samplejtot">A reference to the list where the generated sample values will be added. Cannot be null.</param>
-        private void GetSample(int idxDim, ref List<T> samplejtot)
+        private void GetSampleRecur(int idxDim, ref List<T> samplejtot)
         {
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
@@ -736,7 +774,7 @@ namespace OptNet
                 if (idxDim == dimN - 1)
                     samplejtot.Add(J(inputX));
                 else
-                    GetSample(idxDim + 1, ref samplejtot);
+                    GetSampleRecur(idxDim + 1, ref samplejtot);
             }
         }
         /// <summary>
@@ -751,7 +789,7 @@ namespace OptNet
         /// <param name="inputIdx">A reference to an array representing the current indices for each dimension during the resampling process.</param>
         /// <param name="iSample">A reference to the immutable list of input samples used for resampling.</param>
         /// <param name="oSample">A reference to the list where the resampled output values will be stored.</param>
-        private void ReSample(T x, int axisIdx, int idxDim, ref uint[] inputIdx, ref ImmutableList<T> iSample, ref List<T> oSample)
+        private void ReSampleRecur(T x, int axisIdx, int idxDim, ref uint[] inputIdx, ref ImmutableList<T> iSample, ref List<T> oSample)
         {
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
@@ -773,7 +811,7 @@ namespace OptNet
                     oSample.Add(sum);
                 }
                 else
-                    ReSample(x, axisIdx, idxDim + 1, ref inputIdx, ref iSample, ref oSample);
+                    ReSampleRecur(x, axisIdx, idxDim + 1, ref inputIdx, ref iSample, ref oSample);
             }
         }
         /// <summary>
