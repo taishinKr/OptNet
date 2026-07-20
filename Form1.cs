@@ -12,6 +12,8 @@ namespace OptNet
         public OptParam<decimal> mParamTst3D;
         public OptParam<decimal> mParamBird;
 
+        private bool _initializing;
+
         public Form1()
         {
             InitializeComponent();
@@ -65,6 +67,11 @@ namespace OptNet
             };
             mOptMD = new OptMD<decimal>(mParamTst2D);
 
+            _initializing = true;
+            checkBoxThread.Checked = mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+            radioButtonMin.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Min);
+            radioButtonMax.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Max);
+            _initializing = false;
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -248,6 +255,12 @@ namespace OptNet
             comboBoxMaxX.SelectedIndex = 0; // Set default selected index for comboBoxMaxX
             comboBoxMinXdX.SelectedIndex = 0; // Set default selected index for comboBoxMinXdX
             comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
+
+            _initializing = true;
+            checkBoxThread.Checked = mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+            radioButtonMax.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Max);
+            radioButtonMin.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Min);
+            _initializing = false;
         }
 
         private void NumericUpDownTolJ_ValueChanged(object sender, EventArgs e)
@@ -259,6 +272,40 @@ namespace OptNet
         private void NumericUpDownTolX_ValueChanged(object sender, EventArgs e)
         {
             mOptMD.TolX = (double)(numericUpDownTolX.Value / 100); // Convert percentage to decimal
+        }
+
+        private void checkBoxThread_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if (checkBoxThread.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+            }
+        }
+
+        private void radioButtonMin_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if (radioButtonMin.Checked)
+                mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Min;
+            else
+                mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Max;
+        }
+
+        private void radioButtonMax_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if(radioButtonMax.Checked)
+                mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Max;
+            else
+                mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Min;
         }
     }
 }

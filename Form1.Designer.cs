@@ -54,6 +54,9 @@
             labelMinXdX = new Label();
             labelMaxXdX = new Label();
             labelTolJReal = new Label();
+            radioButtonMin = new RadioButton();
+            checkBoxThread = new CheckBox();
+            radioButtonMax = new RadioButton();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -313,11 +316,49 @@
             labelTolJReal.TabIndex = 28;
             labelTolJReal.Text = "dJ:";
             // 
+            // radioButtonMin
+            // 
+            radioButtonMin.AutoSize = true;
+            radioButtonMin.Location = new Point(539, 22);
+            radioButtonMin.Name = "radioButtonMin";
+            radioButtonMin.Size = new Size(75, 19);
+            radioButtonMin.TabIndex = 29;
+            radioButtonMin.TabStop = true;
+            radioButtonMin.Text = "Minimize";
+            radioButtonMin.UseVisualStyleBackColor = true;
+            radioButtonMin.CheckedChanged += radioButtonMin_CheckedChanged;
+            // 
+            // checkBoxThread
+            // 
+            checkBoxThread.AutoSize = true;
+            checkBoxThread.Location = new Point(433, 27);
+            checkBoxThread.Name = "checkBoxThread";
+            checkBoxThread.Size = new Size(90, 19);
+            checkBoxThread.TabIndex = 30;
+            checkBoxThread.Text = "MultiThread";
+            checkBoxThread.UseVisualStyleBackColor = true;
+            checkBoxThread.CheckedChanged += checkBoxThread_CheckedChanged;
+            // 
+            // radioButtonMax
+            // 
+            radioButtonMax.AutoSize = true;
+            radioButtonMax.Location = new Point(539, 39);
+            radioButtonMax.Name = "radioButtonMax";
+            radioButtonMax.Size = new Size(77, 19);
+            radioButtonMax.TabIndex = 31;
+            radioButtonMax.TabStop = true;
+            radioButtonMax.Text = "Maximize";
+            radioButtonMax.UseVisualStyleBackColor = true;
+            radioButtonMax.CheckedChanged += radioButtonMax_CheckedChanged;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(802, 632);
+            Controls.Add(radioButtonMax);
+            Controls.Add(checkBoxThread);
+            Controls.Add(radioButtonMin);
             Controls.Add(labelTolJReal);
             Controls.Add(comboBoxMaxXdX);
             Controls.Add(comboBoxMinXdX);
@@ -379,5 +420,8 @@
         private Label labelMinXdX;
         private Label labelMaxXdX;
         private Label labelTolJReal;
+        private RadioButton radioButtonMin;
+        private CheckBox checkBoxThread;
+        private RadioButton radioButtonMax;
     }
 }

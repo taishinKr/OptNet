@@ -56,7 +56,9 @@ namespace OptNet
         private ImmutableArray<T> dX;
         private ImmutableArray<T> dXHalf;
         private ImmutableList<T> sampleJtot;
-        private readonly StaMaskEnum mode;
+        // 'mode' is different from 'mState', which is used for internal state management.
+        // 'mode' is dedicated to specifying the optimization goal (Min or Max) and should not be combined.
+        private StaMaskEnum mode;//private readonly StaMaskEnum mode;
         private ImmutableDictionary<uint, OfflineGet<T>> lutConstant;
 
         private static readonly Lock _locker = new();//new Lock();
@@ -74,12 +76,14 @@ namespace OptNet
         public T[] MaxX => [.. maxX]; // maxX.ToArray();
         public T[] DXHalf => [.. dXHalf]; // dXHalf.ToArray();
         public uint DimN => dimN;
+        //private readonly StaMaskEnum mode;
+        public StaMaskEnum Mode { get => mode; set => mode = value; }
 
         public double[][] IntvX { get; set; } // minX, maxX
         public Func<T[], T> J;
         public ConcurrentQueue<string> DisplayMsgQueue;
         [Flags]
-        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, Verbose = 1 << 4 }
+        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, Verbose = 1 << 4, MThread = 1 << 5 }
         private UInt32 mState = 0;
         /// <summary>
         /// Initializes a new instance of the <see cref="OptMD{T}"/> class with the specified optimization parameters.
@@ -104,6 +108,9 @@ namespace OptNet
             this.mode = optParam.Mode;
             if (Ns.Length != dimN || minX.Length != dimN || maxX.Length != dimN)
                 throw new ArgumentException("The lengths of Ns, minX, and maxX must match the dimension dimN.");
+            // Validate the mode to ensure it is either Min or Max, but not both
+            // 'mode' is different from 'mState', which is used for internal state management.
+            // 'mode' is dedicated to specifying the optimization goal (Min or Max) and should not be combined.
             if (mode == (StaMaskEnum.Max | StaMaskEnum.Min))
                 this.mode = StaMaskEnum.Max;
 
@@ -132,6 +139,7 @@ namespace OptNet
 
             SetSysFlag(StaMaskEnum.Verbose);
             ClrSysFlag(StaMaskEnum.Done);
+            ClrSysFlag(StaMaskEnum.MThread);
         }
         /// <summary>
         /// Adjusts the range and resolution of the data grid by shrinking it around a specified point.
@@ -210,17 +218,22 @@ namespace OptNet
 
             ClrSysFlag(StaMaskEnum.Done);
             // for Parallel running ***************************************
-            //await OptimaizeMdRecurAsync(0, sampleJtot, Opt).ContinueWith(
-            //    t =>
-            //    {
-            //        var Optlist = t.Result;
-            //        optResult = [.. Optlist]; //Optlist.ToArray();
-            //    }
-            //);
-
-            // for Serial running ***************************************
-            var Optlist = OptimaizeMdRecur(0, sampleJtot, Opt);
-            optResult = Optlist.ToArray();
+            if (IsSetSysFlag(StaMaskEnum.MThread))
+            {
+                await OptimaizeMdRecurAsync(0, sampleJtot, Opt).ContinueWith(
+                    t =>
+                    {
+                        var Optlist = t.Result;
+                        optResult = [.. Optlist]; //Optlist.ToArray();
+                    }
+                );
+            }
+            else
+            {
+                // for Serial running ***************************************
+                var Optlist = OptimaizeMdRecur(0, sampleJtot, Opt);
+                optResult = Optlist.ToArray();
+            }            
 
             CalResultReal();
             optResultReal = AdjustResult(); // optResultReal = adjustResult().ToArray();
