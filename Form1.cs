@@ -13,6 +13,8 @@ namespace OptNet
         public OptParam<decimal> mParamBird;
 
         private bool _initializing;
+        private bool verboseEnabled;
+        private bool threadEnabled;
 
         public Form1()
         {
@@ -67,11 +69,34 @@ namespace OptNet
             };
             mOptMD = new OptMD<decimal>(mParamTst2D);
 
+            SetModeOfNewOptMD();
+        }
+
+        private void SetModeOfNewOptMD()
+        {
             _initializing = true;
-            checkBoxThread.Checked = mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+            //checkBoxThread.Checked = mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
             radioButtonMin.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Min);
             radioButtonMax.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Max);
+            //checkBoxVerbose.Checked = mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
             _initializing = false;
+
+            if (checkBoxVerbose.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
+            }
+            if (checkBoxThread.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -152,6 +177,8 @@ namespace OptNet
             mOptMD = new OptMD<decimal>(mParamTst2D);
             comboBoxBenchFcn.SelectedIndex = 1;
             buttonShrink.Enabled = false;
+
+            SetModeOfNewOptMD();
         }
         private void Timer1_Tick(object sender, EventArgs e)
         {
@@ -256,11 +283,7 @@ namespace OptNet
             comboBoxMinXdX.SelectedIndex = 0; // Set default selected index for comboBoxMinXdX
             comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
 
-            _initializing = true;
-            checkBoxThread.Checked = mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
-            radioButtonMax.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Max);
-            radioButtonMin.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Min);
-            _initializing = false;
+            SetModeOfNewOptMD();
         }
 
         private void NumericUpDownTolJ_ValueChanged(object sender, EventArgs e)
@@ -302,10 +325,24 @@ namespace OptNet
         {
             if (_initializing) return;
 
-            if(radioButtonMax.Checked)
+            if (radioButtonMax.Checked)
                 mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Max;
             else
                 mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Min;
+        }
+
+        private void checkBoxVerbose_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if (checkBoxThread.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
+            }
         }
     }
 }

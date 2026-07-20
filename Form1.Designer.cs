@@ -53,10 +53,11 @@
             comboBoxMinXdX = new ComboBox();
             labelMinXdX = new Label();
             labelMaxXdX = new Label();
-            labelTolJReal = new Label();
             radioButtonMin = new RadioButton();
             checkBoxThread = new CheckBox();
             radioButtonMax = new RadioButton();
+            checkBoxVerbose = new CheckBox();
+            labelTolJReal = new Label();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -307,19 +308,10 @@
             labelMaxXdX.TabIndex = 24;
             labelMaxXdX.Text = "MaxX+dX/2";
             // 
-            // labelTolJReal
-            // 
-            labelTolJReal.AutoSize = true;
-            labelTolJReal.Location = new Point(258, 51);
-            labelTolJReal.Name = "labelTolJReal";
-            labelTolJReal.Size = new Size(21, 15);
-            labelTolJReal.TabIndex = 28;
-            labelTolJReal.Text = "dJ:";
-            // 
             // radioButtonMin
             // 
             radioButtonMin.AutoSize = true;
-            radioButtonMin.Location = new Point(539, 22);
+            radioButtonMin.Location = new Point(406, 22);
             radioButtonMin.Name = "radioButtonMin";
             radioButtonMin.Size = new Size(75, 19);
             radioButtonMin.TabIndex = 29;
@@ -331,7 +323,7 @@
             // checkBoxThread
             // 
             checkBoxThread.AutoSize = true;
-            checkBoxThread.Location = new Point(433, 27);
+            checkBoxThread.Location = new Point(497, 23);
             checkBoxThread.Name = "checkBoxThread";
             checkBoxThread.Size = new Size(90, 19);
             checkBoxThread.TabIndex = 30;
@@ -342,7 +334,7 @@
             // radioButtonMax
             // 
             radioButtonMax.AutoSize = true;
-            radioButtonMax.Location = new Point(539, 39);
+            radioButtonMax.Location = new Point(406, 39);
             radioButtonMax.Name = "radioButtonMax";
             radioButtonMax.Size = new Size(77, 19);
             radioButtonMax.TabIndex = 31;
@@ -351,15 +343,37 @@
             radioButtonMax.UseVisualStyleBackColor = true;
             radioButtonMax.CheckedChanged += radioButtonMax_CheckedChanged;
             // 
+            // checkBoxVerbose
+            // 
+            checkBoxVerbose.AutoSize = true;
+            checkBoxVerbose.Location = new Point(588, 22);
+            checkBoxVerbose.Name = "checkBoxVerbose";
+            checkBoxVerbose.Size = new Size(69, 19);
+            checkBoxVerbose.TabIndex = 32;
+            checkBoxVerbose.Text = "Verbose";
+            checkBoxVerbose.UseVisualStyleBackColor = true;
+            checkBoxVerbose.Checked = true;
+            checkBoxVerbose.CheckedChanged += checkBoxVerbose_CheckedChanged;
+            // 
+            // labelTolJReal
+            // 
+            labelTolJReal.AutoSize = true;
+            labelTolJReal.Location = new Point(258, 56);
+            labelTolJReal.Name = "labelTolJReal";
+            labelTolJReal.Size = new Size(45, 15);
+            labelTolJReal.TabIndex = 33;
+            labelTolJReal.Text = "TolJ(%)";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(802, 632);
+            Controls.Add(labelTolJReal);
+            Controls.Add(checkBoxVerbose);
             Controls.Add(radioButtonMax);
             Controls.Add(checkBoxThread);
             Controls.Add(radioButtonMin);
-            Controls.Add(labelTolJReal);
             Controls.Add(comboBoxMaxXdX);
             Controls.Add(comboBoxMinXdX);
             Controls.Add(labelMinXdX);
@@ -419,9 +433,10 @@
         private ComboBox comboBoxMinXdX;
         private Label labelMinXdX;
         private Label labelMaxXdX;
-        private Label labelTolJReal;
         private RadioButton radioButtonMin;
         private CheckBox checkBoxThread;
         private RadioButton radioButtonMax;
+        private CheckBox checkBoxVerbose;
+        private Label labelTolJReal;
     }
 }

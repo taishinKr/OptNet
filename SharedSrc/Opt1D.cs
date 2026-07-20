@@ -57,6 +57,7 @@ namespace OptNet
             ClrSysFlag(StaMaskEnum.Max);
             ClrSysFlag(StaMaskEnum.Min);
             var modetmp = mode;
+            // If both Max and Min flags are set, prioritize Max flag
             if (mode == (StaMaskEnum.Max | StaMaskEnum.Min))
                 modetmp = StaMaskEnum.Max;
             SetSysFlag(modetmp);
@@ -83,8 +84,10 @@ namespace OptNet
             C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, (int)minDpK, (int)maxDpK);
 
             Lo = GetLo();
-            Lo.Add((T.Zero, Jw(T.Zero)));
-            Lo.Add((T.One, Jw(T.One)));
+            //Lo.Add((T.Zero, Jw(T.Zero)));
+            //Lo.Add((T.One, Jw(T.One)));
+            Lo.Add((dXHalf, Jw(dXHalf)));
+            Lo.Add((T.One - dXHalf, Jw(T.One - dXHalf)));
 
             var maxJ = Lo.Max(item => item.J);
             var minJ = Lo.Min(item => item.J);

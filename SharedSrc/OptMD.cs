@@ -240,7 +240,7 @@ namespace OptNet
             CalResultPrj();
 
             SetSysFlag(StaMaskEnum.Done);
-            AddDispMsg(ResultMsg());
+            AddDispMsg(ResultMsg(), true);
         }
         /// <summary>
         /// Adjusts the result by clustering items based on their distance and selecting representative items from each
@@ -973,11 +973,23 @@ namespace OptNet
         /// <param name="msg">The message to enqueue. Must not be null or empty.</param>
         public void AddDispMsg(string msg)
         {
-            if (IsSetSysFlag(StaMaskEnum.Verbose) && !string.IsNullOrEmpty(msg))
+            if (IsSetSysFlag(StaMaskEnum.Verbose) && !string.IsNullOrEmpty(msg)
+                )
             {
                 DisplayMsgQueue.Enqueue(msg);
             }
 
+        }
+        public void AddDispMsg(string msg, bool isAwaysVerbose)
+        {
+            if (isAwaysVerbose)
+            {
+                DisplayMsgQueue.Enqueue(msg);
+            }
+            else
+            {
+                AddDispMsg(msg);
+            }
         }
         /// <summary>
         /// Retrieves a message from the display message queue if the verbose system flag is set.
@@ -989,7 +1001,9 @@ namespace OptNet
         /// otherwise, an empty string.</returns>
         public string GetDispMsg()
         {
-            if (IsSetSysFlag(StaMaskEnum.Verbose) && DisplayMsgQueue.TryDequeue(out string? msg))
+            //if (IsSetSysFlag(StaMaskEnum.Verbose) && DisplayMsgQueue.TryDequeue(out string? msg))
+            if (DisplayMsgQueue.TryDequeue(out string? msg))
+
                 return msg;
             else
                 return string.Empty;
