@@ -4,7 +4,7 @@ using System.Numerics;
 
 namespace OptNet
 {
-    public class OptParam<T> where T : struct, INumber<T>
+    public class OptParam<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>
     {
         public Func<T[], T> J { get; set; }
         public double TolJ { get; set; }
@@ -47,7 +47,7 @@ namespace OptNet
             this.Mode = Mode;
         }
     }
-    public class OptMD<T> where T : struct, INumber<T>
+    public class OptMD<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>
     {
         private readonly uint dimN;
         private ImmutableArray<uint> Ns;

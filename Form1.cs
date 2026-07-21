@@ -3,14 +3,14 @@ namespace OptNet
     public partial class Form1 : Form
     {
 
-        private TestFcn<decimal> mTestFcn;
-        private OptMD<decimal> mOptMD;
-        private Opt1D<decimal> mOpt1D;
+        private TestFcn<double> mTestFcn;
+        private OptMD<double> mOptMD;
+        private Opt1D<double> mOpt1D;
 
-        public OptParam<decimal> mParamTst1D;
-        public OptParam<decimal> mParamTst2D;
-        public OptParam<decimal> mParamTst3D;
-        public OptParam<decimal> mParamBird;
+        public OptParam<double> mParamTst1D;
+        public OptParam<double> mParamTst2D;
+        public OptParam<double> mParamTst3D;
+        public OptParam<double> mParamBird;
 
         private bool _initializing;
         private bool verboseEnabled;
@@ -20,10 +20,10 @@ namespace OptNet
         {
             InitializeComponent();
 
-            mTestFcn = new TestFcn<decimal>();
-            mOpt1D = new Opt1D<decimal>(mTestFcn.JTest1D, 0.01, 11, 0, 1, new OfflineGet<decimal>(11), Opt1D<decimal>.StaMaskEnum.Max, null);  // "Min", "Max", or "Both"
+            mTestFcn = new TestFcn<double>();
+            mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.01, 11, 0, 1, new OfflineGet<double>(11), Opt1D<double>.StaMaskEnum.Max, null);  // "Min", "Max", or "Both"
 
-            mParamTst1D = new OptParam<decimal>
+            mParamTst1D = new OptParam<double>
             {
                 J = mTestFcn.JTest1D,
                 TolJ = 0.001,
@@ -32,9 +32,9 @@ namespace OptNet
                 Ns = [11],
                 MinX = [0],
                 MaxX = [1],
-                Mode = OptMD<decimal>.StaMaskEnum.Max
+                Mode = OptMD<double>.StaMaskEnum.Max
             };
-            mParamTst2D = new OptParam<decimal>
+            mParamTst2D = new OptParam<double>
             {
                 J = mTestFcn.JTest2D,
                 TolJ = 0.001,
@@ -43,9 +43,9 @@ namespace OptNet
                 Ns = [11, 11],
                 MinX = [0, 0],
                 MaxX = [1, 1],
-                Mode = OptMD<decimal>.StaMaskEnum.Max
+                Mode = OptMD<double>.StaMaskEnum.Max
             };
-            mParamTst3D = new OptParam<decimal>
+            mParamTst3D = new OptParam<double>
             {
                 J = mTestFcn.JTest3D,
                 TolJ = 0.001,
@@ -54,9 +54,9 @@ namespace OptNet
                 Ns = [11, 11, 11],
                 MinX = [0, 0, 0],
                 MaxX = [1, 1, 1],
-                Mode = OptMD<decimal>.StaMaskEnum.Max
+                Mode = OptMD<double>.StaMaskEnum.Max
             };
-            mParamBird = new OptParam<decimal>
+            mParamBird = new OptParam<double>
             {
                 J = mTestFcn.Bird2D,
                 TolJ = 0.1,
@@ -65,9 +65,9 @@ namespace OptNet
                 Ns = [11, 11],
                 MinX = [-6, -6],
                 MaxX = [6, 6],
-                Mode = OptMD<decimal>.StaMaskEnum.Min
+                Mode = OptMD<double>.StaMaskEnum.Min
             };
-            mOptMD = new OptMD<decimal>(mParamTst2D);
+            mOptMD = new OptMD<double>(mParamTst2D);
 
             SetModeOfNewOptMD();
         }
@@ -75,27 +75,27 @@ namespace OptNet
         private void SetModeOfNewOptMD()
         {
             _initializing = true;
-            //checkBoxThread.Checked = mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
-            radioButtonMin.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Min);
-            radioButtonMax.Checked = (mOptMD.Mode == OptMD<decimal>.StaMaskEnum.Max);
-            //checkBoxVerbose.Checked = mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
+            //checkBoxThread.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.MThread);
+            radioButtonMin.Checked = (mOptMD.Mode == OptMD<double>.StaMaskEnum.Min);
+            radioButtonMax.Checked = (mOptMD.Mode == OptMD<double>.StaMaskEnum.Max);
+            //checkBoxVerbose.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             _initializing = false;
 
             if (checkBoxVerbose.Checked)
             {
-                mOptMD.SetSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             }
             else
             {
-                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             }
             if (checkBoxThread.Checked)
             {
-                mOptMD.SetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.MThread);
             }
             else
             {
-                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.MThread);
             }
         }
 
@@ -174,7 +174,7 @@ namespace OptNet
         }
         private void ButtonResetAll_Click(object sender, EventArgs e)
         {
-            mOptMD = new OptMD<decimal>(mParamTst2D);
+            mOptMD = new OptMD<double>(mParamTst2D);
             comboBoxBenchFcn.SelectedIndex = 1;
             buttonShrink.Enabled = false;
 
@@ -183,7 +183,7 @@ namespace OptNet
         private void Timer1_Tick(object sender, EventArgs e)
         {
 
-            if (mOptMD.IsSetSysFlag(OptMD<decimal>.StaMaskEnum.Done))
+            if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Done))
             {
                 comboBoxIdxXlist.Enabled = true;
                 numericUpDownShrink.Enabled = true;
@@ -233,28 +233,28 @@ namespace OptNet
                 return;
             }
             else
-                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.Done);
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.Done);
 
             switch (selectedItem)
             {
                 case "JTest1D":
-                    mOptMD = new OptMD<decimal>(mParamTst1D);
+                    mOptMD = new OptMD<double>(mParamTst1D);
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "JTest2D":
-                    mOptMD = new OptMD<decimal>(mParamTst2D);
+                    mOptMD = new OptMD<double>(mParamTst2D);
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "JTest3D":
-                    mOptMD = new OptMD<decimal>(mParamTst3D);
+                    mOptMD = new OptMD<double>(mParamTst3D);
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "Bird2D":
-                    mOptMD = new OptMD<decimal>(mParamBird);
+                    mOptMD = new OptMD<double>(mParamBird);
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "1DOnly":
-                    mOpt1D = new Opt1D<decimal>(mTestFcn.JTest1D, 0.001, 11, 0, 1, new OfflineGet<decimal>(11), Opt1D<decimal>.StaMaskEnum.Max, null);  // "Min", "Max"
+                    mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.001, 11, 0, 1, new OfflineGet<double>(11), Opt1D<double>.StaMaskEnum.Max, null);  // "Min", "Max"
                     DisplayMessage(mOpt1D.ResultMsg());
                     buttonOptimzeMD.Enabled = false;
                     //buttonShrink.Enabled = false;
@@ -303,11 +303,11 @@ namespace OptNet
 
             if (checkBoxThread.Checked)
             {
-                mOptMD.SetSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.MThread);
             }
             else
             {
-                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.MThread);
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.MThread);
             }
         }
 
@@ -316,9 +316,9 @@ namespace OptNet
             if (_initializing) return;
 
             if (radioButtonMin.Checked)
-                mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Min;
+                mOptMD.Mode = OptMD<double>.StaMaskEnum.Min;
             else
-                mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Max;
+                mOptMD.Mode = OptMD<double>.StaMaskEnum.Max;
         }
 
         private void radioButtonMax_CheckedChanged(object sender, EventArgs e)
@@ -326,9 +326,9 @@ namespace OptNet
             if (_initializing) return;
 
             if (radioButtonMax.Checked)
-                mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Max;
+                mOptMD.Mode = OptMD<double>.StaMaskEnum.Max;
             else
-                mOptMD.Mode = OptMD<decimal>.StaMaskEnum.Min;
+                mOptMD.Mode = OptMD<double>.StaMaskEnum.Min;
         }
 
         private void checkBoxVerbose_CheckedChanged(object sender, EventArgs e)
@@ -337,11 +337,11 @@ namespace OptNet
 
             if (checkBoxThread.Checked)
             {
-                mOptMD.SetSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             }
             else
             {
-                mOptMD.ClrSysFlag(OptMD<decimal>.StaMaskEnum.Verbose);
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             }
         }
     }

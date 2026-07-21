@@ -2,7 +2,7 @@ using System.Numerics;
 
 namespace OptNet
 {
-    public class TestFcn<T> where T : struct, INumber<T>
+    public class TestFcn<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>
     {
         // Test functions for optimization problems, OptMD ////////////////////
         public T JTest1D(T[] xT)
