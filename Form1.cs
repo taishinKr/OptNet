@@ -335,7 +335,7 @@ namespace OptNet
         {
             if (_initializing) return;
 
-            if (checkBoxThread.Checked)
+            if (checkBoxVerbose.Checked)
             {
                 mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             }

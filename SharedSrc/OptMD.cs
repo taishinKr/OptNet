@@ -6,7 +6,7 @@ namespace OptNet
 {
     public class OptParam<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>
     {
-        public Func<T[], T> J { get; set; }
+        public Func<T[], uint, T> J { get; set; }
         public double TolJ { get; set; }
         public double TolX { get; set; }
         public uint DimN { get; set; }
@@ -28,7 +28,7 @@ namespace OptNet
             Mode = OptMD<T>.StaMaskEnum.Done; // Default value, should be set properly later.            
         }
         public OptParam(
-            in Func<T[], T> J,
+            in Func<T[], uint, T> J,
             in double TolJ,
             in double TolX,
             in uint DimN,
@@ -98,7 +98,7 @@ namespace OptNet
         /// the mode is invalid.</exception>
         public OptMD(OptParam<T> optParam)
         {
-            J = optParam.J;
+            J = x => optParam.J(x,optParam.DimN);
             this.TolX = optParam.TolX < 0.0 ? 0.001 : optParam.TolX; // default value if tolX is negative
             this.TolJ = optParam.TolJ < 0.0 ? 0.001 : optParam.TolJ; // default value if tolJ is negative
             this.dimN = optParam.DimN;

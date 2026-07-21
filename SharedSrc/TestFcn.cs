@@ -5,13 +5,13 @@ namespace OptNet
     public class TestFcn<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>
     {
         // Test functions for optimization problems, OptMD ////////////////////
-        public T JTest1D(T[] xT)
+        public T JTest1D(T[] xT, uint dim)
         {
             double[] x = new double[1]; ;
             x[0] = double.CreateChecked(xT[0]);
             return T.CreateChecked(Math.Exp(x[0]) * Math.Sin(5.5 * Math.PI * x[0]));
         }
-        public T JTest2D(T[] xT)
+        public T JTest2D(T[] xT, uint dim)
         {
             double[] x = new double[2];
 
@@ -22,7 +22,7 @@ namespace OptNet
                 1.0E-14 * Math.Exp(-34 * x[0] * x[0] + x[0] * (64 - 60 * x[1]) + (64 - 34 * x[1]) * x[1]) * Math.Sin(6 * Math.Sqrt(2) * (x[0] - x[1]))
             );
         }
-        public T JTest3D(T[] xT)
+        public T JTest3D(T[] xT, uint dim)
         {
             double[] x = new double[3];
 
@@ -35,7 +35,7 @@ namespace OptNet
             );
         }
 
-        public T Bird2D(T[] xT)
+        public T Bird2D(T[] xT, uint dim)
         {
             double[] x = new double[2];
 
