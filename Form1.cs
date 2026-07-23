@@ -73,10 +73,10 @@ namespace OptNet
                 J = mTestFcn.Ackley,
                 TolJ = 0.001,
                 TolX = 0.1,
-                DimN = 2,
-                Ns = [11, 11],
-                MinX = [-32, -32],
-                MaxX = [32, 32],
+                DimN = 6,
+                Ns = [11, 11, 11, 11, 11, 11],
+                MinX = [-32, -32, -32, -32, -32, -32],
+                MaxX = [32, 32, 32, 32, 32, 32],
                 Mode = OptMD<double>.StaMaskEnum.Min
             };
             mOptMD = new OptMD<double>(mParamTst2D);
@@ -152,6 +152,12 @@ namespace OptNet
         }
         private void ButtonOptimzeMD_Click(object sender, EventArgs e)
         {
+            buttonOptimzeMD.Enabled = false;
+
+            buttonShrink.Enabled = false;
+            numericUpDownShrink.Enabled = false;
+            comboBoxIdxXlist.Enabled = false;
+
             mOptMD.OptimizeMD();
         }
         private void ButtonShrink_Click(object sender, EventArgs e)
@@ -200,6 +206,7 @@ namespace OptNet
                 comboBoxIdxXlist.Enabled = true;
                 numericUpDownShrink.Enabled = true;
                 buttonShrink.Enabled = true;
+                buttonOptimzeMD.Enabled = true;
             }
             else
             {

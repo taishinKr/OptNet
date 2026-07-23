@@ -316,7 +316,7 @@ namespace OptNet
         /// objective value <c>J</c>.</returns>
         private List<(T[] X, T J)> OptimaizeMdRecur(int axisIdx, ImmutableList<T> samplejtot, (T[] X, T J) Opt)
         {
-            AddDispMsg(string.Format("MdReur({0,0:G3})" + Environment.NewLine, axisIdx));
+            AddDispMsg(string.Format("MdRecur({0,0:G3})" + Environment.NewLine, axisIdx));
 
             var Optlist = new List<(T[] X, T J)>();
 
@@ -640,6 +640,7 @@ namespace OptNet
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
                 inputIndex[idxDim] = n; // Set the current index for the dimension being processed
+                AddDispMsg(string.Format("        Md1Axis({0,0:G3},{1,0:G3},{2,0:G3})" + Environment.NewLine, axisIdx, idxDim, n));
 
                 // If at the last dimension, directly sample the objective function value
                 if (idxDim == dimN - 1)
@@ -656,7 +657,7 @@ namespace OptNet
                 }
                 else
                 {
-                    AddDispMsg(string.Format("        Md1Axis({0,0:G3},{1,0:G3},{2,0:G3})" + Environment.NewLine, axisIdx, idxDim, n));
+                    // AddDispMsg(string.Format("        Md1Axis({0,0:G3},{1,0:G3},{2,0:G3})" + Environment.NewLine, axisIdx, idxDim, n));
 
                     (var optlist, optIntv) = OptimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex);
 
