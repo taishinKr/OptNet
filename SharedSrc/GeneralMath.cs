@@ -202,7 +202,7 @@ namespace OptNet
         /// <param name="xMinDist">The minimum distance required to consider points as part of the same cluster.</param>
         /// <returns>A list of clusters, where each cluster is a list of tuples containing the coordinates and associated value
         /// of points that are close to each other based on the specified minimum distance.</returns>
-        public static List<List<(T[] X, T J)>> ClusterByDistance((T[] X, T J)[] optResult, double xMinDist)
+        public static List<List<(T[] X, T J)>> ClusterByDistance((T[] X, T J)[] optResult, T xMinDist)
         {
             var clusters = new List<List<(T[] X, T J)>>();
             var used = new bool[optResult.Length];
@@ -219,13 +219,14 @@ namespace OptNet
                     bool closeToAll = true;
                     foreach (var (X, J) in cluster)
                     {
-                        double dist = 0;
+                        T dist = T.Zero;
                         for (int d = 0; d < X.Length; d++)
                         {
-                            double dx = double.CreateChecked(X[d]) - double.CreateChecked(optResult[j].X[d]);
+                            T dx = X[d] - optResult[j].X[d];
                             dist += dx * dx;
                         }
-                        dist = Math.Sqrt(dist);
+
+                        dist = T.CreateChecked(Math.Sqrt(double.CreateChecked(dist)));
                         if (dist >= xMinDist)
                         {
                             closeToAll = false;

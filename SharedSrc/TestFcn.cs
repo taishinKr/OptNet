@@ -47,6 +47,46 @@ namespace OptNet
             );
         }
 
+        /// <summary>
+        /// Computes the Ackley benchmark function for generic numeric types.
+        /// </summary>
+        /// <typeparam name="T">A numeric type implementing trigonometric, exponential, and root functions.</typeparam>
+        /// <param name="xT">The decision variable array (input vector).</param>
+        /// <param name="dim">The dimension of the decision variable space.</param>
+        /// <returns>The evaluated Ackley function value.</returns>
+        public T Ackley(T[] xT, uint dim)
+        {
+            if (xT == null || xT.Length < dim)
+                throw new ArgumentException("Input array length must be greater than or equal to the specified dimension.");
+
+            if (dim == 0)
+                return T.Zero;
+
+            T sum1 = T.Zero;
+            T sum2 = T.Zero;
+            T twoPi = T.CreateChecked(2.0 * Math.PI);
+
+            for (int i = 0; i < dim; i++)
+            {
+                sum1 += xT[i] * xT[i];
+                sum2 += T.Cos(twoPi * xT[i]);
+            }
+
+            T d = T.CreateChecked(dim);
+
+            // Term 1: -20 * exp(-0.2 * sqrt( (1/d) * sum1 ))
+            // IRootFunctions<T> 덕분에 T.Sqrt 가 정상 작동합니다.
+            T term1 = T.CreateChecked(-20.0) * T.Exp(T.CreateChecked(-0.2) * T.Sqrt(sum1 / d));
+
+            // Term 2: -exp( (1/d) * sum2 )
+            T term2 = -T.Exp(sum2 / d);
+
+            // Constant: 20 + e
+            T constant = T.CreateChecked(20.0) + T.E;
+
+            return term1 + term2 + constant;
+        }
+
 
 
         // Test functions for optimization problems, Opt1D ////////////////////

@@ -2,7 +2,7 @@
 
 namespace OptNet
 {
-    public class Opt1D<T> where T : struct, INumber<T>
+    public class Opt1D<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T> 
     {
         private readonly T[] W;
         private readonly T[] A;
@@ -52,7 +52,7 @@ namespace OptNet
         /// <param name="mode"></param>
         /// <param name="optIntv"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        public Opt1D(in T[] sampleJs, double TolJ, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in StaMaskEnum mode, double[]? optIntv)
+        public Opt1D(in T[] sampleJs, T TolJ, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in StaMaskEnum mode, double[]? optIntv)
         {
             ClrSysFlag(StaMaskEnum.Max);
             ClrSysFlag(StaMaskEnum.Min);
@@ -66,6 +66,7 @@ namespace OptNet
             this.sampleJs = sampleJs;
             this.minX = minX;
             this.maxX = maxX;
+            var dxhalf = T.One / T.CreateChecked((Ns - 1)/2);
             dX = (maxX - minX) / T.CreateChecked((Ns - 1));
             dXHalf = dX / T.CreateChecked(2);
 
@@ -83,11 +84,11 @@ namespace OptNet
             B = GeneralMath<T>.LinearTransform(constVars.Rb.Data, Js, (int)minDpK, (int)maxDpK);
             C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, (int)minDpK, (int)maxDpK);
 
-            Lo = GetLo();
+            Lo = GetLo((int)minDpK, (int)maxDpK);
             //Lo.Add((T.Zero, Jw(T.Zero)));
             //Lo.Add((T.One, Jw(T.One)));
-            Lo.Add((dXHalf, Jw(dXHalf)));
-            Lo.Add((T.One - dXHalf, Jw(T.One - dXHalf)));
+            Lo.Add((dxhalf, Jw(dxhalf)));
+            Lo.Add((T.One - dxhalf, Jw(T.One - dxhalf)));
 
             var maxJ = Lo.Max(item => item.J);
             var minJ = Lo.Min(item => item.J);
@@ -100,12 +101,13 @@ namespace OptNet
             if (IsSetSysFlag(StaMaskEnum.Max))
             {
                 //Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked((item.J - maxJ) / spanJ)) <= TolJ)]; //.ToArray(); 
-                Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked(item.J - maxJ)) <= TolJ)]; //.ToArray();
+                //Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked(item.J - maxJ)) <= TolJ)]; //.ToArray();
+                Optlist = [.. Lo.Where(item => T.Abs(item.J - maxJ) <= (T)TolJ)];
             }
             if (IsSetSysFlag(StaMaskEnum.Min))
             {
                 //Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked((item.J - minJ) / spanJ)) <= TolJ)]; //.ToArray();
-                Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked(item.J - minJ)) <= TolJ)]; //.ToArray();
+                Optlist = [.. Lo.Where(item => T.Abs(item.J - minJ) <= TolJ)]; //.ToArray();
             }
         }
         /// <summary>
@@ -149,7 +151,7 @@ namespace OptNet
             B = GeneralMath<T>.LinearTransform(constVars.Rb.Data, Js, minDpK, maxDpK);
             C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, minDpK, maxDpK);
 
-            Lo = GetLo();
+            Lo = GetLo((int)minDpK, (int)maxDpK);
             Lo.Add((T.Zero, Jw(T.Zero)));
             Lo.Add((T.One, Jw(T.One)));
 
@@ -186,11 +188,13 @@ namespace OptNet
         /// Calculates the list of local optima (Lo) by solving quadratic equations derived from the coefficients A, B, and C for each interval defined by the constant variables. The method checks if the solutions are within the valid range and adds them to the list along with their corresponding J values.
         /// </summary>
         /// <returns></returns>
-        private List<(T X, T J)> GetLo()
+        private List<(T X, T J)> GetLo(int minDpK, int maxDpK)
         {
             var lo = new List<(T X, T J)>();
             for (int k = 0; k < A.Length; k++)
             {
+                if((k<minDpK) || (k>maxDpK))
+                    continue;
                 T tmpD2 = B[k] * B[k] - A[k] * C[k] * (T.One + T.One + T.One + T.One);
 
                 T x;
@@ -286,8 +290,10 @@ namespace OptNet
         /// <returns></returns>
         private bool IsInCi(in T x, in int k)
         {
-
-            if ((x >= constVars.Dp[k]) && (x < constVars.Dp[k + 1]))
+            //var a = T.Abs(x- constVars.Dp[k]);
+            //var b = T.Abs(x- constVars.Dp[k + 1]);
+            var tol = T.CreateChecked(0.001);
+            if ((x >= constVars.Dp[k]-tol) && (x < constVars.Dp[k + 1]+tol))
                 return true;
             else
                 return false;

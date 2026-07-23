@@ -7,8 +7,8 @@ namespace OptNet
     public class OptParam<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>
     {
         public Func<T[], uint, T> J { get; set; }
-        public double TolJ { get; set; }
-        public double TolX { get; set; }
+        public double TolJ { get; set; } //
+        public double TolX { get; set; } // tolerance(ratio, %) for the input vector, X, to be considered as converged.
         public uint DimN { get; set; }
         public uint[] Ns { get; set; }
         public T[] MinX { get; set; }
@@ -68,10 +68,10 @@ namespace OptNet
         public (T[] X, T J)[] optResult = [];
         public (T[] X, T J)[] optResultReal = [];
 
-        public double TolJ { get; set; } = 0.1; // tolerance(ratio) for the objective function, J, to be considered as converged.
-        private double spanJ = 0.0; // span of the objective function, J, from the initial sampling. 
-        public double TolJReal => spanJ * TolJ; // tolerance for the objective function, J, to be considered as converged.
-        public double TolX { get; set; } = 0.1; // tolerance(ratio) for the input vector, X, to be considered as converged.
+        public T TolJ { get; set; } = T.CreateChecked(0.1); // tolerance(ratio) for the objective function, J, to be considered as converged.
+        private T spanJ = T.Zero; // span of the objective function, J, from the initial sampling. 
+        public T TolJReal => spanJ * TolJ; // tolerance for the objective function, J, to be considered as converged.
+        public T TolX { get; set; } = T.CreateChecked(0.1); // tolerance(ratio) for the input vector, X, to be considered as converged.
         public T[] MinX => [.. minX]; // minX.ToArray();
         public T[] MaxX => [.. maxX]; // maxX.ToArray();
         public T[] DXHalf => [.. dXHalf]; // dXHalf.ToArray();
@@ -99,8 +99,10 @@ namespace OptNet
         public OptMD(OptParam<T> optParam)
         {
             J = x => optParam.J(x,optParam.DimN);
-            this.TolX = optParam.TolX < 0.0 ? 0.001 : optParam.TolX; // default value if tolX is negative
-            this.TolJ = optParam.TolJ < 0.0 ? 0.001 : optParam.TolJ; // default value if tolJ is negative
+            var tmpTolX = optParam.TolX < 0.0 ? 0.001 : optParam.TolX; // default value if tolX is negative
+            this.TolX = T.CreateChecked(tmpTolX);
+            var tmpTolJ = optParam.TolJ < 0.0 ? 0.001 : optParam.TolJ; // default value if tolJ is negative
+            this.TolJ = T.CreateChecked(tmpTolJ);
             this.dimN = optParam.DimN;
             this.Ns = ImmutableArray.Create(optParam.Ns);
             this.minX = ImmutableArray.Create(optParam.MinX);
@@ -129,7 +131,7 @@ namespace OptNet
 
             var samplejtot = new List<T>();
             GetSampleRecur(0, ref samplejtot);
-            spanJ = double.CreateChecked(samplejtot.Max() - samplejtot.Min());
+            spanJ = samplejtot.Max() - samplejtot.Min();
 
             sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
 
@@ -151,7 +153,7 @@ namespace OptNet
         /// <param name="ratio">The shrink ratio to apply. A value of 0.5 maintains the current sample count, while other values may change
         /// the number of samples.</param>
         /// <param name="idxXlist">The index of the target point in the list of optimization results around which the grid will be shrunk.</param>
-        public void ShrinkBy(double ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
+        public void ShrinkBy(T ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
             var minx = new T[dimN];
             var maxx = new T[dimN];
@@ -163,12 +165,12 @@ namespace OptNet
             for (int idxDim = 0; idxDim < dimN; idxDim++)
             {
                 int dxIdx = (int)(Ns[idxDim] - 1.0);
-                int rdxIdx = (int)(ratio * dxIdx);
+                int rdxIdx = (int)(int.CreateChecked(ratio) * dxIdx);
                 if (rdxIdx <= 0)
                     throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
                 //double optidx = (double.CreateChecked(optResult.Xlist[idxXlist][idxDim]) * dxIdx);
-                double optidx = (double.CreateChecked(optResult[idxXlist].X[idxDim]) * dxIdx);
-                int minIdx = (int)(optidx - rdxIdx / 2.0);
+                T optidx = (T.CreateChecked(optResult[idxXlist].X[idxDim]) * dX[idxDim]);
+                int minIdx = (int)(double.CreateChecked(optidx) - rdxIdx / 2.0);
                 if (minIdx < 0)
                     minIdx = 0;
                 int maxIdx = minIdx + rdxIdx;
@@ -199,7 +201,7 @@ namespace OptNet
 
             var adjTolX = TolX / ratio; // adjust the tolerance for the input vector, X, to be considered as converged. 
                                         // Fix for the problematic line causing multiple errors  
-            TolX = (adjTolX < 1) ? adjTolX : 1; // Adjust the tolerance for the input vector, X, to be considered as converged. 
+            TolX = (adjTolX < T.One) ? adjTolX : T.One; // Adjust the tolerance for the input vector, X, to be considered as converged. 
 
 
             ClrSysFlag(StaMaskEnum.Done);
@@ -259,14 +261,14 @@ namespace OptNet
         private (T[] X, T J)[] AdjustResult()
         {
             var clusters = new List<List<(T[] X, T J)>>();
-            if (TolX < 1.0)
+            if (TolX < T.One)
             {
-                var spanX = 0.0;
+                var spanX = T.Zero;
                 for (int i = 0; i < dimN; i++)
                 {
-                    spanX += double.CreateChecked(maxX[i] - minX[i]) * double.CreateChecked(maxX[i] - minX[i]);
+                    spanX += (maxX[i] - minX[i]) * (maxX[i] - minX[i]);
                 }
-                spanX = Math.Sqrt(spanX);
+                spanX = T.Sqrt(spanX);
 
                 clusters = GeneralMath<T>.ClusterByDistance(optResultReal, TolX * spanX);
             }
@@ -294,7 +296,7 @@ namespace OptNet
             }
             if (newResult.Length != 0)
             {
-                newResult = [.. newResult.Where(item => Math.Abs(double.CreateChecked(item.J - optj)) <= TolJReal)]; //.ToArray();
+                newResult = [.. newResult.Where(item => T.Abs(item.J - optj) <= TolJReal)]; //.ToArray();
             }
             return newResult;
         }

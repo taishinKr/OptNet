@@ -18,6 +18,10 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Compile Remove="SharedSrc\OfflineGet - 복사본.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="WinformSrc.zip" />
   </ItemGroup>
 

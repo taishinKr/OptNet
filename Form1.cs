@@ -11,6 +11,7 @@ namespace OptNet
         public OptParam<double> mParamTst2D;
         public OptParam<double> mParamTst3D;
         public OptParam<double> mParamBird;
+        public OptParam<double> mParamAckley;
 
         private bool _initializing;
         private bool verboseEnabled;
@@ -67,6 +68,17 @@ namespace OptNet
                 MaxX = [6, 6],
                 Mode = OptMD<double>.StaMaskEnum.Min
             };
+            mParamAckley = new OptParam<double>
+            {
+                J = mTestFcn.Ackley,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-32, -32],
+                MaxX = [32, 32],
+                Mode = OptMD<double>.StaMaskEnum.Min
+            };
             mOptMD = new OptMD<double>(mParamTst2D);
 
             SetModeOfNewOptMD();
@@ -104,7 +116,7 @@ namespace OptNet
             // Form load event handler          
 
             comboBoxBenchFcn.Items.AddRange([
-                "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly"
+                "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly", "Ackley"
             ]);
             comboBoxBenchFcn.SelectedIndex = 1; // Default to the first item
             numericUpDownShrink.Value = 0.5M; // Default value for numericUpDown
@@ -251,6 +263,10 @@ namespace OptNet
                     break;
                 case "Bird2D":
                     mOptMD = new OptMD<double>(mParamBird);
+                    buttonOptimzeMD.Enabled = true;
+                    break;
+                case "Ackley":
+                    mOptMD = new OptMD<double>(mParamAckley);
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "1DOnly":
