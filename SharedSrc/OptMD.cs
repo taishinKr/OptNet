@@ -186,12 +186,12 @@ namespace OptNet
 
             for (int idxDim = 0; idxDim < dimN; idxDim++)
             {
-                int dxIdx = (int)(Ns[idxDim] - 1.0);
-                int rdxIdx = (int)(double.CreateChecked(ratio) * dxIdx);
+                int dxIdx = (int)(Ns[idxDim] - 1); // range of the current dimension in terms of index
+                int rdxIdx = (int)(double.CreateChecked(ratio) * dxIdx); // shrinked range of the current dimension in terms of index
                 if (rdxIdx <= 0)
                     throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
-                //double optidx = (double.CreateChecked(optResult.Xlist[idxXlist][idxDim]) * dxIdx);
-                T optidx = (T.CreateChecked(optResult[idxXlist].X[idxDim]) * dX[idxDim]);
+
+                T optidx = optResult[idxXlist].X[idxDim] * T.CreateChecked(dxIdx);
                 int minIdx = (int)(double.CreateChecked(optidx) - rdxIdx / 2.0);
                 if (minIdx < 0)
                     minIdx = 0;
@@ -228,6 +228,59 @@ namespace OptNet
 
             ClrSysFlag(StaMaskEnum.Done);
         }
+        /*        public void ShrinkBy(T ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
+                {
+                    var minx = new T[dimN];
+                    var maxx = new T[dimN];
+                    var dx = new T[dimN];
+                    var dxhalf = new T[dimN];
+                    var ns = new uint[dimN];
+                    var inputIndex = new uint[dimN];
+
+                    for (int idxDim = 0; idxDim < dimN; idxDim++)
+                    {
+                        int dxIdx = (int)(Ns[idxDim] - 1); // range of the current dimension in terms of index
+                        int rdxIdx = (int)(double.CreateChecked(ratio) * dxIdx); // shrinked range of the current dimension in terms of index
+                        if (rdxIdx <= 0)
+                            throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
+                        //double optidx = (double.CreateChecked(optResult.Xlist[idxXlist][idxDim]) * dxIdx);
+                        T optidx = (T.CreateChecked(optResult[idxXlist].X[idxDim]) * dX[idxDim]);
+                        int minIdx = (int)(double.CreateChecked(optidx) - rdxIdx / 2.0);
+                        if (minIdx < 0)
+                            minIdx = 0;
+                        int maxIdx = minIdx + rdxIdx;
+                        if (maxIdx >= Ns[idxDim] - 1)
+                        {
+                            maxIdx = (int)(Ns[idxDim] - 1);
+                            minIdx = maxIdx - rdxIdx;
+                        }
+                        minx[idxDim] = minX[idxDim] + T.CreateChecked(minIdx) * dX[idxDim];
+                        maxx[idxDim] = minX[idxDim] + T.CreateChecked(maxIdx) * dX[idxDim];
+                        ns[idxDim] = (uint)(rdxIdx * 2 + 1);
+                        dx[idxDim] = dX[idxDim] / (T.One + T.One);
+                        dxhalf[idxDim] = dx[idxDim] / (T.One + T.One);
+
+                        inputIndex[idxDim] = (uint)minIdx;
+                    }
+
+                    uint[] oldNs = [.. Ns]; // Ns.ToArray();
+                    Ns = ImmutableArray.Create(ns);
+                    minX = ImmutableArray.Create(minx);
+                    maxX = ImmutableArray.Create(maxx);
+                    dX = ImmutableArray.Create(dx);
+                    dXHalf = ImmutableArray.Create(dxhalf);
+
+                    var samplejtot = new List<T>();
+                    UpSample(0, ref samplejtot, true, inputIndex, oldNs);
+                    sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
+
+                    var adjTolX = TolX / ratio; // adjust the tolerance for the input vector, X, to be considered as converged. 
+                                                // Fix for the problematic line causing multiple errors  
+                    TolX = (adjTolX < T.One) ? adjTolX : T.One; // Adjust the tolerance for the input vector, X, to be considered as converged. 
+
+
+                    ClrSysFlag(StaMaskEnum.Done);
+                }*/
         /// <summary>
         /// Asynchronously optimizes a multi-dimensional dataset and updates the optimization results.
         /// </summary>
