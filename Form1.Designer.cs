@@ -56,10 +56,11 @@
             radioButtonMin = new RadioButton();
             checkBoxThread = new CheckBox();
             radioButtonMax = new RadioButton();
-            checkBoxVerbose = new CheckBox();
             labelTolJReal = new Label();
             labelDimension = new Label();
             numericUpDownDimension = new NumericUpDown();
+            comboBoxLogLevel = new ComboBox();
+            labelLogLevel = new Label();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -326,7 +327,7 @@
             // checkBoxThread
             // 
             checkBoxThread.AutoSize = true;
-            checkBoxThread.Location = new Point(148, 55);
+            checkBoxThread.Location = new Point(148, 62);
             checkBoxThread.Name = "checkBoxThread";
             checkBoxThread.Size = new Size(90, 19);
             checkBoxThread.TabIndex = 30;
@@ -345,19 +346,6 @@
             radioButtonMax.Text = "Maximize";
             radioButtonMax.UseVisualStyleBackColor = true;
             radioButtonMax.CheckedChanged += radioButtonMax_CheckedChanged;
-            // 
-            // checkBoxVerbose
-            // 
-            checkBoxVerbose.AutoSize = true;
-            checkBoxVerbose.Checked = true;
-            checkBoxVerbose.CheckState = CheckState.Checked;
-            checkBoxVerbose.Location = new Point(148, 73);
-            checkBoxVerbose.Name = "checkBoxVerbose";
-            checkBoxVerbose.Size = new Size(69, 19);
-            checkBoxVerbose.TabIndex = 32;
-            checkBoxVerbose.Text = "Verbose";
-            checkBoxVerbose.UseVisualStyleBackColor = true;
-            checkBoxVerbose.CheckedChanged += checkBoxVerbose_CheckedChanged;
             // 
             // labelTolJReal
             // 
@@ -388,15 +376,36 @@
             numericUpDownDimension.Value = new decimal(new int[] { 1, 0, 0, 196608 });
             numericUpDownDimension.ValueChanged += numericUpDownDimension_ValueChanged;
             // 
+            // comboBoxLogLevel
+            // 
+            comboBoxLogLevel.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBoxLogLevel.Font = new Font("Malgun Gothic", 9F);
+            comboBoxLogLevel.FormattingEnabled = true;
+            comboBoxLogLevel.Location = new Point(588, 22);
+            comboBoxLogLevel.Name = "comboBoxLogLevel";
+            comboBoxLogLevel.Size = new Size(100, 23);
+            comboBoxLogLevel.TabIndex = 36;
+            comboBoxLogLevel.SelectedIndexChanged += comboBoxLogLevel_SelectedIndexChanged;
+            // 
+            // labelLogLevel
+            // 
+            labelLogLevel.AutoSize = true;
+            labelLogLevel.Location = new Point(589, 4);
+            labelLogLevel.Name = "labelLogLevel";
+            labelLogLevel.Size = new Size(58, 15);
+            labelLogLevel.TabIndex = 37;
+            labelLogLevel.Text = "Log Level";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(802, 632);
+            Controls.Add(labelLogLevel);
+            Controls.Add(comboBoxLogLevel);
             Controls.Add(labelDimension);
             Controls.Add(numericUpDownDimension);
             Controls.Add(labelTolJReal);
-            Controls.Add(checkBoxVerbose);
             Controls.Add(radioButtonMax);
             Controls.Add(checkBoxThread);
             Controls.Add(radioButtonMin);
@@ -463,9 +472,10 @@
         private RadioButton radioButtonMin;
         private CheckBox checkBoxThread;
         private RadioButton radioButtonMax;
-        private CheckBox checkBoxVerbose;
         private Label labelTolJReal;
         private Label labelDimension;
         private NumericUpDown numericUpDownDimension;
+        private ComboBox comboBoxLogLevel;
+        private Label labelLogLevel;
     }
 }

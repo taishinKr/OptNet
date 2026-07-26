@@ -101,7 +101,7 @@ namespace OptNet
         public Func<T[], T> J;
         public ConcurrentQueue<string> DisplayMsgQueue;
         [Flags]
-        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, Verbose = 1 << 4, MThread = 1 << 5 }
+        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, MThread = 1 << 4 }
         private UInt32 mState = 0;
 
         public OptParam<T> OptParam { get; set; }
@@ -161,7 +161,6 @@ namespace OptNet
 
             DisplayMsgQueue = new(); // new ConcurrentQueue<string>();
 
-            SetSysFlag(StaMaskEnum.Verbose);
             ClrSysFlag(StaMaskEnum.Done);
             ClrSysFlag(StaMaskEnum.MThread);
         }
@@ -317,7 +316,7 @@ namespace OptNet
             CalResultPrj();
 
             SetSysFlag(StaMaskEnum.Done);
-            AddDispMsg(ResultMsg(), true);
+            AddDispMsg(ResultMsg(), LogLevel.Info0);
         }
         /// <summary>
         /// Adjusts the result by clustering items based on their distance and selecting representative items from each
@@ -391,7 +390,7 @@ namespace OptNet
         /// objective value <c>J</c>.</returns>
         private List<(T[] X, T J)> OptimaizeMdRecur(int axisIdx, ImmutableList<T> samplejtot, (T[] X, T J) Opt)
         {
-            AddDispMsg(string.Format("MdRecur({0,0:G3})" + Environment.NewLine, axisIdx));
+            AddDispMsg(string.Format("MdRecur({0,0:G3})" + Environment.NewLine, axisIdx), LogLevel.Info1);
 
             var Optlist = new List<(T[] X, T J)>();
 
@@ -448,7 +447,7 @@ namespace OptNet
         /// the solution vector.</description></item> </list></returns>
         private async Task<List<(T[] X, T J)>> OptimaizeMdRecurAsync(int axisIdx, ImmutableList<T> samplejtot, (T[] X, T J) Opt)
         {
-            AddDispMsg(string.Format("MdReur({0,0:G3})" + Environment.NewLine, axisIdx));
+            AddDispMsg(string.Format("MdReur({0,0:G3})" + Environment.NewLine, axisIdx), LogLevel.Info1);
 
             var Optlist = new List<(T[] X, T J)>();
 
@@ -541,7 +540,7 @@ namespace OptNet
                 }
                 else
                 {
-                    AddDispMsg(string.Format("    task: Md1Axis({0,0:G3},{1,0:G3})" + Environment.NewLine, idxDim, n));
+                    AddDispMsg(string.Format("    task: Md1Axis({0,0:G3},{1,0:G3})" + Environment.NewLine, idxDim, n), LogLevel.Info2);
 
                     var task = pcQ.Enqueue<((T X, T J)[] Optlist1Axis, double[][] optIntv)>(
                         () => OptimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex)
@@ -715,7 +714,7 @@ namespace OptNet
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
                 inputIndex[idxDim] = n; // Set the current index for the dimension being processed
-                AddDispMsg(string.Format("        Md1Axis({0,0:G3},{1,0:G3},{2,0:G3})" + Environment.NewLine, axisIdx, idxDim, n));
+                AddDispMsg(string.Format("        Md1Axis({0,0:G3},{1,0:G3},{2,0:G3})" + Environment.NewLine, axisIdx, idxDim, n), LogLevel.Info3);
 
                 // If at the last dimension, directly sample the objective function value
                 if (idxDim == dimN - 1)
@@ -1042,6 +1041,61 @@ namespace OptNet
         /// <returns>The projected value of <paramref name="realX"/> as a normalized ratio within the range of the specified
         /// dimension.</returns>
         public T CalcProjX(in T realX, in int idxDim) => (realX - minX[idxDim] + dXHalf[idxDim]) / (maxX[idxDim] - minX[idxDim] + dX[idxDim]);
+        
+        /// <summary>
+        /// Sets the specified system flag in the current state.
+        /// </summary>
+        /// <remarks>This method modifies the internal state by enabling the specified flag. The operation
+        /// is performed in-place.</remarks>
+        /// <param name="mask">The flag to set, represented as a value from the <see cref="StaMaskEnum"/> enumeration.</param>
+        public void SetSysFlag(in StaMaskEnum mask)
+        {
+            mState = GeneralMath<T>.SetFlag(ref mState, (UInt32)mask);
+
+        }
+        /// <summary>
+        /// Clears the specified system flag in the current state.
+        /// </summary>
+        /// <remarks>This method modifies the internal state by clearing the bit corresponding to the
+        /// specified flag.</remarks>
+        /// <param name="mask">The flag to clear, represented as a value from the <see cref="StaMaskEnum"/> enumeration.</param>
+        public void ClrSysFlag(in StaMaskEnum mask)
+        {
+            mState = GeneralMath<T>.ClrFlag(ref mState, (UInt32)mask);
+        }
+        /// <summary>
+        /// Determines whether the specified system flag is set in the current state.
+        /// </summary>
+        /// <param name="mask">The system flag to check, represented as a <see cref="StaMaskEnum"/> value.</param>
+        /// <returns><see langword="true"/> if the specified system flag is set; otherwise, <see langword="false"/>.</returns>
+        public bool IsSetSysFlag(in StaMaskEnum mask)
+        {
+            return GeneralMath<T>.IsSetFlag(mState, (UInt32)mask);
+        }
+
+        public enum LogLevel
+        {
+            None,
+            Error,
+            Warning,
+            Info0,
+            Info1,
+            Info2,
+            Info3,
+            Debug,
+            Verbose
+        }
+        private LogLevel currentLevel = LogLevel.Info0; // 기본값
+
+        public LogLevel CurrentLevel
+        {
+            get { return currentLevel; }
+            set
+            {
+                // 필요하다면 유효성 검사나 이벤트 트리거 가능
+                currentLevel = value;
+            }
+        }
         /// <summary>
         /// Adds a message to the display message queue if the verbose system flag is set.
         /// </summary>
@@ -1049,25 +1103,20 @@ namespace OptNet
         /// determined by  <see cref="isSetSysFlag(StaMaskEnum)"/>. If <paramref name="msg"/> is null or empty, the
         /// method does nothing.</remarks>
         /// <param name="msg">The message to enqueue. Must not be null or empty.</param>
+        public void AddDispMsg(string msg, LogLevel level)
+        {
+            if (level <= CurrentLevel)
+            {
+                AddDispMsg(msg);
+            }
+        }
         public void AddDispMsg(string msg)
         {
-            if (IsSetSysFlag(StaMaskEnum.Verbose) && !string.IsNullOrEmpty(msg)
-                )
+            if (!string.IsNullOrEmpty(msg))
             {
                 DisplayMsgQueue.Enqueue(msg);
             }
 
-        }
-        public void AddDispMsg(string msg, bool isAwaysVerbose)
-        {
-            if (isAwaysVerbose)
-            {
-                DisplayMsgQueue.Enqueue(msg);
-            }
-            else
-            {
-                AddDispMsg(msg);
-            }
         }
         /// <summary>
         /// Retrieves a message from the display message queue if the verbose system flag is set.
@@ -1122,36 +1171,6 @@ namespace OptNet
 
             //DisplayMsgFunc(msgOptX);
             return msgOptX;
-        }
-        /// <summary>
-        /// Sets the specified system flag in the current state.
-        /// </summary>
-        /// <remarks>This method modifies the internal state by enabling the specified flag. The operation
-        /// is performed in-place.</remarks>
-        /// <param name="mask">The flag to set, represented as a value from the <see cref="StaMaskEnum"/> enumeration.</param>
-        public void SetSysFlag(in StaMaskEnum mask)
-        {
-            mState = GeneralMath<T>.SetFlag(ref mState, (UInt32)mask);
-
-        }
-        /// <summary>
-        /// Clears the specified system flag in the current state.
-        /// </summary>
-        /// <remarks>This method modifies the internal state by clearing the bit corresponding to the
-        /// specified flag.</remarks>
-        /// <param name="mask">The flag to clear, represented as a value from the <see cref="StaMaskEnum"/> enumeration.</param>
-        public void ClrSysFlag(in StaMaskEnum mask)
-        {
-            mState = GeneralMath<T>.ClrFlag(ref mState, (UInt32)mask);
-        }
-        /// <summary>
-        /// Determines whether the specified system flag is set in the current state.
-        /// </summary>
-        /// <param name="mask">The system flag to check, represented as a <see cref="StaMaskEnum"/> value.</param>
-        /// <returns><see langword="true"/> if the specified system flag is set; otherwise, <see langword="false"/>.</returns>
-        public bool IsSetSysFlag(in StaMaskEnum mask)
-        {
-            return GeneralMath<T>.IsSetFlag(mState, (UInt32)mask);
         }
     }
 }

@@ -1,8 +1,10 @@
+using System.Diagnostics;
+using static System.Runtime.InteropServices.JavaScript.JSType;
+
 namespace OptNet
 {
     public partial class Form1 : Form
     {
-
         private TestFcn<double> mTestFcn;
         private OptMD<double> mOptMD;
         private Opt1D<double> mOpt1D;
@@ -14,8 +16,6 @@ namespace OptNet
         public OptParam<double> mParamAckley;
 
         private bool _initializing;
-        private bool verboseEnabled;
-        private bool threadEnabled;
 
         public Form1()
         {
@@ -93,14 +93,6 @@ namespace OptNet
             //checkBoxVerbose.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             _initializing = false;
 
-            if (checkBoxVerbose.Checked)
-            {
-                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.Verbose);
-            }
-            else
-            {
-                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.Verbose);
-            }
             if (checkBoxThread.Checked)
             {
                 mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.MThread);
@@ -119,6 +111,13 @@ namespace OptNet
                 "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly", "Ackley"
             ]);
             comboBoxBenchFcn.SelectedIndex = 1; // Default to the first item
+
+            comboBoxLogLevel.Items.AddRange([
+                "None", "Error", "Warning", "Info0", "Info1","Info2","Info3","Debug", "Verbose"
+            ]);
+            comboBoxLogLevel.SelectedIndex = 3;
+
+
             numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
 
 
@@ -163,6 +162,7 @@ namespace OptNet
         {
             mOptMD = new OptMD<double>(mParamTst2D);
             comboBoxBenchFcn.SelectedIndex = 1;
+            comboBoxLogLevel.SelectedIndex = 3;
             buttonShrink.Enabled = false;
 
             SetModeOfNewOptMD();
@@ -285,6 +285,8 @@ namespace OptNet
             comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
 
             numericUpDownDimension.Value = mOptMD.DimN; // Reset the dimension value
+
+            mOptMD.CurrentLevel = (OptMD<double>.LogLevel)comboBoxLogLevel.SelectedIndex;
         }
 
         private void NumericUpDownTolJ_ValueChanged(object sender, EventArgs e)
@@ -332,20 +334,6 @@ namespace OptNet
                 mOptMD.Mode = OptMD<double>.StaMaskEnum.Min;
         }
 
-        private void checkBoxVerbose_CheckedChanged(object sender, EventArgs e)
-        {
-            if (_initializing) return;
-
-            if (checkBoxVerbose.Checked)
-            {
-                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.Verbose);
-            }
-            else
-            {
-                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.Verbose);
-            }
-        }
-
         private void numericUpDownDimension_ValueChanged(object sender, EventArgs e)
         {
             buttonOptimzeMD.Enabled = false;
@@ -358,6 +346,50 @@ namespace OptNet
             ResetUICtr();
 
             SetModeOfNewOptMD();
+        }
+
+        private void comboBoxLogLevel_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            var selectedItem = comboBoxLogLevel.SelectedItem?.ToString();
+            if (selectedItem == null)
+            {
+                DisplayMessage("No item selected in comboBoxLogLevel.");
+                return;
+            }
+
+            switch (selectedItem)
+            {
+                case "None":
+                    mOptMD.CurrentLevel = OptMD<double>.LogLevel.None;
+                    break;
+                case "Error":
+                    mOptMD.CurrentLevel = OptMD<double>.LogLevel.Error;
+                    break;
+                case "Warning":
+                    mOptMD.CurrentLevel = OptMD<double>.LogLevel.Warning;
+                    break;
+                case "Info0":
+                    mOptMD.CurrentLevel = OptMD<double>.LogLevel.Info0;
+                    break;
+                case "Info1":
+                    mOptMD.CurrentLevel = OptMD<double>.LogLevel.Info1;
+                    break;
+                case "Info2":
+                    mOptMD.CurrentLevel = OptMD<double>.LogLevel.Info2;
+                    break;
+                case "Info3":
+                    mOptMD.CurrentLevel = OptMD<double>.LogLevel.Info3;
+                    break;
+                case "Debug":
+                    mOptMD.CurrentLevel = OptMD<double>.LogLevel.Debug;
+                    break;
+                case "Verbose":
+                    mOptMD.CurrentLevel = OptMD<double>.LogLevel.Verbose;
+                    break;
+                default:
+                    DisplayMessage("Invalid selection in comboBoxLogLevel.");
+                    break;
+            }
         }
     }
 }
