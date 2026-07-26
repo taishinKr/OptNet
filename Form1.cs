@@ -348,7 +348,16 @@ namespace OptNet
 
         private void numericUpDownDimension_ValueChanged(object sender, EventArgs e)
         {
-            //mOptMD.DimN = (uint)numericUpDownDimension.Value;
+            buttonOptimzeMD.Enabled = false;
+            OptParam<double> optParam = new(mOptMD.OptParam, (uint)numericUpDownDimension.Value);
+            mOptMD = new OptMD<double>(optParam);
+            buttonOptimzeMD.Enabled = true;
+
+            numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
+
+            ResetUICtr();
+
+            SetModeOfNewOptMD();
         }
     }
 }

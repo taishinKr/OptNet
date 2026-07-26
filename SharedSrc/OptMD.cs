@@ -27,6 +27,24 @@ namespace OptNet
             MaxX = [T.One, T.One];
             Mode = OptMD<T>.StaMaskEnum.Done; // Default value, should be set properly later.            
         }
+
+        public OptParam( OptParam<T> optparm, uint dimN)
+        {
+            this.J = optparm.J;
+            this.TolJ = optparm.TolJ;
+            this.TolX = optparm.TolX < 0.0 ? 0.001 : optparm.TolX; // default value if tolX is negative
+            this.DimN = dimN;
+            this.Ns = new uint[dimN];
+            this.MinX = new T[dimN];
+            this.MaxX = new T[dimN];
+            for(int i = 0; i < dimN; i++)
+            {
+                this.Ns[i] = optparm.Ns[0];
+                this.MinX[i] = optparm.MinX[0];
+                this.MaxX[i] = optparm.MaxX[0];
+            }
+            this.Mode = optparm.Mode;
+        }
         public OptParam(
             in Func<T[], uint, T> J,
             in double TolJ,
@@ -85,6 +103,9 @@ namespace OptNet
         [Flags]
         public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, Verbose = 1 << 4, MThread = 1 << 5 }
         private UInt32 mState = 0;
+
+        public OptParam<T> OptParam { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="OptMD{T}"/> class with the specified optimization parameters.
         /// </summary>
@@ -98,6 +119,7 @@ namespace OptNet
         /// the mode is invalid.</exception>
         public OptMD(OptParam<T> optParam)
         {
+            this.OptParam = optParam;
             J = x => optParam.J(x,optParam.DimN);
             var tmpTolX = optParam.TolX < 0.0 ? 0.001 : optParam.TolX; // default value if tolX is negative
             this.TolX = T.CreateChecked(tmpTolX);
@@ -165,7 +187,7 @@ namespace OptNet
             for (int idxDim = 0; idxDim < dimN; idxDim++)
             {
                 int dxIdx = (int)(Ns[idxDim] - 1.0);
-                int rdxIdx = (int)(int.CreateChecked(ratio) * dxIdx);
+                int rdxIdx = (int)(double.CreateChecked(ratio) * dxIdx);
                 if (rdxIdx <= 0)
                     throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
                 //double optidx = (double.CreateChecked(optResult.Xlist[idxXlist][idxDim]) * dxIdx);
