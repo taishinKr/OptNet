@@ -58,9 +58,12 @@
             radioButtonMax = new RadioButton();
             checkBoxVerbose = new CheckBox();
             labelTolJReal = new Label();
+            labelDimension = new Label();
+            numericUpDownDimension = new NumericUpDown();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownDimension).BeginInit();
             SuspendLayout();
             // 
             // textBoxMsg
@@ -160,7 +163,7 @@
             // numericUpDownTolX
             // 
             numericUpDownTolX.DecimalPlaces = 2;
-            numericUpDownTolX.Location = new Point(332, 25);
+            numericUpDownTolX.Location = new Point(428, 25);
             numericUpDownTolX.Name = "numericUpDownTolX";
             numericUpDownTolX.Size = new Size(65, 23);
             numericUpDownTolX.TabIndex = 13;
@@ -171,7 +174,7 @@
             // numericUpDownTolJ
             // 
             numericUpDownTolJ.DecimalPlaces = 2;
-            numericUpDownTolJ.Location = new Point(258, 25);
+            numericUpDownTolJ.Location = new Point(354, 25);
             numericUpDownTolJ.Name = "numericUpDownTolJ";
             numericUpDownTolJ.Size = new Size(65, 23);
             numericUpDownTolJ.TabIndex = 14;
@@ -200,7 +203,7 @@
             // labelTolJ
             // 
             labelTolJ.AutoSize = true;
-            labelTolJ.Location = new Point(258, 8);
+            labelTolJ.Location = new Point(354, 8);
             labelTolJ.Name = "labelTolJ";
             labelTolJ.Size = new Size(45, 15);
             labelTolJ.TabIndex = 17;
@@ -209,7 +212,7 @@
             // labelTolX
             // 
             labelTolX.AutoSize = true;
-            labelTolX.Location = new Point(332, 8);
+            labelTolX.Location = new Point(428, 8);
             labelTolX.Name = "labelTolX";
             labelTolX.Size = new Size(48, 15);
             labelTolX.TabIndex = 18;
@@ -311,7 +314,7 @@
             // radioButtonMin
             // 
             radioButtonMin.AutoSize = true;
-            radioButtonMin.Location = new Point(406, 22);
+            radioButtonMin.Location = new Point(502, 22);
             radioButtonMin.Name = "radioButtonMin";
             radioButtonMin.Size = new Size(75, 19);
             radioButtonMin.TabIndex = 29;
@@ -323,7 +326,7 @@
             // checkBoxThread
             // 
             checkBoxThread.AutoSize = true;
-            checkBoxThread.Location = new Point(497, 23);
+            checkBoxThread.Location = new Point(148, 55);
             checkBoxThread.Name = "checkBoxThread";
             checkBoxThread.Size = new Size(90, 19);
             checkBoxThread.TabIndex = 30;
@@ -334,7 +337,7 @@
             // radioButtonMax
             // 
             radioButtonMax.AutoSize = true;
-            radioButtonMax.Location = new Point(406, 39);
+            radioButtonMax.Location = new Point(502, 39);
             radioButtonMax.Name = "radioButtonMax";
             radioButtonMax.Size = new Size(77, 19);
             radioButtonMax.TabIndex = 31;
@@ -346,29 +349,52 @@
             // checkBoxVerbose
             // 
             checkBoxVerbose.AutoSize = true;
-            checkBoxVerbose.Location = new Point(588, 22);
+            checkBoxVerbose.Checked = true;
+            checkBoxVerbose.CheckState = CheckState.Checked;
+            checkBoxVerbose.Location = new Point(148, 73);
             checkBoxVerbose.Name = "checkBoxVerbose";
             checkBoxVerbose.Size = new Size(69, 19);
             checkBoxVerbose.TabIndex = 32;
             checkBoxVerbose.Text = "Verbose";
             checkBoxVerbose.UseVisualStyleBackColor = true;
-            checkBoxVerbose.Checked = true;
             checkBoxVerbose.CheckedChanged += checkBoxVerbose_CheckedChanged;
             // 
             // labelTolJReal
             // 
             labelTolJReal.AutoSize = true;
-            labelTolJReal.Location = new Point(258, 56);
+            labelTolJReal.Location = new Point(354, 56);
             labelTolJReal.Name = "labelTolJReal";
             labelTolJReal.Size = new Size(45, 15);
             labelTolJReal.TabIndex = 33;
             labelTolJReal.Text = "TolJ(%)";
+            // 
+            // labelDimension
+            // 
+            labelDimension.AutoSize = true;
+            labelDimension.Location = new Point(258, 9);
+            labelDimension.Name = "labelDimension";
+            labelDimension.Size = new Size(65, 15);
+            labelDimension.TabIndex = 35;
+            labelDimension.Text = "Dimension";
+            // 
+            // numericUpDownDimension
+            // 
+            numericUpDownDimension.Location = new Point(258, 26);
+            numericUpDownDimension.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
+            numericUpDownDimension.Name = "numericUpDownDimension";
+            numericUpDownDimension.Size = new Size(65, 23);
+            numericUpDownDimension.TabIndex = 34;
+            numericUpDownDimension.TextAlign = HorizontalAlignment.Center;
+            numericUpDownDimension.Value = new decimal(new int[] { 1, 0, 0, 196608 });
+            numericUpDownDimension.ValueChanged += numericUpDownDimension_ValueChanged;
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(802, 632);
+            Controls.Add(labelDimension);
+            Controls.Add(numericUpDownDimension);
             Controls.Add(labelTolJReal);
             Controls.Add(checkBoxVerbose);
             Controls.Add(radioButtonMax);
@@ -403,6 +429,7 @@
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).EndInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).EndInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownDimension).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -438,5 +465,7 @@
         private RadioButton radioButtonMax;
         private CheckBox checkBoxVerbose;
         private Label labelTolJReal;
+        private Label labelDimension;
+        private NumericUpDown numericUpDownDimension;
     }
 }

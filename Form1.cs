@@ -119,25 +119,10 @@ namespace OptNet
                 "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly", "Ackley"
             ]);
             comboBoxBenchFcn.SelectedIndex = 1; // Default to the first item
-            numericUpDownShrink.Value = 0.5M; // Default value for numericUpDown
             numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
-            numericUpDownTolX.Value = (decimal)(mOptMD.TolX * 100); // Set the default value for numericUpDownTolX
 
-            comboBoxMinX.Items.Clear();
-            comboBoxMaxX.Items.Clear();
-            comboBoxMinXdX.Items.Clear();
-            comboBoxMaxXdX.Items.Clear();
-            for (int i = 0; i < mOptMD.DimN; i++)
-            {
-                comboBoxMinX.Items.Add(mOptMD.MinX[i].ToString("F4"));
-                comboBoxMaxX.Items.Add(mOptMD.MaxX[i].ToString("F4"));
-                comboBoxMinXdX.Items.Add((mOptMD.MinX[i] - mOptMD.DXHalf[i]).ToString("F4"));
-                comboBoxMaxXdX.Items.Add((mOptMD.MaxX[i] + mOptMD.DXHalf[i]).ToString("F4"));
-            }
-            comboBoxMinX.SelectedIndex = 0; // Set default selected index for comboBoxMinX
-            comboBoxMaxX.SelectedIndex = 0; // Set default selected index for comboBoxMaxX
-            comboBoxMinXdX.SelectedIndex = 0; // Set default selected index for comboBoxMinXdX
-            comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
+
+            ResetUICtr();
 
             labelTolJReal.Text = $"dJ: {mOptMD.TolJ:F4}";
         }
@@ -171,24 +156,8 @@ namespace OptNet
             {
                 MessageBox.Show($"Shrink operation failed: {ex.Message}");
             }
-            numericUpDownShrink.Value = 0.5M; // Default value for numericUpDown
-            numericUpDownTolX.Value = (decimal)mOptMD.TolX * 100; // Reset the tolerance value
 
-            comboBoxMinX.Items.Clear();
-            comboBoxMaxX.Items.Clear();
-            comboBoxMinXdX.Items.Clear();
-            comboBoxMaxXdX.Items.Clear();
-            for (int i = 0; i < mOptMD.DimN; i++)
-            {
-                comboBoxMinX.Items.Add(mOptMD.MinX[i].ToString("F4"));
-                comboBoxMaxX.Items.Add(mOptMD.MaxX[i].ToString("F4"));
-                comboBoxMinXdX.Items.Add((mOptMD.MinX[i] - mOptMD.DXHalf[i]).ToString("F4"));
-                comboBoxMaxXdX.Items.Add((mOptMD.MaxX[i] + mOptMD.DXHalf[i]).ToString("F4"));
-            }
-            comboBoxMinX.SelectedIndex = 0; // Set default selected index for comboBoxMinX
-            comboBoxMaxX.SelectedIndex = 0; // Set default selected index for comboBoxMaxX
-            comboBoxMinXdX.SelectedIndex = 0; // Set default selected index for comboBoxMinXdX
-            comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
+            ResetUICtr();
         }
         private void ButtonResetAll_Click(object sender, EventArgs e)
         {
@@ -286,9 +255,18 @@ namespace OptNet
                     DisplayMessage("Invalid selection in comboBoxBenchFcn.");
                     break;
             }
-            numericUpDownShrink.Value = 0.5M; // Default value for numericUpDown
+
             numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
-            numericUpDownTolX.Value = (decimal)(mOptMD.TolX * 100); // Set the default value for numericUpDownTolX
+
+            ResetUICtr();
+
+            SetModeOfNewOptMD();
+        }
+
+        private void ResetUICtr()
+        {
+            numericUpDownShrink.Value = 0.5M; // Default value for numericUpDown                        
+            numericUpDownTolX.Value = (decimal)mOptMD.TolX * 100; // Reset the tolerance value
 
             comboBoxMinX.Items.Clear();
             comboBoxMaxX.Items.Clear();
@@ -306,7 +284,7 @@ namespace OptNet
             comboBoxMinXdX.SelectedIndex = 0; // Set default selected index for comboBoxMinXdX
             comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
 
-            SetModeOfNewOptMD();
+            numericUpDownDimension.Value = mOptMD.DimN; // Reset the dimension value
         }
 
         private void NumericUpDownTolJ_ValueChanged(object sender, EventArgs e)
@@ -366,6 +344,11 @@ namespace OptNet
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             }
+        }
+
+        private void numericUpDownDimension_ValueChanged(object sender, EventArgs e)
+        {
+            //mOptMD.DimN = (uint)numericUpDownDimension.Value;
         }
     }
 }
