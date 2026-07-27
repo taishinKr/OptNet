@@ -69,6 +69,7 @@ namespace OptNet
     {
         private readonly uint dimN;
         private ImmutableArray<uint> Ns;
+        private ImmutableArray<uint> orginNs;
         private ImmutableArray<T> minX;
         private ImmutableArray<T> maxX;
         private ImmutableArray<T> dX;
@@ -82,6 +83,7 @@ namespace OptNet
         private static readonly Lock _locker = new();//new Lock();
         private static readonly PCQueue pcQ = new(Environment.ProcessorCount); // new PCQueue(Environment.ProcessorCount);
 
+        private uint[] inputXIdx;
         private T[] inputX;
         public (T[] X, T J)[] optResult = [];
         public (T[] X, T J)[] optResultReal = [];
@@ -94,14 +96,14 @@ namespace OptNet
         public T[] MaxX => [.. maxX]; // maxX.ToArray();
         public T[] DXHalf => [.. dXHalf]; // dXHalf.ToArray();
         public uint DimN => dimN;
-        //private readonly StaMaskEnum mode;
+        public uint[] Nsample => [.. Ns]; // Assuming all dimensions have the same number of samples
         public StaMaskEnum Mode { get => mode; set => mode = value; }
 
         public double[][] IntvX { get; set; } // minX, maxX
         public Func<T[], T> J;
         public ConcurrentQueue<string> DisplayMsgQueue;
         [Flags]
-        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, MThread = 1 << 4 }
+        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, MThread = 1 << 4, SampleReuse = 1 << 5 }
         private UInt32 mState = 0;
 
         public OptParam<T> OptParam { get; set; }
@@ -127,6 +129,7 @@ namespace OptNet
             this.TolJ = T.CreateChecked(tmpTolJ);
             this.dimN = optParam.DimN;
             this.Ns = ImmutableArray.Create(optParam.Ns);
+            this.orginNs = ImmutableArray.Create(optParam.Ns);
             this.minX = ImmutableArray.Create(optParam.MinX);
             this.maxX = ImmutableArray.Create(optParam.MaxX);
             this.mode = optParam.Mode;
@@ -139,6 +142,7 @@ namespace OptNet
                 this.mode = StaMaskEnum.Max;
 
             inputX = new T[dimN];
+            inputXIdx = new uint[dimN];
             lutConstant = ImmutableDictionary<uint, OfflineGet<T>>.Empty;
 
             var dx = new T[dimN];
@@ -163,18 +167,9 @@ namespace OptNet
 
             ClrSysFlag(StaMaskEnum.Done);
             ClrSysFlag(StaMaskEnum.MThread);
+            SetSysFlag(StaMaskEnum.SampleReuse);
         }
-        /// <summary>
-        /// Adjusts the range and resolution of the data grid by shrinking it around a specified point.
-        /// </summary>
-        /// <remarks>This method recalculates the minimum and maximum bounds, step sizes, and sample
-        /// counts for each dimension based on the specified shrink ratio and target point. The grid is then updated to
-        /// reflect the new bounds and resolution. Note that the shrink ratio directly influences the number of samples
-        /// in the grid.</remarks>
-        /// <param name="ratio">The shrink ratio to apply. A value of 0.5 maintains the current sample count, while other values may change
-        /// the number of samples.</param>
-        /// <param name="idxXlist">The index of the target point in the list of optimization results around which the grid will be shrunk.</param>
-        public void ShrinkBy(T ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
+        /*public void ShrinkBy(T ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
             var minx = new T[dimN];
             var maxx = new T[dimN];
@@ -184,22 +179,62 @@ namespace OptNet
             var inputIndex = new uint[dimN];
 
             for (int idxDim = 0; idxDim < dimN; idxDim++)
-            {
-                int dxIdx = (int)(Ns[idxDim] - 1); // range of the current dimension in terms of index
-                int rdxIdx = (int)(double.CreateChecked(ratio) * dxIdx); // shrinked range of the current dimension in terms of index
-                if (rdxIdx <= 0)
+            {                
+                T rangeNext = ratio * (maxX[idxDim]-minX[idxDim]); // shrinked range of the current dimension in terms of index
+                if (rangeNext <= T.Zero)
                     throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
-
-                T optidx = optResult[idxXlist].X[idxDim] * T.CreateChecked(dxIdx);
-                int minIdx = (int)(double.CreateChecked(optidx) - rdxIdx / 2.0);
-                if (minIdx < 0)
-                    minIdx = 0;
-                int maxIdx = minIdx + rdxIdx;
-                if (maxIdx >= Ns[idxDim] - 1)
+                T optX = optResult[idxXlist].X[idxDim];
+                T minNext = optX - rangeNext / (T.One + T.One);
+                if (minNext < minX[idxDim])
+                    minNext = minX[idxDim];
+                T maxNext = minNext + rangeNext;
+                if(maxNext >= maxX[idxDim])
                 {
-                    maxIdx = (int)(Ns[idxDim] - 1);
-                    minIdx = maxIdx - rdxIdx;
+                    maxNext = maxX[idxDim];
+                    minNext = maxNext - rangeNext;
                 }
+
+                T uMinSample = 
+                    minX[idxDim] +
+                        T.CreateChecked(
+                            Math.Floor(double.CreateChecked((minNext - minX[idxDim]) / dX[idxDim]))
+                        );
+                uint uMaxIdx = (uint)Math.Floor(double.CreateChecked(maxNext));
+                uint nUpsample = 2;
+                uint tmpNs = 0;
+                if ((rangeIdx < T.One) && (uMinIdx == uMaxIdx))
+                {
+                    // possible resampling freely
+                }
+                else
+                {
+                    while (tmpNs < Ns[idxDim])
+                    {
+                        T divIdx = T.CreateChecked(1.0 / (double)nUpsample);
+                        T minIdxNext = T.CreateChecked(uMinIdx);
+                        uint n = 0;
+                        while (minIdxNext > minIdx)
+                        {
+                            minIdxNext -= T.CreateChecked(n++ + 1) * divIdx;
+                        }
+
+                        tmpNs = n; // number of samples in the current dimension after upsampling less than uMinIdx
+                        tmpNs += (uMaxIdx - uMinIdx) * nUpsample; // number of samples in the current dimension after upsampling between uMinIdx and uMaxIdx
+                        if (uMaxIdx == uMinIdx)
+                            tmpNs += 1; // for uMinIdx
+                        else
+                            tmpNs += 2; // for uMinIdx and uMaxIdx
+                        T maxIdxNext = T.CreateChecked(uMaxIdx);
+
+                        n = 0;
+                        while (maxIdxNext < maxIdx)
+                        {
+                            maxIdxNext += T.CreateChecked(n++ + 1) * divIdx;
+                        }
+                        tmpNs += n; // number of samples in the current dimension after upsampling greater than uMaxIdx
+                    }
+                }
+
                 minx[idxDim] = minX[idxDim] + T.CreateChecked(minIdx) * dX[idxDim];
                 maxx[idxDim] = minX[idxDim] + T.CreateChecked(maxIdx) * dX[idxDim];
                 ns[idxDim] = (uint)(rdxIdx * 2 + 1);
@@ -226,60 +261,149 @@ namespace OptNet
 
 
             ClrSysFlag(StaMaskEnum.Done);
-        }
-        /*        public void ShrinkBy(T ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
+        }*/
+        public void ShrinkBy(T ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
+        {
+            var minx = new T[dimN];
+            var maxx = new T[dimN];
+            var dx = new T[dimN];
+            var dxhalf = new T[dimN];
+            var ns = new int[dimN];
+            var inputIndex = new uint[dimN];
+
+            int[] nUpsample = new int[dimN];
+            int[] nPreSample = new int[dimN];
+
+            T[] divIdx = new T[dimN];
+            T[] minIdxNext = new T[dimN];
+            T[] maxIdxNext = new T[dimN];
+
+            bool isReusableSample = IsSetSysFlag(StaMaskEnum.SampleReuse); // flag to indicate whether the previous samples can be reused
+
+            for (int idxDim = 0; idxDim < dimN; idxDim++)
+            {
+                T rangeIdx = T.CreateChecked(Ns[idxDim] - 1); // range of the current dimension in terms of index
+                T rangeIdxHalf = rangeIdx / T.CreateChecked(2);
+                T rdxIdx = ratio * rangeIdx; // shrinked range of the current dimension in terms of index
+                if (rdxIdx <= T.Zero)
+                    throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
+
+                //T optidx = optResult[idxXlist].X[idxDim] * T.CreateChecked(rangeIdx);
+                ////T optidx = ConvXToIdx(optResult[idxXlist].X[idxDim], rangeIdx, rangeIdxHalf);
+                T optidx = (optResultReal[idxXlist].X[idxDim] - minX[idxDim]) / dX[idxDim];
+                T minIdx = optidx - rdxIdx / (T.One + T.One);
+                if (minIdx < T.Zero)
+                    minIdx = T.Zero;
+                T maxIdx = minIdx + rdxIdx;
+                if (maxIdx >= rangeIdx)
                 {
-                    var minx = new T[dimN];
-                    var maxx = new T[dimN];
-                    var dx = new T[dimN];
-                    var dxhalf = new T[dimN];
-                    var ns = new uint[dimN];
-                    var inputIndex = new uint[dimN];
+                    maxIdx = rangeIdx;
+                    minIdx = maxIdx - rdxIdx;
+                }
 
-                    for (int idxDim = 0; idxDim < dimN; idxDim++)
+                int uMinIdx = (int)Math.Ceiling(double.CreateChecked(minIdx));
+                int uMaxIdx = (int)Math.Floor(double.CreateChecked(maxIdx));
+                if (
+                        !IsSetSysFlag(StaMaskEnum.SampleReuse) ||  // if SampleReuse is not set, we cannot reuse the previous samples, so we need to resample freely
+                        ((rdxIdx < T.One) && (uMinIdx > uMaxIdx))  // if the shrinked range is less than 1 and the upper index is less than the lower index, we cannot reuse the previous samples, so we need to resample freely  
+                    )
+                {
+                    // possible to resample freely
+                    minx[idxDim] = minX[idxDim] + minIdx * dX[idxDim];
+                    maxx[idxDim] = minX[idxDim] + maxIdx * dX[idxDim];
+                    ns[idxDim] = (int)Ns[idxDim];
+                    dx[idxDim] = (maxx[idxDim] - minx[idxDim]) / T.CreateChecked(ns[idxDim] - 1);
+                    dxhalf[idxDim] = dx[idxDim] / (T.One + T.One);
+                    isReusableSample = false; // even 1 dimension is not reusable, the whole sample is not reusable, so set the flag to false
+                }
+                else
+                {
+                    divIdx[idxDim] = T.Zero;
+                    minIdxNext[idxDim] = T.Zero;
+                    maxIdxNext[idxDim] = T.Zero;
+
+                    nUpsample[idxDim] = 2;
+                    int tmpNs = 0;
+
+                    var tmpLimit = orginNs[idxDim] * double.CreateChecked(ratio); //orginNs[idxDim]
+                    var maxSampleLimit = tmpLimit >= 3 ? tmpLimit : 3;
+                    while (tmpNs < maxSampleLimit) // cap the number of samples to avoid excessive upsampling
                     {
-                        int dxIdx = (int)(Ns[idxDim] - 1); // range of the current dimension in terms of index
-                        int rdxIdx = (int)(double.CreateChecked(ratio) * dxIdx); // shrinked range of the current dimension in terms of index
-                        if (rdxIdx <= 0)
-                            throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
-                        //double optidx = (double.CreateChecked(optResult.Xlist[idxXlist][idxDim]) * dxIdx);
-                        T optidx = (T.CreateChecked(optResult[idxXlist].X[idxDim]) * dX[idxDim]);
-                        int minIdx = (int)(double.CreateChecked(optidx) - rdxIdx / 2.0);
-                        if (minIdx < 0)
-                            minIdx = 0;
-                        int maxIdx = minIdx + rdxIdx;
-                        if (maxIdx >= Ns[idxDim] - 1)
+                        divIdx[idxDim] = T.CreateChecked(1.0 / (double)nUpsample[idxDim]);
+                        minIdxNext[idxDim] = T.CreateChecked(uMinIdx);
+                        int n = 0;
+                        while (minIdxNext[idxDim] >= minIdx)
                         {
-                            maxIdx = (int)(Ns[idxDim] - 1);
-                            minIdx = maxIdx - rdxIdx;
+                            n++;
+                            minIdxNext[idxDim] = T.CreateChecked(uMinIdx) - T.CreateChecked(n) * divIdx[idxDim];
                         }
-                        minx[idxDim] = minX[idxDim] + T.CreateChecked(minIdx) * dX[idxDim];
-                        maxx[idxDim] = minX[idxDim] + T.CreateChecked(maxIdx) * dX[idxDim];
-                        ns[idxDim] = (uint)(rdxIdx * 2 + 1);
-                        dx[idxDim] = dX[idxDim] / (T.One + T.One);
-                        dxhalf[idxDim] = dx[idxDim] / (T.One + T.One);
+                        n--;
+                        minIdxNext[idxDim] = T.CreateChecked(uMinIdx) - T.CreateChecked(n) * divIdx[idxDim];
 
-                        inputIndex[idxDim] = (uint)minIdx;
+                        tmpNs = nPreSample[idxDim] = n; // number of samples in the current dimension after upsampling less than uMinIdx
+                        if (uMaxIdx == uMinIdx)
+                            tmpNs += 1; // for uMinIdx
+                        else
+                        {
+                            tmpNs += (uMaxIdx - uMinIdx) * nUpsample[idxDim] - 1; // number of samples in the current dimension after upsampling between uMinIdx and uMaxIdx
+                            tmpNs += 2; // for uMinIdx and uMaxIdx
+                        }
+                        maxIdxNext[idxDim] = T.CreateChecked(uMaxIdx);
+                        n = 0;
+                        //while (maxIdxNext < maxIdx + T.CreateChecked(0.000001))
+                        while (maxIdxNext[idxDim] <= maxIdx)
+                        {
+                            n++;
+                            maxIdxNext[idxDim] = T.CreateChecked(uMaxIdx) + T.CreateChecked(n) * divIdx[idxDim];
+                        }
+                        n--;
+                        maxIdxNext[idxDim] = T.CreateChecked(uMaxIdx) + T.CreateChecked(n) * divIdx[idxDim];
+                        tmpNs += n; // number of samples in the current dimension after upsampling greater than uMaxIdx
+                        nUpsample[idxDim]++;
                     }
+                    nUpsample[idxDim]--;
+                    minx[idxDim] = minX[idxDim] + minIdxNext[idxDim] * dX[idxDim];
+                    maxx[idxDim] = minX[idxDim] + maxIdxNext[idxDim] * dX[idxDim];
+                    ns[idxDim] = tmpNs;
+                    dx[idxDim] =  (maxx[idxDim] - minx[idxDim]) / T.CreateChecked(ns[idxDim] - 1);//dX[idxDim] * divIdx[idxDim];
+                    dxhalf[idxDim] = dx[idxDim] / (T.One + T.One);
+                }
+                //inputIndex[idxDim] = (uint)minIdx;
+            }
+            
+            int[] oldNs = Ns.Select(x => (int)x).ToArray(); //int[] oldNs = [.. Ns]; // Ns.ToArray();
+            Ns = ImmutableArray.CreateRange(ns.Select(x => (uint)x)); //Ns = ImmutableArray.Create(ns);
+            minX = ImmutableArray.Create(minx);
+            maxX = ImmutableArray.Create(maxx);
+            dX = ImmutableArray.Create(dx);
+            dXHalf = ImmutableArray.Create(dxhalf);
 
-                    uint[] oldNs = [.. Ns]; // Ns.ToArray();
-                    Ns = ImmutableArray.Create(ns);
-                    minX = ImmutableArray.Create(minx);
-                    maxX = ImmutableArray.Create(maxx);
-                    dX = ImmutableArray.Create(dx);
-                    dXHalf = ImmutableArray.Create(dxhalf);
+            var samplejtot = new List<T>();
 
-                    var samplejtot = new List<T>();
-                    UpSample(0, ref samplejtot, true, inputIndex, oldNs);
-                    sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
+            if (isReusableSample)
+            {
+                int[] initIdxOfOldSample = new int[dimN];
+                for (int i = 0; i < dimN; i++)
+                {
+                    initIdxOfOldSample[i] = (int)Math.Ceiling(double.CreateChecked(minIdxNext[i]));
+                }
+                UpSampleRecur(0, initIdxOfOldSample, nUpsample, nPreSample, ref samplejtot, true, oldNs);
+            }
+            else
+            {
+                UpSampleRecur(0, ref samplejtot);
+            }
+            //UpSample(0, ref samplejtot, true, inputIndex, oldNs);
+            sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
 
-                    var adjTolX = TolX / ratio; // adjust the tolerance for the input vector, X, to be considered as converged. 
-                                                // Fix for the problematic line causing multiple errors  
-                    TolX = (adjTolX < T.One) ? adjTolX : T.One; // Adjust the tolerance for the input vector, X, to be considered as converged. 
+            var adjTolX = TolX / ratio; // adjust the tolerance for the input vector, X, to be considered as converged. 
+                                        // Fix for the problematic line causing multiple errors  
+            TolX = (adjTolX < T.One) ? adjTolX : T.One; // Adjust the tolerance for the input vector, X, to be considered as converged. 
 
 
-                    ClrSysFlag(StaMaskEnum.Done);
-                }*/
+            ClrSysFlag(StaMaskEnum.Done);
+        }
+        
         /// <summary>
         /// Asynchronously optimizes a multi-dimensional dataset and updates the optimization results.
         /// </summary>
@@ -867,6 +991,55 @@ namespace OptNet
                     GetSampleRecur(idxDim + 1, ref samplejtot);
             }
         }
+        private void UpSampleRecur(int idxDim, ref List<T> samplejtot)
+        {
+            for (uint n = 0; n < Ns[idxDim]; n++)
+            {
+                inputX[idxDim] = minX[idxDim] + T.CreateChecked(n) * dX[idxDim];
+                if (idxDim == dimN - 1)
+                {
+                    samplejtot.Add(J(inputX));
+                }
+                else
+                    UpSampleRecur(idxDim + 1, ref samplejtot);
+            }
+        }
+        private void UpSampleRecur(int idxDim, int[] initIdxOfOldSample,int[] nUpsample, int[] nPreSample, ref List<T> samplejtot, bool isReusable, int[] oldNs)
+        {            
+            for (uint n = 0; n < Ns[idxDim]; n++)
+            {
+                bool isReusableCurr = isReusable && TestReusable(n, nUpsample[idxDim], nPreSample[idxDim]);
+                inputXIdx[idxDim] = (uint)(
+                                            ((int)n - nPreSample[idxDim]) / nUpsample[idxDim] + initIdxOfOldSample[idxDim]
+                                    );
+                inputX[idxDim] = minX[idxDim] + T.CreateChecked(n) * dX[idxDim];
+                if (idxDim == dimN - 1)
+                { 
+                    if(IsSetSysFlag(StaMaskEnum.SampleReuse) && isReusableCurr)
+                    {
+                        samplejtot.Add(sampleJtot[(int)GetIdTot(inputXIdx, oldNs)]);
+                        var test = sampleJtot[(int)GetIdTot(inputXIdx, oldNs)];
+                        if ( Math.Abs(double.CreateChecked(test) - double.CreateChecked(J(inputX))) > double.CreateChecked(1e-12) )
+                        {
+                            AddDispMsg(string.Format("UpSampleRecur: sampleJtot[{0,0:G3}]={1,0:G3} != J(inputX)={2,0:G3}" + Environment.NewLine, GetIdTot(inputXIdx, oldNs), test, J(inputX)), LogLevel.Warning);
+                        }
+                    }                        
+                    else
+                        samplejtot.Add(J(inputX));
+                }
+                else
+                    UpSampleRecur(idxDim + 1,initIdxOfOldSample, nUpsample, nPreSample, ref samplejtot, isReusableCurr, oldNs);
+            }
+        }
+        private bool TestReusable(uint n, int nUpsample, int nPreSample)
+        {
+            if(IsSetSysFlag(StaMaskEnum.SampleReuse) == false)
+                return false;            
+            if ( ( ((int)n - nPreSample) % nUpsample) != 0)
+                return false;
+            else
+                return true;
+        }
         /// <summary>
         /// Recursively resamples input data along a specified axis and generates an output sample.
         /// </summary>
@@ -892,7 +1065,7 @@ namespace OptNet
                         inputIdx[axisIdx - 1] = i;
                         samplej[i] = iSample[(int)GetIdTot(inputIdx)];
                     }
-                    OfflineGet<T> constVars = lutConstant[Ns[idxDim]];
+                    OfflineGet<T> constVars = lutConstant[Ns[idxDim-1]];
                     var w = GeneralMath<T>.LinearTransform(constVars.P.Data, samplej);
 
                     T sum = T.Zero;
@@ -904,7 +1077,7 @@ namespace OptNet
                     ReSampleRecur(x, axisIdx, idxDim + 1, ref inputIdx, ref iSample, ref oSample);
             }
         }
-        /// <summary>
+        /*/// <summary>
         /// Recursively generates upsampled data points for a multidimensional grid.
         /// </summary>
         /// <remarks>This method processes each dimension of a multidimensional grid recursively,
@@ -944,7 +1117,7 @@ namespace OptNet
 
             }
             inputIndex[idxDim] = tmpInputIdx;
-        }
+        }*/
         /// <summary>
         /// get an index for the sampleJtot array from the dimN dimensional inputIndex array.
         /// resample() makes the dimension to decrease by 1 and reduces the size of sampleJtot array,
@@ -969,6 +1142,19 @@ namespace OptNet
                 uint accumNs = 1;
                 for (int j = (int)dimN - 1; j > i; j--)
                     accumNs *= Ns[j];
+                idTot += inputIndex[i] * accumNs;
+            }
+
+            return idTot;
+        }
+        private uint GetIdTot(in uint[] inputIndex, in int[] ns)
+        {
+            uint idTot = inputIndex[dimN - 1];
+            for (int i = (int)dimN - 2; i >= 0; i--)
+            {
+                uint accumNs = 1;
+                for (int j = (int)dimN - 1; j > i; j--)
+                    accumNs *= (uint)ns[j];
                 idTot += inputIndex[i] * accumNs;
             }
 

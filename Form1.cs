@@ -73,13 +73,13 @@ namespace OptNet
                 J = mTestFcn.Ackley,
                 TolJ = 0.001,
                 TolX = 0.1,
-                DimN = 6,
-                Ns = [11, 11, 11, 11, 11, 11],
-                MinX = [-32, -32, -32, -32, -32, -32],
-                MaxX = [32, 32, 32, 32, 32, 32],
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-32, -32, -32],
+                MaxX = [32, 32, 32],
                 Mode = OptMD<double>.StaMaskEnum.Min
             };
-            mOptMD = new OptMD<double>(mParamTst2D);
+            mOptMD = new OptMD<double>(mParamAckley);
 
             SetModeOfNewOptMD();
         }
@@ -101,6 +101,15 @@ namespace OptNet
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.MThread);
             }
+
+            if (checkBoxSampleReuse.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.SampleReuse);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.SampleReuse);
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -110,7 +119,7 @@ namespace OptNet
             comboBoxBenchFcn.Items.AddRange([
                 "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly", "Ackley"
             ]);
-            comboBoxBenchFcn.SelectedIndex = 1; // Default to the first item
+            comboBoxBenchFcn.SelectedIndex = 5; // Default to the last item
 
             comboBoxLogLevel.Items.AddRange([
                 "None", "Error", "Warning", "Info0", "Info1","Info2","Info3","Debug", "Verbose"
@@ -155,15 +164,18 @@ namespace OptNet
             {
                 MessageBox.Show($"Shrink operation failed: {ex.Message}");
             }
-
+            var old = numericUpDownShrink.Value;
             ResetUICtr();
+            numericUpDownShrink.Value = old;
         }
         private void ButtonResetAll_Click(object sender, EventArgs e)
         {
-            mOptMD = new OptMD<double>(mParamTst2D);
-            comboBoxBenchFcn.SelectedIndex = 1;
+            mOptMD = new OptMD<double>(mParamAckley);
+            comboBoxBenchFcn.SelectedIndex = 5;
             comboBoxLogLevel.SelectedIndex = 3;
             buttonShrink.Enabled = false;
+
+            ResetUICtr();
 
             SetModeOfNewOptMD();
         }
@@ -272,17 +284,20 @@ namespace OptNet
             comboBoxMaxX.Items.Clear();
             comboBoxMinXdX.Items.Clear();
             comboBoxMaxXdX.Items.Clear();
+            comboBoxNs.Items.Clear();
             for (int i = 0; i < mOptMD.DimN; i++)
             {
                 comboBoxMinX.Items.Add(mOptMD.MinX[i].ToString("F4"));
                 comboBoxMaxX.Items.Add(mOptMD.MaxX[i].ToString("F4"));
                 comboBoxMinXdX.Items.Add((mOptMD.MinX[i] - mOptMD.DXHalf[i]).ToString("F4"));
                 comboBoxMaxXdX.Items.Add((mOptMD.MaxX[i] + mOptMD.DXHalf[i]).ToString("F4"));
+                comboBoxNs.Items.Add(mOptMD.Nsample[i].ToString("F0"));
             }
             comboBoxMinX.SelectedIndex = 0; // Set default selected index for comboBoxMinX
             comboBoxMaxX.SelectedIndex = 0; // Set default selected index for comboBoxMaxX
             comboBoxMinXdX.SelectedIndex = 0; // Set default selected index for comboBoxMinXdX
             comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
+            comboBoxNs.SelectedIndex = 0; // Set default selected index for comboBoxNs
 
             numericUpDownDimension.Value = mOptMD.DimN; // Reset the dimension value
 
@@ -391,5 +406,21 @@ namespace OptNet
                     break;
             }
         }
+
+        private void checkBoxSampleReuse_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if (checkBoxSampleReuse.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.SampleReuse);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.SampleReuse);
+            }
+        }
+
+        
     }
 }

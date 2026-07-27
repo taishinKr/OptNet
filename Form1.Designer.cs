@@ -61,6 +61,9 @@
             numericUpDownDimension = new NumericUpDown();
             comboBoxLogLevel = new ComboBox();
             labelLogLevel = new Label();
+            comboBoxNs = new ComboBox();
+            labelNs = new Label();
+            checkBoxSampleReuse = new CheckBox();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -75,7 +78,7 @@
             textBoxMsg.Multiline = true;
             textBoxMsg.Name = "textBoxMsg";
             textBoxMsg.ScrollBars = ScrollBars.Vertical;
-            textBoxMsg.Size = new Size(776, 486);
+            textBoxMsg.Size = new Size(829, 486);
             textBoxMsg.TabIndex = 2;
             // 
             // buttonOptimzeMD
@@ -133,6 +136,7 @@
             comboBoxIdxXlist.FormattingEnabled = true;
             comboBoxIdxXlist.ItemHeight = 15;
             comboBoxIdxXlist.Location = new Point(258, 95);
+            comboBoxIdxXlist.MaxDropDownItems = 100;
             comboBoxIdxXlist.Name = "comboBoxIdxXlist";
             comboBoxIdxXlist.Size = new Size(65, 23);
             comboBoxIdxXlist.TabIndex = 3;
@@ -245,6 +249,7 @@
             comboBoxMinX.FormattingEnabled = true;
             comboBoxMinX.ItemHeight = 15;
             comboBoxMinX.Location = new Point(497, 95);
+            comboBoxMinX.MaxDropDownItems = 100;
             comboBoxMinX.Name = "comboBoxMinX";
             comboBoxMinX.Size = new Size(82, 23);
             comboBoxMinX.TabIndex = 21;
@@ -257,6 +262,7 @@
             comboBoxMaxX.FormattingEnabled = true;
             comboBoxMaxX.ItemHeight = 15;
             comboBoxMaxX.Location = new Point(588, 95);
+            comboBoxMaxX.MaxDropDownItems = 100;
             comboBoxMaxX.Name = "comboBoxMaxX";
             comboBoxMaxX.Size = new Size(82, 23);
             comboBoxMaxX.TabIndex = 22;
@@ -278,6 +284,7 @@
             comboBoxMaxXdX.FormattingEnabled = true;
             comboBoxMaxXdX.ItemHeight = 15;
             comboBoxMaxXdX.Location = new Point(679, 95);
+            comboBoxMaxXdX.MaxDropDownItems = 100;
             comboBoxMaxXdX.Name = "comboBoxMaxXdX";
             comboBoxMaxXdX.Size = new Size(82, 23);
             comboBoxMaxXdX.TabIndex = 27;
@@ -290,6 +297,7 @@
             comboBoxMinXdX.FormattingEnabled = true;
             comboBoxMinXdX.ItemHeight = 15;
             comboBoxMinXdX.Location = new Point(406, 95);
+            comboBoxMinXdX.MaxDropDownItems = 100;
             comboBoxMinXdX.Name = "comboBoxMinXdX";
             comboBoxMinXdX.Size = new Size(82, 23);
             comboBoxMinXdX.TabIndex = 26;
@@ -327,7 +335,7 @@
             // checkBoxThread
             // 
             checkBoxThread.AutoSize = true;
-            checkBoxThread.Location = new Point(148, 62);
+            checkBoxThread.Location = new Point(148, 56);
             checkBoxThread.Name = "checkBoxThread";
             checkBoxThread.Size = new Size(90, 19);
             checkBoxThread.TabIndex = 30;
@@ -396,11 +404,49 @@
             labelLogLevel.TabIndex = 37;
             labelLogLevel.Text = "Log Level";
             // 
+            // comboBoxNs
+            // 
+            comboBoxNs.AllowDrop = true;
+            comboBoxNs.DropDownStyle = ComboBoxStyle.DropDownList;
+            comboBoxNs.Font = new Font("Malgun Gothic", 9F);
+            comboBoxNs.FormattingEnabled = true;
+            comboBoxNs.ItemHeight = 15;
+            comboBoxNs.Location = new Point(770, 94);
+            comboBoxNs.MaxDropDownItems = 100;
+            comboBoxNs.Name = "comboBoxNs";
+            comboBoxNs.Size = new Size(65, 23);
+            comboBoxNs.TabIndex = 39;
+            // 
+            // labelNs
+            // 
+            labelNs.AutoSize = true;
+            labelNs.Location = new Point(770, 77);
+            labelNs.Name = "labelNs";
+            labelNs.Size = new Size(21, 15);
+            labelNs.TabIndex = 38;
+            labelNs.Text = "Ns";
+            // 
+            // checkBoxSampleReuse
+            // 
+            checkBoxSampleReuse.AutoSize = true;
+            checkBoxSampleReuse.Checked = true;
+            checkBoxSampleReuse.CheckState = CheckState.Checked;
+            checkBoxSampleReuse.Location = new Point(148, 72);
+            checkBoxSampleReuse.Name = "checkBoxSampleReuse";
+            checkBoxSampleReuse.Size = new Size(101, 19);
+            checkBoxSampleReuse.TabIndex = 40;
+            checkBoxSampleReuse.Text = "Sample Reuse";
+            checkBoxSampleReuse.UseVisualStyleBackColor = true;
+            checkBoxSampleReuse.CheckedChanged += checkBoxSampleReuse_CheckedChanged;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(802, 632);
+            ClientSize = new Size(853, 632);
+            Controls.Add(checkBoxSampleReuse);
+            Controls.Add(comboBoxNs);
+            Controls.Add(labelNs);
             Controls.Add(labelLogLevel);
             Controls.Add(comboBoxLogLevel);
             Controls.Add(labelDimension);
@@ -477,5 +523,8 @@
         private NumericUpDown numericUpDownDimension;
         private ComboBox comboBoxLogLevel;
         private Label labelLogLevel;
+        private ComboBox comboBoxNs;
+        private Label labelNs;
+        private CheckBox checkBoxSampleReuse;
     }
 }
