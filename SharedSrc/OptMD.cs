@@ -327,8 +327,8 @@ namespace OptNet
                     nUpsample[idxDim] = 2;
                     int tmpNs = 0;
 
-                    var tmpLimit = orginNs[idxDim] * double.CreateChecked(ratio); //orginNs[idxDim]
-                    var maxSampleLimit = tmpLimit >= 3 ? tmpLimit : 3;
+                    var tmpLimit = Ns[idxDim] * double.CreateChecked(ratio); // orginNs[idxDim] * double.CreateChecked(ratio); //orginNs[idxDim]
+                    var maxSampleLimit = tmpLimit >= 5 ? tmpLimit : 5;
                     while (tmpNs < maxSampleLimit) // cap the number of samples to avoid excessive upsampling
                     {
                         divIdx[idxDim] = T.CreateChecked(1.0 / (double)nUpsample[idxDim]);
@@ -1067,7 +1067,8 @@ namespace OptNet
                         inputIdx[axisIdx - 1] = i;
                         samplej[i] = iSample[(int)GetIdTot(inputIdx)];
                     }
-                    OfflineGet<T> constVars = lutConstant[Ns[idxDim-1]];
+                    //OfflineGet<T> constVars = lutConstant[Ns[idxDim-1]];
+                    OfflineGet<T> constVars = lutConstant[Ns[axisIdx - 1]];
                     var w = GeneralMath<T>.LinearTransform(constVars.P.Data, samplej);
 
                     T sum = T.Zero;

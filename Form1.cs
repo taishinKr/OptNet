@@ -17,8 +17,11 @@ namespace OptNet
 		public OptParam<double> mParamGriewank;
         public OptParam<double> mParamRastrigin;
         public OptParam<double> mParamSchwefel;
+        public OptParam<double> mParamAlpine;
+        public OptParam<double> mParamExpandedSchafferF6;
+        public OptParam<double> mParamSalomons;
 
-		private bool _initializing;
+        private bool _initializing;
 
         public Form1()
         {
@@ -123,7 +126,43 @@ namespace OptNet
 				Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true
 			};
-			mOptMD = new OptMD<double>(mParamAckleyN1); // Default to AckleyN1 function
+            mParamAlpine = new OptParam<double>
+            {
+                J = mTestFcn.Alpine,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-10, -10, -10],
+                MaxX = [10, 10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true
+            };
+            mParamExpandedSchafferF6 = new OptParam<double>
+            {
+                J = mTestFcn.ExpandedSchafferF6,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-100, -100, -100],
+                MaxX = [100, 100, 100],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true
+            };
+            mParamSalomons = new OptParam<double>
+            {
+                J = mTestFcn.Salomons,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-100, -100, -100],
+                MaxX = [100, 100, 100],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true
+            };
+            mOptMD = new OptMD<double>(mParamAckleyN1); // Default to AckleyN1 function
 
 			SetModeOfNewOptMD();
         }
@@ -161,7 +200,7 @@ namespace OptNet
             // Form load event handler          
 
             comboBoxBenchFcn.Items.AddRange([
-                "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly", "AckleyN1", "Griewank", "Rastrigin", "Schwefel"
+                "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly", "AckleyN1", "Griewank", "Rastrigin", "Schwefel", "Alpine", "ExpandedSchafferF6", "Salomons"
             ]);
             comboBoxBenchFcn.SelectedIndex = 5; // Default to the last item
 
@@ -313,6 +352,18 @@ namespace OptNet
                     mOptMD = new OptMD<double>(mParamSchwefel);
                     buttonOptimzeMD.Enabled = true;
                     break;
+                case "Alpine":
+                    mOptMD = new OptMD<double>(mParamAlpine);
+                    buttonOptimzeMD.Enabled = true;
+                    break;
+                case "ExpandedSchafferF6":
+                    mOptMD = new OptMD<double>(mParamExpandedSchafferF6);
+                    buttonOptimzeMD.Enabled = true;
+                    break;
+                case "Salomons":
+                    mOptMD = new OptMD<double>(mParamSalomons);
+                    buttonOptimzeMD.Enabled = true;
+                    break;
                 case "1DOnly":
                     mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.001, 11, 0, 1, new OfflineGet<double>(11), Opt1D<double>.StaMaskEnum.Max, null);  // "Min", "Max"
                     DisplayMessage(mOpt1D.ResultMsg());
@@ -333,7 +384,7 @@ namespace OptNet
 
         private void ResetUICtr()
         {
-            numericUpDownShrink.Value = 0.5M; // Default value for numericUpDown                        
+            numericUpDownShrink.Value = 0.1M; // Default value for numericUpDown                        
             numericUpDownTolX.Value = (decimal)mOptMD.TolX * 100; // Reset the tolerance value
 
             comboBoxMinX.Items.Clear();

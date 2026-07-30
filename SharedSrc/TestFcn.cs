@@ -176,6 +176,92 @@ namespace OptNet
             return (c418 * d) - sum;
         }
 
+        /// <summary>
+        /// 1. Alpine No. 1 Function
+        /// Global Minimum: f(x) = 0 at x = [0, 0, ..., 0]
+        /// Standard Domain: x_i in [-10, 10]
+        /// </summary>
+        public T Alpine(T[] xT, uint dim)
+        {
+            if (xT == null || xT.Length < dim)
+                throw new ArgumentException("Input array length must be greater than or equal to the specified dimension.");
+
+            if (dim == 0)
+                return T.Zero;
+
+            T sum = T.Zero;
+
+            for (int i = 0; i < dim; i++)
+            {
+                // sum += | x_i * sin(x_i) + 0.1 * x_i |
+                T term = (xT[i] * T.Sin(xT[i])) + (T.CreateChecked(0.1) * xT[i]);
+                sum += T.Abs(term);
+            }
+
+            return sum;
+        }
+
+        /// <summary>
+        /// 2. Expanded Schaffer's F6 Function
+        /// Global Minimum: f(x) = 0 at x = [0, 0, ..., 0]
+        /// Standard Domain: x_i in [-100, 100]
+        /// </summary>
+        public T ExpandedSchafferF6(T[] xT, uint dim)
+        {
+            if (xT == null || xT.Length < dim)
+                throw new ArgumentException("Input array length must be greater than or equal to the specified dimension.");
+
+            if (dim <= 1)
+                return T.Zero;
+
+            T sum = T.Zero;
+            T zeroPointFive = T.CreateChecked(0.5);
+            T pointZeroZeroOne = T.CreateChecked(0.001);
+
+            // 2차원 Schaffer F6 구조를 인접 원소 쌍(x_i, x_{i+1}) 및 (x_{dim-1}, x_0)에 대해 확장 연산
+            for (int i = 0; i < dim; i++)
+            {
+                T x1 = xT[i];
+                T x2 = xT[(i + 1) % dim]; // Cyclic expansion
+
+                T temp = (x1 * x1) + (x2 * x2);
+                T sinVal = T.Sin(T.Sqrt(temp));
+                T num = (sinVal * sinVal) - zeroPointFive;
+                T denom = T.One + (pointZeroZeroOne * temp);
+                T denomSq = denom * denom;
+
+                sum += zeroPointFive + (num / denomSq);
+            }
+
+            return sum;
+        }
+
+        /// <summary>
+        /// 3. Salomon's Function
+        /// Global Minimum: f(x) = 0 at x = [0, 0, ..., 0]
+        /// Standard Domain: x_i in [-100, 100]
+        /// </summary>
+        public T Salomons(T[] xT, uint dim)
+        {
+            if (xT == null || xT.Length < dim)
+                throw new ArgumentException("Input array length must be greater than or equal to the specified dimension.");
+
+            if (dim == 0)
+                return T.Zero;
+
+            T sumSq = T.Zero;
+            for (int i = 0; i < dim; i++)
+            {
+                sumSq += xT[i] * xT[i];
+            }
+
+            T r = T.Sqrt(sumSq); // Euclidean distance from origin
+            T twoPi = T.CreateChecked(2.0 * Math.PI);
+
+            // f(x) = 1 - cos(2 * pi * r) + 0.1 * r
+            return T.One - T.Cos(twoPi * r) + (T.CreateChecked(0.1) * r);
+        }
+
         // Test functions for optimization problems, Opt1D ////////////////////
         public T JTest1D(T xT)
         {
