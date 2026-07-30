@@ -14,6 +14,7 @@ namespace OptNet
         public T[] MinX { get; set; }
         public T[] MaxX { get; set; }
         public OptMD<T>.StaMaskEnum Mode { get; set; }
+        public bool IsScalable { get; set; } = true; // flag to indicate whether the optimization problem is scalable or not, default is true.
 
         public OptParam()
         {
@@ -37,6 +38,7 @@ namespace OptNet
             this.Ns = new uint[dimN];
             this.MinX = new T[dimN];
             this.MaxX = new T[dimN];
+            this.IsScalable = optparm.IsScalable;
             for(int i = 0; i < dimN; i++)
             {
                 this.Ns[i] = optparm.Ns[0];

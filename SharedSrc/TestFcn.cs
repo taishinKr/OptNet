@@ -48,13 +48,13 @@ namespace OptNet
         }
 
         /// <summary>
-        /// Computes the Ackley benchmark function for generic numeric types.
+        /// Computes the AckleyN1 benchmark function for generic numeric types.
         /// </summary>
         /// <typeparam name="T">A numeric type implementing trigonometric, exponential, and root functions.</typeparam>
         /// <param name="xT">The decision variable array (input vector).</param>
         /// <param name="dim">The dimension of the decision variable space.</param>
-        /// <returns>The evaluated Ackley function value.</returns>
-        public T Ackley(T[] xT, uint dim)
+        /// <returns>The evaluated AckleyN1 function value.</returns>
+        public T AckleyN1(T[] xT, uint dim)
         {
             if (xT == null || xT.Length < dim)
                 throw new ArgumentException("Input array length must be greater than or equal to the specified dimension.");
@@ -87,7 +87,94 @@ namespace OptNet
             return term1 + term2 + constant;
         }
 
+        /// <summary>
+        /// 1. Griewank Function
+        /// Global Minimum: f(x) = 0 at x = [0, 0, ..., 0]
+        /// Standard Domain: x_i in [-600, 600]
+        /// </summary>
+        public T Griewank(T[] xT, uint dim)
+        {
+            if (xT == null || xT.Length < dim)
+                throw new ArgumentException("Input array length must be greater than or equal to the specified dimension.");
 
+            if (dim == 0)
+                return T.Zero;
+
+            T sum = T.Zero;
+            T prod = T.One;
+
+            for (int i = 0; i < dim; i++)
+            {
+                // sum += x_i^2 / 4000
+                sum += (xT[i] * xT[i]) / T.CreateChecked(4000.0);
+
+                // prod *= cos(x_i / sqrt(i + 1))
+                T index = T.CreateChecked(i + 1);
+                T term = xT[i] / T.Sqrt(index);
+                prod *= T.Cos(term);
+            }
+
+            // f(x) = sum - prod + 1
+            return sum - prod + T.One;
+        }
+
+        /// <summary>
+        /// 2. Rastrigin Function
+        /// Global Minimum: f(x) = 0 at x = [0, 0, ..., 0]
+        /// Standard Domain: x_i in [-5.12, 5.12]
+        /// </summary>
+        public T Rastrigin(T[] xT, uint dim)
+        {
+            if (xT == null || xT.Length < dim)
+                throw new ArgumentException("Input array length must be greater than or equal to the specified dimension.");
+
+            if (dim == 0)
+                return T.Zero;
+
+            T sum = T.Zero;
+            T ten = T.CreateChecked(10.0);
+            T twoPi = T.CreateChecked(2.0 * Math.PI);
+
+            for (int i = 0; i < dim; i++)
+            {
+                // sum += x_i^2 - 10 * cos(2 * pi * x_i)
+                sum += (xT[i] * xT[i]) - (ten * T.Cos(twoPi * xT[i]));
+            }
+
+            T d = T.CreateChecked(dim);
+
+            // f(x) = 10 * d + sum
+            return (ten * d) + sum;
+        }
+
+        /// <summary>
+        /// 3. Schwefel Function
+        /// Global Minimum: f(x) = 0 at x = [420.9687, 420.9687, ..., 420.9687]
+        /// Standard Domain: x_i in [-500, 500]
+        /// </summary>
+        public T Schwefel(T[] xT, uint dim)
+        {
+            if (xT == null || xT.Length < dim)
+                throw new ArgumentException("Input array length must be greater than or equal to the specified dimension.");
+
+            if (dim == 0)
+                return T.Zero;
+
+            T sum = T.Zero;
+            T c418 = T.CreateChecked(418.9829);
+
+            for (int i = 0; i < dim; i++)
+            {
+                // sum += x_i * sin(sqrt(|x_i|))
+                T absX = T.Abs(xT[i]);
+                sum += xT[i] * T.Sin(T.Sqrt(absX));
+            }
+
+            T d = T.CreateChecked(dim);
+
+            // f(x) = 418.9829 * d - sum
+            return (c418 * d) - sum;
+        }
 
         // Test functions for optimization problems, Opt1D ////////////////////
         public T JTest1D(T xT)

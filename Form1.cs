@@ -13,9 +13,12 @@ namespace OptNet
         public OptParam<double> mParamTst2D;
         public OptParam<double> mParamTst3D;
         public OptParam<double> mParamBird;
-        public OptParam<double> mParamAckley;
+        public OptParam<double> mParamAckleyN1;
+		public OptParam<double> mParamGriewank;
+        public OptParam<double> mParamRastrigin;
+        public OptParam<double> mParamSchwefel;
 
-        private bool _initializing;
+		private bool _initializing;
 
         public Form1()
         {
@@ -33,7 +36,8 @@ namespace OptNet
                 Ns = [11],
                 MinX = [0],
                 MaxX = [1],
-                Mode = OptMD<double>.StaMaskEnum.Max
+                Mode = OptMD<double>.StaMaskEnum.Max,
+                IsScalable = false
             };
             mParamTst2D = new OptParam<double>
             {
@@ -44,7 +48,8 @@ namespace OptNet
                 Ns = [11, 11],
                 MinX = [0, 0],
                 MaxX = [1, 1],
-                Mode = OptMD<double>.StaMaskEnum.Max
+                Mode = OptMD<double>.StaMaskEnum.Max,
+                IsScalable = false
             };
             mParamTst3D = new OptParam<double>
             {
@@ -55,7 +60,8 @@ namespace OptNet
                 Ns = [11, 11, 11],
                 MinX = [0, 0, 0],
                 MaxX = [1, 1, 1],
-                Mode = OptMD<double>.StaMaskEnum.Max
+                Mode = OptMD<double>.StaMaskEnum.Max,
+                IsScalable = false
             };
             mParamBird = new OptParam<double>
             {
@@ -66,22 +72,60 @@ namespace OptNet
                 Ns = [11, 11],
                 MinX = [-6, -6],
                 MaxX = [6, 6],
-                Mode = OptMD<double>.StaMaskEnum.Min
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false
             };
-            mParamAckley = new OptParam<double>
+            mParamAckleyN1 = new OptParam<double>
             {
-                J = mTestFcn.Ackley,
+                J = mTestFcn.AckleyN1,
                 TolJ = 0.001,
                 TolX = 0.1,
                 DimN = 3,
                 Ns = [11, 11, 11],
                 MinX = [-32, -32, -32],
                 MaxX = [32, 32, 32],
-                Mode = OptMD<double>.StaMaskEnum.Min
-            };
-            mOptMD = new OptMD<double>(mParamAckley);
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true
+            };            
+			mParamGriewank = new OptParam<double>
+			{
+				J = mTestFcn.Griewank,
+				TolJ = 0.001,
+				TolX = 0.1,
+				DimN = 3,
+				Ns = [11, 11, 11],
+				MinX = [-600, -600, -600],
+				MaxX = [600, 600, 600],
+				Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true
+			};
+			mParamRastrigin = new OptParam<double>
+			{
+				J = mTestFcn.Rastrigin,
+				TolJ = 0.001,
+				TolX = 0.1,
+				DimN = 3,
+				Ns = [11, 11, 11],
+				MinX = [-5.12, -5.12, -5.12],
+				MaxX = [5.12, 5.12, 5.12],
+				Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true
+			};
+			mParamSchwefel = new OptParam<double>
+			{
+				J = mTestFcn.Schwefel,
+				TolJ = 0.001,
+				TolX = 0.1,
+				DimN = 3,
+				Ns = [11, 11, 11],
+				MinX = [-500, -500, -500],
+				MaxX = [500, 500, 500],
+				Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true
+			};
+			mOptMD = new OptMD<double>(mParamAckleyN1); // Default to AckleyN1 function
 
-            SetModeOfNewOptMD();
+			SetModeOfNewOptMD();
         }
 
         private void SetModeOfNewOptMD()
@@ -117,7 +161,7 @@ namespace OptNet
             // Form load event handler          
 
             comboBoxBenchFcn.Items.AddRange([
-                "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly", "Ackley"
+                "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly", "AckleyN1", "Griewank", "Rastrigin", "Schwefel"
             ]);
             comboBoxBenchFcn.SelectedIndex = 5; // Default to the last item
 
@@ -170,8 +214,8 @@ namespace OptNet
         }
         private void ButtonResetAll_Click(object sender, EventArgs e)
         {
-            mOptMD = new OptMD<double>(mParamAckley);
-            comboBoxBenchFcn.SelectedIndex = 5;
+            mOptMD = new OptMD<double>(mParamAckleyN1); // Reset to AckleyN1 function
+			comboBoxBenchFcn.SelectedIndex = 5;
             comboBoxLogLevel.SelectedIndex = 3;
             buttonShrink.Enabled = false;
 
@@ -253,8 +297,20 @@ namespace OptNet
                     mOptMD = new OptMD<double>(mParamBird);
                     buttonOptimzeMD.Enabled = true;
                     break;
-                case "Ackley":
-                    mOptMD = new OptMD<double>(mParamAckley);
+                case "AckleyN1":
+                    mOptMD = new OptMD<double>(mParamAckleyN1);
+                    buttonOptimzeMD.Enabled = true;
+                    break;
+                case "Griewank":
+                    mOptMD = new OptMD<double>(mParamGriewank);
+                    buttonOptimzeMD.Enabled = true;
+                    break;
+                case "Rastrigin":
+                    mOptMD = new OptMD<double>(mParamRastrigin);
+                    buttonOptimzeMD.Enabled = true;
+                    break;
+                case "Schwefel":
+                    mOptMD = new OptMD<double>(mParamSchwefel);
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "1DOnly":
@@ -300,6 +356,7 @@ namespace OptNet
             comboBoxNs.SelectedIndex = 0; // Set default selected index for comboBoxNs
 
             numericUpDownDimension.Value = mOptMD.DimN; // Reset the dimension value
+            numericUpDownDimension.Enabled = mOptMD.OptParam.IsScalable;
 
             mOptMD.CurrentLevel = (OptMD<double>.LogLevel)comboBoxLogLevel.SelectedIndex;
         }
