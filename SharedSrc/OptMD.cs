@@ -4,7 +4,7 @@ using System.Numerics;
 
 namespace OptNet
 {
-    public class OptParam<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>
+    public class OptParam<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>, IPowerFunctions<T>
     {
         public Func<T[], uint, T> J { get; set; }
         public double TolJ { get; set; } //
@@ -15,6 +15,7 @@ namespace OptNet
         public T[] MaxX { get; set; }
         public OptMD<T>.StaMaskEnum Mode { get; set; }
         public bool IsScalable { get; set; } = true; // flag to indicate whether the optimization problem is scalable or not, default is true.
+        public (T[] X, T J)[] Optima { get; set; } = []; //Array.Empty<(T[], T)>();
 
         public OptParam()
         {
@@ -31,6 +32,29 @@ namespace OptNet
 
         public OptParam( OptParam<T> optparm, uint dimN)
         {
+            if (optparm.IsScalable) // UI의 combobox에서 dimN을 변경한 경우
+            {
+                this.Optima = optparm.Optima.Select(o =>
+                {
+                    var newX = new T[dimN];
+
+                    // 기존 값 복사
+                    for (int i = 0; i < this.DimN; i++)
+                        newX[i] = o.X[i];
+                    // 나머지 값은 X[1]로 채우기
+                    for (uint i = this.DimN; i < dimN; i++)
+                        newX[i] = o.X[1];
+
+                    return (newX, o.J);
+                }).ToArray();
+            }
+            else // UI의 combobox에서 dimN을 변경하지 않은 경우
+            {
+                Optima = optparm.Optima
+                    .Select(o => (o.X, o.J))
+                    .ToArray();
+            }
+
             this.J = optparm.J;
             this.TolJ = optparm.TolJ;
             this.TolX = optparm.TolX < 0.0 ? 0.001 : optparm.TolX; // default value if tolX is negative
@@ -67,7 +91,7 @@ namespace OptNet
             this.Mode = Mode;
         }
     }
-    public class OptMD<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>
+    public class OptMD<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>, IPowerFunctions<T>
     {
         private readonly uint dimN;
         private ImmutableArray<uint> Ns;
@@ -1324,17 +1348,6 @@ namespace OptNet
             else
                 return string.Empty;
         }
-        /*public void DisplayMsg(Action<string> DisplayMessage)
-        {
-            string msgOptX = "Optimum ";
-            msgOptX += string.Format("{0,8:G5} at ", optResult.J); ;
-
-            for (int i = 0; i < dimN; i++)
-            {
-                msgOptX += string.Format("{0,8:G5} ", calcRealX(optResult.Xlist[0][i], i)); ;
-            }
-            DisplayMessage(msgOptX);
-        }*/
         /// <summary>
         /// Generates a formatted message summarizing the optimum results.
         /// </summary>
@@ -1346,9 +1359,11 @@ namespace OptNet
         public string ResultMsg()
         {
             string msgOptX = "";
+            int j = 0;
             foreach (var opt in optResultReal)
             {
-                string msgOptX1 = "Optimum ";
+                string msgOptX1 = "Optimum(";
+                msgOptX1 += string.Format("{0,1:G3}) ", j);
                 msgOptX1 += string.Format("{0,8:G5} at ", opt.J);
 
                 for (int i = 0; i < dimN; i++)
@@ -1356,6 +1371,7 @@ namespace OptNet
                     msgOptX1 += string.Format("{0,8:G5} ", opt.X[i]);
                 }
                 msgOptX += msgOptX1 + Environment.NewLine;
+                j++;
             }
 
             //DisplayMsgFunc(msgOptX);
