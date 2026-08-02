@@ -151,7 +151,7 @@ namespace OptNet
 				MaxX = [500, 500, 500],
 				Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
-                Optima = [([420.9687, 420.9687, 420.9687], -12569.5)]
+                Optima = [([420.9687, 420.9687, 420.9687], 0)]
             };
             mParamAlpine = new OptParam<double>
             {
@@ -198,7 +198,7 @@ namespace OptNet
                 TolJ = 0.001,
                 TolX = 0.1,
                 DimN = 2,
-                Ns = [11, 11],
+                Ns = [51, 51],
                 MinX = [-4.5, -4.5],
                 MaxX = [4.5, 4.5],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -436,8 +436,10 @@ namespace OptNet
                 IsScalable = false,
                 Optima = [([0, 0], 0.0)]
             };
-            mOptMD = new OptMD<double>(mParamAckleyN1); // Default to AckleyN1 function
-            
+            //mOptMD = new OptMD<double>(mParamAckleyN1); // Default to AckleyN1 function
+            mOptMD = new OptMD<double>(mParamBeale); // Default to Beale function
+
+
             SetModeOfNewOptMD();
         }
 
@@ -478,7 +480,8 @@ namespace OptNet
                 ,"Beale", "Booth", "CrossInTray", "DropWave", "Easom", "GoldsteinPrice", "Himmelblau", "HolderTable", "LevyN13", "Matyas", "SchafferN2", "ThreeHumpCamel"
                 ,"ExpandedZakharov", "Michalewicz", "Rosenbrock", "Sphere", "StyblinskiTang", "SchafferF6"
             ]);
-            comboBoxBenchFcn.SelectedIndex = 5; // Default to the last item
+            //comboBoxBenchFcn.SelectedIndex = 5; // Default to the last item
+            comboBoxBenchFcn.SelectedIndex = 12; // Default to the last item
 
             comboBoxLogLevel.Items.AddRange([
                 "None", "Error", "Warning", "Info0", "Info1","Info2","Info3","Debug", "Verbose"
@@ -530,9 +533,11 @@ namespace OptNet
         private void ButtonResetAll_Click(object sender, EventArgs e)
         {
             DisplayMessage("Initializing...");
-            mOptMD = new OptMD<double>(mParamAckleyN1); // Reset to AckleyN1 function
+            //mOptMD = new OptMD<double>(mParamAckleyN1); // Reset to AckleyN1 function
+            mOptMD = new OptMD<double>(mParamBeale); // Reset to Beale function
+
             DisplayMessage("Done." + Environment.NewLine);
-            comboBoxBenchFcn.SelectedIndex = 5;
+            comboBoxBenchFcn.SelectedIndex = 12; // for Beale  // 5 for AckleyN;
             comboBoxLogLevel.SelectedIndex = 3;
             buttonShrink.Enabled = false;
 
@@ -770,7 +775,10 @@ namespace OptNet
             comboBoxMaxXdX.SelectedIndex = 0; // Set default selected index for comboBoxMaxXdX
             comboBoxNs.SelectedIndex = 0; // Set default selected index for comboBoxNs
 
+            _isChangedFromUI = false; // Prevent triggering ValueChanged event during initialization
             numericUpDownDimension.Value = mOptMD.DimN; // Reset the dimension value
+            _isChangedFromUI = true; // Re-enable ValueChanged event after initialization
+
             numericUpDownDimension.Enabled = mOptMD.OptParam.IsScalable;
 
             mOptMD.CurrentLevel = (OptMD<double>.LogLevel)comboBoxLogLevel.SelectedIndex;
@@ -821,33 +829,25 @@ namespace OptNet
                 mOptMD.Mode = OptMD<double>.StaMaskEnum.Min;
         }
 
-        private bool _isInitialized = false;
+        private bool _isChangedFromUI = false;
         private void numericUpDownDimension_ValueChanged(object sender, EventArgs e)
-        {            
-            buttonOptimzeMD.Enabled = false;            
-            OptParam<double> optParam = new(mOptMD.OptParam, (uint)numericUpDownDimension.Value);
+        {
+            if (_isChangedFromUI)
+            { 
+                buttonOptimzeMD.Enabled = false;
+                OptParam<double> optParam = new(mOptMD.OptParam, (uint)numericUpDownDimension.Value);
 
-            if (_isInitialized)
                 DisplayMessage("Initializing...");
-
-            mOptMD = new OptMD<double>(optParam);
-
-            if (_isInitialized)
+                mOptMD = new OptMD<double>(optParam);
                 DisplayMessage("Done." + Environment.NewLine);
 
-            buttonOptimzeMD.Enabled = true;
+                buttonOptimzeMD.Enabled = true;
 
-            numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
+                numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
 
-            ResetUICtr();
-            SetModeOfNewOptMD();
-            if (_isInitialized)
-            {
+                ResetUICtr();
+                SetModeOfNewOptMD();
                 MsgForNewFunction();
-            }
-            else
-            {
-                _isInitialized = true;
             }
         }
 

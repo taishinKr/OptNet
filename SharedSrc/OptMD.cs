@@ -917,6 +917,7 @@ namespace OptNet
             {
                 var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
                 opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, optIntV1D);
+                //opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, null);
             }
             // If not at the specified axis, create an instance of the Opt1D class without specifying intervals
             else
