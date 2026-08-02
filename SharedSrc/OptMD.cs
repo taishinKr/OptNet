@@ -91,6 +91,20 @@ namespace OptNet
             this.Mode = Mode;
         }
     }
+    // 상태를 저장할 클래스 (mutable 컬렉션 사용)
+    public class StateSnapshot<T>
+    {
+        public uint[]? Ns { get; set; }
+        public T[]? MinX { get; set; }
+        public T[]? MaxX { get; set; }
+        public T[]? DX { get; set; }
+        public T[]? DXHalf { get; set; }
+        public List<T>? SampleJtot { get; set; }
+        public T? TolX { get; set; }
+        public (T[] X, T J)[] OptResultReal { get; set; } 
+    }
+
+
     public class OptMD<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>, IPowerFunctions<T>
     {
         private readonly uint dimN;
@@ -149,9 +163,9 @@ namespace OptNet
         {
             this.OptParam = optParam;
             J = x => optParam.J(x,optParam.DimN);
-            var tmpTolX = optParam.TolX < 0.0 ? 0.001 : optParam.TolX; // default value if tolX is negative
+            var tmpTolX = optParam.TolX < 0.0 ? 0.00001 : optParam.TolX; // default value if tolX is negative
             this.TolX = T.CreateChecked(tmpTolX);
-            var tmpTolJ = optParam.TolJ < 0.0 ? 0.001 : optParam.TolJ; // default value if tolJ is negative
+            var tmpTolJ = optParam.TolJ < 0.0 ? 0.00001 : optParam.TolJ; // default value if tolJ is negative
             this.TolJ = T.CreateChecked(tmpTolJ);
             this.dimN = optParam.DimN;
             this.Ns = ImmutableArray.Create(optParam.Ns);
@@ -195,99 +209,8 @@ namespace OptNet
             ClrSysFlag(StaMaskEnum.MThread);
             SetSysFlag(StaMaskEnum.SampleReuse);
         }
-        /*public void ShrinkBy(T ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
-        {
-            var minx = new T[dimN];
-            var maxx = new T[dimN];
-            var dx = new T[dimN];
-            var dxhalf = new T[dimN];
-            var ns = new uint[dimN];
-            var inputIndex = new uint[dimN];
-
-            for (int idxDim = 0; idxDim < dimN; idxDim++)
-            {                
-                T rangeNext = ratio * (maxX[idxDim]-minX[idxDim]); // shrinked range of the current dimension in terms of index
-                if (rangeNext <= T.Zero)
-                    throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
-                T optX = optResult[idxXlist].X[idxDim];
-                T minNext = optX - rangeNext / (T.One + T.One);
-                if (minNext < minX[idxDim])
-                    minNext = minX[idxDim];
-                T maxNext = minNext + rangeNext;
-                if(maxNext >= maxX[idxDim])
-                {
-                    maxNext = maxX[idxDim];
-                    minNext = maxNext - rangeNext;
-                }
-
-                T uMinSample = 
-                    minX[idxDim] +
-                        T.CreateChecked(
-                            Math.Floor(double.CreateChecked((minNext - minX[idxDim]) / dX[idxDim]))
-                        );
-                uint uMaxIdx = (uint)Math.Floor(double.CreateChecked(maxNext));
-                uint nUpsample = 2;
-                uint tmpNs = 0;
-                if ((rangeIdx < T.One) && (uMinIdx == uMaxIdx))
-                {
-                    // possible resampling freely
-                }
-                else
-                {
-                    while (tmpNs < Ns[idxDim])
-                    {
-                        T divIdx = T.CreateChecked(1.0 / (double)nUpsample);
-                        T minIdxNext = T.CreateChecked(uMinIdx);
-                        uint n = 0;
-                        while (minIdxNext > minIdx)
-                        {
-                            minIdxNext -= T.CreateChecked(n++ + 1) * divIdx;
-                        }
-
-                        tmpNs = n; // number of samples in the current dimension after upsampling less than uMinIdx
-                        tmpNs += (uMaxIdx - uMinIdx) * nUpsample; // number of samples in the current dimension after upsampling between uMinIdx and uMaxIdx
-                        if (uMaxIdx == uMinIdx)
-                            tmpNs += 1; // for uMinIdx
-                        else
-                            tmpNs += 2; // for uMinIdx and uMaxIdx
-                        T maxIdxNext = T.CreateChecked(uMaxIdx);
-
-                        n = 0;
-                        while (maxIdxNext < maxIdx)
-                        {
-                            maxIdxNext += T.CreateChecked(n++ + 1) * divIdx;
-                        }
-                        tmpNs += n; // number of samples in the current dimension after upsampling greater than uMaxIdx
-                    }
-                }
-
-                minx[idxDim] = minX[idxDim] + T.CreateChecked(minIdx) * dX[idxDim];
-                maxx[idxDim] = minX[idxDim] + T.CreateChecked(maxIdx) * dX[idxDim];
-                ns[idxDim] = (uint)(rdxIdx * 2 + 1);
-                dx[idxDim] = dX[idxDim] / (T.One + T.One);
-                dxhalf[idxDim] = dx[idxDim] / (T.One + T.One);
-
-                inputIndex[idxDim] = (uint)minIdx;
-            }
-
-            uint[] oldNs = [.. Ns]; // Ns.ToArray();
-            Ns = ImmutableArray.Create(ns);
-            minX = ImmutableArray.Create(minx);
-            maxX = ImmutableArray.Create(maxx);
-            dX = ImmutableArray.Create(dx);
-            dXHalf = ImmutableArray.Create(dxhalf);
-
-            var samplejtot = new List<T>();
-            UpSample(0, ref samplejtot, true, inputIndex, oldNs);
-            sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
-
-            var adjTolX = TolX / ratio; // adjust the tolerance for the input vector, X, to be considered as converged. 
-                                        // Fix for the problematic line causing multiple errors  
-            TolX = (adjTolX < T.One) ? adjTolX : T.One; // Adjust the tolerance for the input vector, X, to be considered as converged. 
-
-
-            ClrSysFlag(StaMaskEnum.Done);
-        }*/
+        
+        private StateSnapshot<T> oldDataBeforeShrink = new StateSnapshot<T>();
         public void ShrinkBy(T ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
             var minx = new T[dimN];
@@ -396,7 +319,9 @@ namespace OptNet
                 }
                 //inputIndex[idxDim] = (uint)minIdx;
             }
-            
+
+
+            oldDataBeforeShrink = SaveState(); // Save the current state before shrinking
             int[] oldNs = Ns.Select(x => (int)x).ToArray(); //int[] oldNs = [.. Ns]; // Ns.ToArray();
             Ns = ImmutableArray.CreateRange(ns.Select(x => (uint)x)); //Ns = ImmutableArray.Create(ns);
             minX = ImmutableArray.Create(minx);
@@ -422,14 +347,51 @@ namespace OptNet
             //UpSample(0, ref samplejtot, true, inputIndex, oldNs);
             sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
 
-            var adjTolX = TolX / ratio; // adjust the tolerance for the input vector, X, to be considered as converged. 
-                                        // Fix for the problematic line causing multiple errors  
-            TolX = (adjTolX < T.One) ? adjTolX : T.One; // Adjust the tolerance for the input vector, X, to be considered as converged. 
-
+            var adjTolX = TolX / ratio; // Adjust TolX based on the shrink ratio to maintain the same relative tolerance in the new, smaller search space
+                                        // the size of clusters is determined by the product of TolX and the span of the search space.
+                                        // the span of the search space is reduced by the shrink ratio, so we need to increase TolX by the same ratio to maintain the same cluster size.
+                                        // the greater TolX, the larger the cluster size, and the fewer clusters will be formed, which may lead to a loss of optimal solutions.
+            TolX = (adjTolX < T.One) ? adjTolX : T.One; 
 
             ClrSysFlag(StaMaskEnum.Done);
         }
-        
+        public StateSnapshot<T> SaveState()
+        {
+            return new StateSnapshot<T>
+            {
+                Ns = [.. Ns.ToArray()],
+                MinX = [.. minX.ToArray()],
+                MaxX = [.. maxX.ToArray()],
+                DX = [.. dX.ToArray()],
+                DXHalf = [.. dXHalf.ToArray()],
+                SampleJtot = [.. sampleJtot.ToList()],
+                TolX = TolX,
+                OptResultReal = [.. optResultReal.ToArray()]
+            };
+        }
+        public void RestoreState()
+        {
+            if (
+                !(oldDataBeforeShrink.Ns == null ||
+                oldDataBeforeShrink.MinX == null ||
+                oldDataBeforeShrink.MaxX == null ||
+                oldDataBeforeShrink.DX == null ||
+                oldDataBeforeShrink.DXHalf == null ||
+                oldDataBeforeShrink.SampleJtot == null ||
+                oldDataBeforeShrink.OptResultReal == null)
+               )
+            {
+                Ns = [.. oldDataBeforeShrink.Ns];
+                minX = [.. oldDataBeforeShrink.MinX];
+                maxX = [.. oldDataBeforeShrink.MaxX];
+                dX = [.. oldDataBeforeShrink.DX];
+                dXHalf = [.. oldDataBeforeShrink.DXHalf];
+                sampleJtot = [.. oldDataBeforeShrink.SampleJtot];
+                TolX = oldDataBeforeShrink.TolX;
+                optResultReal = [.. oldDataBeforeShrink.OptResultReal];
+            }
+        }
+
         /// <summary>
         /// Asynchronously optimizes a multi-dimensional dataset and updates the optimization results.
         /// </summary>
@@ -496,10 +458,12 @@ namespace OptNet
 
                 clusters = GeneralMath<T>.ClusterByDistance(optResultReal, TolX * spanX);
             }
-            else
+            else // If TolX is greater than or equal to 1, treat all results as a single cluster
             {
-                clusters.Add([.. optResultReal]); //new List<(T[] X, T J)>(optResultReal);
+                clusters.Add(new List<(T[] X, T J)>());
+                clusters[0] = optResultReal.ToList();
             }
+
 
             (T[] X, T J)[] newResult = []; //Array.Empty<(T[], T)>();
             T optj = T.Zero;

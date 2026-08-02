@@ -152,8 +152,10 @@ namespace OptNet
             C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, minDpK, maxDpK);
 
             Lo = GetLo((int)minDpK, (int)maxDpK);
-            Lo.Add((T.Zero, Jw(T.Zero)));
-            Lo.Add((T.One, Jw(T.One)));
+            T tmpoffset = T.CreateChecked(1.0 / 2.0 / Ns);
+            Lo.Add((tmpoffset, Jw(tmpoffset)));
+            Lo.Add((T.One - tmpoffset, Jw(T.One- tmpoffset)));
+            
 
             var maxJ = Lo.Max(item => item.J);
             var minJ = Lo.Min(item => item.J);

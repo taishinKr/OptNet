@@ -64,6 +64,8 @@
             comboBoxNs = new ComboBox();
             labelNs = new Label();
             checkBoxSampleReuse = new CheckBox();
+            buttonUndo = new Button();
+            label1 = new Label();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -83,9 +85,9 @@
             // 
             // buttonOptimzeMD
             // 
-            buttonOptimzeMD.Location = new Point(148, 22);
+            buttonOptimzeMD.Location = new Point(138, 22);
             buttonOptimzeMD.Name = "buttonOptimzeMD";
-            buttonOptimzeMD.Size = new Size(100, 28);
+            buttonOptimzeMD.Size = new Size(104, 28);
             buttonOptimzeMD.TabIndex = 0;
             buttonOptimzeMD.Text = "OptimzeMD";
             buttonOptimzeMD.UseVisualStyleBackColor = true;
@@ -94,9 +96,9 @@
             // buttonShrink
             // 
             buttonShrink.Enabled = false;
-            buttonShrink.Location = new Point(148, 92);
+            buttonShrink.Location = new Point(138, 92);
             buttonShrink.Name = "buttonShrink";
-            buttonShrink.Size = new Size(100, 28);
+            buttonShrink.Size = new Size(49, 28);
             buttonShrink.TabIndex = 1;
             buttonShrink.Text = "Shrink";
             buttonShrink.UseVisualStyleBackColor = true;
@@ -439,11 +441,32 @@
             checkBoxSampleReuse.UseVisualStyleBackColor = true;
             checkBoxSampleReuse.CheckedChanged += checkBoxSampleReuse_CheckedChanged;
             // 
+            // buttonUndo
+            // 
+            buttonUndo.Location = new Point(193, 92);
+            buttonUndo.Name = "buttonUndo";
+            buttonUndo.Size = new Size(49, 28);
+            buttonUndo.TabIndex = 41;
+            buttonUndo.Text = "Undo";
+            buttonUndo.UseVisualStyleBackColor = true;
+            buttonUndo.Click += buttonUndo_Click;
+            // 
+            // label1
+            // 
+            label1.AutoSize = true;
+            label1.Location = new Point(184, 99);
+            label1.Name = "label1";
+            label1.Size = new Size(12, 15);
+            label1.TabIndex = 42;
+            label1.Text = "/";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(853, 632);
+            Controls.Add(label1);
+            Controls.Add(buttonUndo);
             Controls.Add(checkBoxSampleReuse);
             Controls.Add(comboBoxNs);
             Controls.Add(labelNs);
@@ -526,5 +549,7 @@
         private ComboBox comboBoxNs;
         private Label labelNs;
         private CheckBox checkBoxSampleReuse;
+        private Button buttonUndo;
+        private Label label1;
     }
 }

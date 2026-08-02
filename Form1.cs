@@ -14,7 +14,7 @@ namespace OptNet
         public OptParam<double> mParamTst3D;
         public OptParam<double> mParamBird;
         public OptParam<double> mParamAckleyN1;
-		public OptParam<double> mParamGriewank;
+        public OptParam<double> mParamGriewank;
         public OptParam<double> mParamRastrigin;
         public OptParam<double> mParamSchwefel;
         public OptParam<double> mParamAlpine;
@@ -113,43 +113,43 @@ namespace OptNet
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
                 Optima = [([0, 0, 0], 0.0)]
-            };            
-			mParamGriewank = new OptParam<double>
-			{
-				J = mTestFcn.Griewank,
-				TolJ = 0.001,
-				TolX = 0.1,
-				DimN = 3,
-				Ns = [11, 11, 11],
-				MinX = [-600, -600, -600],
-				MaxX = [600, 600, 600],
-				Mode = OptMD<double>.StaMaskEnum.Min,
+            };
+            mParamGriewank = new OptParam<double>
+            {
+                J = mTestFcn.Griewank,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-600, -600, -600],
+                MaxX = [600, 600, 600],
+                Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
                 Optima = [([0, 0, 0], 0.0)]
             };
-			mParamRastrigin = new OptParam<double>
-			{
-				J = mTestFcn.Rastrigin,
-				TolJ = 0.001,
-				TolX = 0.1,
-				DimN = 3,
-				Ns = [11, 11, 11],
-				MinX = [-5.12, -5.12, -5.12],
-				MaxX = [5.12, 5.12, 5.12],
-				Mode = OptMD<double>.StaMaskEnum.Min,
+            mParamRastrigin = new OptParam<double>
+            {
+                J = mTestFcn.Rastrigin,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-5.12, -5.12, -5.12],
+                MaxX = [5.12, 5.12, 5.12],
+                Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
                 Optima = [([0, 0, 0], 0.0)]
-			};
-			mParamSchwefel = new OptParam<double>
-			{
-				J = mTestFcn.Schwefel,
-				TolJ = 0.001,
-				TolX = 0.1,
-				DimN = 3,
-				Ns = [11, 11, 11],
-				MinX = [-500, -500, -500],
-				MaxX = [500, 500, 500],
-				Mode = OptMD<double>.StaMaskEnum.Min,
+            };
+            mParamSchwefel = new OptParam<double>
+            {
+                J = mTestFcn.Schwefel,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-500, -500, -500],
+                MaxX = [500, 500, 500],
+                Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
                 Optima = [([420.9687, 420.9687, 420.9687], 0)]
             };
@@ -195,10 +195,10 @@ namespace OptNet
             mParamBeale = new OptParam<double>
             {
                 J = mTestFcn.Beale,
-                TolJ = 0.001,
+                TolJ = 0.0005,
                 TolX = 0.1,
                 DimN = 2,
-                Ns = [51, 51],
+                Ns = [11, 11],
                 MinX = [-4.5, -4.5],
                 MaxX = [4.5, 4.5],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -510,6 +510,7 @@ namespace OptNet
             buttonOptimzeMD.Enabled = false;
 
             buttonShrink.Enabled = false;
+            //buttonUndo.Enabled = false;
             numericUpDownShrink.Enabled = false;
             comboBoxIdxXlist.Enabled = false;
 
@@ -517,7 +518,6 @@ namespace OptNet
         }
         private void ButtonShrink_Click(object sender, EventArgs e)
         {
-            buttonShrink.Enabled = false;
             try
             {
                 mOptMD.ShrinkBy((double)(numericUpDownShrink.Value), comboBoxIdxXlist.SelectedIndex);
@@ -540,6 +540,7 @@ namespace OptNet
             comboBoxBenchFcn.SelectedIndex = 12; // for Beale  // 5 for AckleyN;
             comboBoxLogLevel.SelectedIndex = 3;
             buttonShrink.Enabled = false;
+            //buttonUndo.Enabled = false;
 
             ResetUICtr();
             SetModeOfNewOptMD();
@@ -553,11 +554,13 @@ namespace OptNet
                 comboBoxIdxXlist.Enabled = true;
                 numericUpDownShrink.Enabled = true;
                 buttonShrink.Enabled = true;
+                //buttonUndo.Enabled = true;
                 buttonOptimzeMD.Enabled = true;
             }
             else
             {
                 buttonShrink.Enabled = false;
+                //buttonUndo.Enabled = false;
                 numericUpDownShrink.Enabled = false;
                 comboBoxIdxXlist.Enabled = false;
             }
@@ -833,7 +836,7 @@ namespace OptNet
         private void numericUpDownDimension_ValueChanged(object sender, EventArgs e)
         {
             if (_isChangedFromUI)
-            { 
+            {
                 buttonOptimzeMD.Enabled = false;
                 OptParam<double> optParam = new(mOptMD.OptParam, (uint)numericUpDownDimension.Value);
 
@@ -909,6 +912,21 @@ namespace OptNet
             }
         }
 
-        
+        private void buttonUndo_Click(object sender, EventArgs e)
+        {
+            //buttonUndo.Enabled = false;
+            try
+            {
+                mOptMD.RestoreState();
+            }
+            catch (InvalidOperationException ex)
+            {
+                MessageBox.Show($"Shrink Undooperation failed: {ex.Message}");
+            }
+            var old = numericUpDownShrink.Value;
+            ResetUICtr();
+            numericUpDownShrink.Value = old;
+            mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.Done); // Set the Done flag to true after restoring state
+        }
     }
 }
