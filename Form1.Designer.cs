@@ -68,7 +68,7 @@
             label1 = new Label();
             checkBoxStrictLimit = new CheckBox();
             groupBox1 = new GroupBox();
-            labelSpanJ = new Label();
+            labelTolXReal = new Label();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -484,21 +484,21 @@
             groupBox1.TabStop = false;
             groupBox1.Text = "MODE";
             // 
-            // labelSpanJ
+            // labelTolXReal
             // 
-            labelSpanJ.AutoSize = true;
-            labelSpanJ.Location = new Point(558, 30);
-            labelSpanJ.Name = "labelSpanJ";
-            labelSpanJ.Size = new Size(38, 15);
-            labelSpanJ.TabIndex = 45;
-            labelSpanJ.Text = "SpanJ";
+            labelTolXReal.AutoSize = true;
+            labelTolXReal.Location = new Point(558, 30);
+            labelTolXReal.Name = "labelTolXReal";
+            labelTolXReal.Size = new Size(52, 15);
+            labelTolXReal.TabIndex = 45;
+            labelTolXReal.Text = "TolXReal";
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(853, 723);
-            Controls.Add(labelSpanJ);
+            Controls.Add(labelTolXReal);
             Controls.Add(groupBox1);
             Controls.Add(checkBoxStrictLimit);
             Controls.Add(label1);
@@ -589,6 +589,6 @@
         private Label label1;
         private CheckBox checkBoxStrictLimit;
         private GroupBox groupBox1;
-        private Label labelSpanJ;
+        private Label labelTolXReal;
     }
 }

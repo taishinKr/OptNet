@@ -92,7 +92,7 @@ namespace OptNet
             {
                 J = mTestFcn.Bird2D,
                 TolJ = 0.1,
-                TolX = 0.03,
+                TolX = 0.3,
                 DimN = 2,
                 Ns = [11, 11],
                 MinX = [-6, -6],
@@ -504,7 +504,7 @@ namespace OptNet
             ResetUICtr();
 
             labelTolJReal.Text = $"TolJReal: {mOptMD.TolJ:F4}";
-            labelSpanJ.Text = $"SpanJ: {mOptMD.SpanJ:F4}";
+            labelTolXReal.Text = $"TolXReal: {mOptMD.TolXReal:F4}";
         }
 
         public void DisplayMessage(string message)
@@ -559,7 +559,7 @@ namespace OptNet
         private void Timer1_Tick(object sender, EventArgs e)
         {
             labelTolJReal.Text = $"TolJReal: {mOptMD.TolJReal:F4}";
-            labelSpanJ.Text = $"SpanJ: {mOptMD.SpanJ:F4}";
+            labelTolXReal.Text = $"TolXReal: {mOptMD.TolXReal:F4}";
 
             if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Done))
             {
@@ -803,7 +803,7 @@ namespace OptNet
         {
             mOptMD.TolJ = (double)(numericUpDownTolJ.Value / 100);
             labelTolJReal.Text = $"TolJReal: {mOptMD.TolJReal:F4}";
-            labelSpanJ.Text = $"SpanJ: {mOptMD.SpanJ:F4}";
+            labelTolXReal.Text = $"TolXReal: {mOptMD.TolXReal:F4}";
         }
 
         private void NumericUpDownTolX_ValueChanged(object sender, EventArgs e)
