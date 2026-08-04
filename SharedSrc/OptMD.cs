@@ -132,6 +132,7 @@ namespace OptNet
         private T spanJ = T.Zero; // span of the objective function, J, from the initial sampling. 
         public T TolJReal => spanJ * TolJ; // tolerance for the objective function, J, to be considered as converged.
         public T TolX { get; set; } = T.CreateChecked(0.1); // tolerance(ratio) for the input vector, X, to be considered as converged.
+        public T SpanJ => spanJ;
         public T[] MinX => [.. minX]; // minX.ToArray();
         public T[] MaxX => [.. maxX]; // maxX.ToArray();
         public T[] DXHalf => [.. dXHalf]; // dXHalf.ToArray();
@@ -346,6 +347,8 @@ namespace OptNet
             {
                 UpSampleRecur(0, ref samplejtot);
             }
+
+            spanJ = samplejtot.Max() - samplejtot.Min();
             //UpSample(0, ref samplejtot, true, inputIndex, oldNs);
             sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
 
@@ -391,6 +394,7 @@ namespace OptNet
                 sampleJtot = [.. oldDataBeforeShrink.SampleJtot];
                 TolX = oldDataBeforeShrink.TolX;
                 optResultReal = [.. oldDataBeforeShrink.OptResultReal];
+                spanJ = sampleJtot.Max() - sampleJtot.Min();
             }
         }
 
@@ -470,26 +474,76 @@ namespace OptNet
             (T[] X, T J)[] newResult = []; //Array.Empty<(T[], T)>();
             T optj = T.Zero;
 
-            if (mode == StaMaskEnum.Min)
+            if (mode == StaMaskEnum.Min) // If the mode is set to Min, select the item with the minimum J value from each cluster
+                                         // and filter the results to include only those within TolJReal of the optimal J value
+                                         // and order the results by J value in ascending order
             {
-                newResult = [.. clusters
-                                 .Where(cluster => cluster.Count > 0)
-                                 .Select(cluster => cluster.MinBy(item => item.J))]; //.Select(cluster => cluster.MinBy(item => item.J)).ToArray();
-                optj = newResult.Min(item => item.J);
+                newResult = clusters.Where(c => c.Count > 0)
+                                    .Select(c => c.MinBy(item => item.J))
+                                    .Where(r => T.Abs(r.J - clusters
+                                        .Where(c => c.Count > 0)
+                                        .Select(c => c.MinBy(item => item.J))
+                                        .Min(x => x.J)) <= TolJReal)
+                                    .OrderBy(r => r.J)
+                                    .ToArray();
             }
-            if (mode == StaMaskEnum.Max)
+            else if (mode == StaMaskEnum.Max) // If the mode is set to Max, select the item with the maximum J value from each cluster
+                                              // and filter the results to include only those within TolJReal of the optimal J value
+                                              // and order the results by J value in descending order
             {
-                newResult = [.. clusters
-                                .Where(cluster => cluster.Count > 0)
-                                .Select(cluster => cluster.MaxBy(item => item.J))]; //.Select(cluster => cluster.MaxBy(item => item.J)).ToArray();
-                optj = newResult.Max(item => item.J);
+                newResult = clusters.Where(c => c.Count > 0)
+                                    .Select(c => c.MaxBy(item => item.J))
+                                    .Where(r => T.Abs(r.J - clusters
+                                        .Where(c => c.Count > 0)
+                                        .Select(c => c.MaxBy(item => item.J))
+                                        .Max(x => x.J)) <= TolJReal)
+                                    .OrderByDescending(r => r.J)
+                                    .ToArray();
+
             }
-            if (newResult.Length != 0)
-            {
-                newResult = [.. newResult.Where(item => T.Abs(item.J - optj) <= TolJReal)]; //.ToArray();
-            }
+            //if (newResult.Length != 0)
+            //{ // Filter the newResult to include only items whose J value is within TolJReal of the optimal J value
+            //    newResult = [.. newResult.Where(item => T.Abs(item.J - optj) <= TolJReal)]; //.ToArray(); 
+            //}
+            AddWeightedCentroid(ref newResult); // Add the weighted centroid of the clusters to the result
             return newResult;
         }
+        /// <summary>
+        /// Calculates and adds the weighted centroid of the given results to the end of the array.
+        /// </summary>
+        /// <param name="newResult"></param>
+        public static void AddWeightedCentroid(ref (T[] X, T J)[] newResult)
+        {
+            if (newResult.Length <= 1)
+                return;
+            // 전체 가중치 합
+            T totalWeight = T.Zero;
+            int dimension = newResult[0].X.Length;
+            T[] weightedSum = new T[dimension];
+
+            foreach (var (X, J) in newResult)
+            {
+                totalWeight += J;
+
+                for (int i = 0; i < dimension; i++)
+                {
+                    weightedSum[i] += X[i] * J;
+                }
+            }
+
+            // 무게 중심(가중 평균) 계산
+            T[] centroid = new T[dimension];
+            for (int i = 0; i < dimension; i++)
+            {
+                centroid[i] = weightedSum[i] / totalWeight;
+            }
+
+            // 결과를 newResult 마지막에 추가
+            var newItem = (centroid, totalWeight);
+            Array.Resize(ref newResult, newResult.Length + 1);
+            newResult[^1] = newItem;
+        }
+
         /// <summary>
         /// Recursively optimizes a multi-dimensional function along each axis and returns a list of optimal solutions.
         /// </summary>

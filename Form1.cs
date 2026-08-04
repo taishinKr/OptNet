@@ -503,7 +503,8 @@ namespace OptNet
 
             ResetUICtr();
 
-            labelTolJReal.Text = $"dJ: {mOptMD.TolJ:F4}";
+            labelTolJReal.Text = $"TolJReal: {mOptMD.TolJ:F4}";
+            labelSpanJ.Text = $"SpanJ: {mOptMD.SpanJ:F4}";
         }
 
         public void DisplayMessage(string message)
@@ -557,6 +558,8 @@ namespace OptNet
         }
         private void Timer1_Tick(object sender, EventArgs e)
         {
+            labelTolJReal.Text = $"TolJReal: {mOptMD.TolJReal:F4}";
+            labelSpanJ.Text = $"SpanJ: {mOptMD.SpanJ:F4}";
 
             if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Done))
             {
@@ -799,7 +802,8 @@ namespace OptNet
         private void NumericUpDownTolJ_ValueChanged(object sender, EventArgs e)
         {
             mOptMD.TolJ = (double)(numericUpDownTolJ.Value / 100);
-            labelTolJReal.Text = $"dJ: {mOptMD.TolJReal:F4}";
+            labelTolJReal.Text = $"TolJReal: {mOptMD.TolJReal:F4}";
+            labelSpanJ.Text = $"SpanJ: {mOptMD.SpanJ:F4}";
         }
 
         private void NumericUpDownTolX_ValueChanged(object sender, EventArgs e)

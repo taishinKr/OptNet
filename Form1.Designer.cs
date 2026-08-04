@@ -68,6 +68,7 @@
             label1 = new Label();
             checkBoxStrictLimit = new CheckBox();
             groupBox1 = new GroupBox();
+            labelSpanJ = new Label();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -79,11 +80,11 @@
             // 
             textBoxMsg.BackColor = SystemColors.Desktop;
             textBoxMsg.ForeColor = Color.Khaki;
-            textBoxMsg.Location = new Point(12, 221);
+            textBoxMsg.Location = new Point(12, 210);
             textBoxMsg.Multiline = true;
             textBoxMsg.Name = "textBoxMsg";
             textBoxMsg.ScrollBars = ScrollBars.Vertical;
-            textBoxMsg.Size = new Size(829, 520);
+            textBoxMsg.Size = new Size(829, 497);
             textBoxMsg.TabIndex = 2;
             // 
             // buttonOptimzeMD
@@ -109,7 +110,7 @@
             // 
             // buttonResetAll
             // 
-            buttonResetAll.Location = new Point(453, 23);
+            buttonResetAll.Location = new Point(237, 23);
             buttonResetAll.Name = "buttonResetAll";
             buttonResetAll.Size = new Size(92, 28);
             buttonResetAll.TabIndex = 4;
@@ -119,7 +120,7 @@
             // 
             // buttonClearMsgs
             // 
-            buttonClearMsgs.Location = new Point(288, 176);
+            buttonClearMsgs.Location = new Point(723, 176);
             buttonClearMsgs.Name = "buttonClearMsgs";
             buttonClearMsgs.Size = new Size(100, 28);
             buttonClearMsgs.TabIndex = 5;
@@ -173,7 +174,7 @@
             // numericUpDownTolX
             // 
             numericUpDownTolX.DecimalPlaces = 2;
-            numericUpDownTolX.Location = new Point(385, 26);
+            numericUpDownTolX.Location = new Point(410, 26);
             numericUpDownTolX.Name = "numericUpDownTolX";
             numericUpDownTolX.Size = new Size(65, 23);
             numericUpDownTolX.TabIndex = 13;
@@ -184,7 +185,7 @@
             // numericUpDownTolJ
             // 
             numericUpDownTolJ.DecimalPlaces = 2;
-            numericUpDownTolJ.Location = new Point(311, 26);
+            numericUpDownTolJ.Location = new Point(482, 26);
             numericUpDownTolJ.Name = "numericUpDownTolJ";
             numericUpDownTolJ.Size = new Size(65, 23);
             numericUpDownTolJ.TabIndex = 14;
@@ -213,7 +214,7 @@
             // labelTolJ
             // 
             labelTolJ.AutoSize = true;
-            labelTolJ.Location = new Point(311, 8);
+            labelTolJ.Location = new Point(482, 8);
             labelTolJ.Name = "labelTolJ";
             labelTolJ.Size = new Size(45, 15);
             labelTolJ.TabIndex = 17;
@@ -222,7 +223,7 @@
             // labelTolX
             // 
             labelTolX.AutoSize = true;
-            labelTolX.Location = new Point(385, 8);
+            labelTolX.Location = new Point(410, 8);
             labelTolX.Name = "labelTolX";
             labelTolX.Size = new Size(48, 15);
             labelTolX.TabIndex = 18;
@@ -363,16 +364,16 @@
             // labelTolJReal
             // 
             labelTolJReal.AutoSize = true;
-            labelTolJReal.Location = new Point(331, 56);
+            labelTolJReal.Location = new Point(558, 9);
             labelTolJReal.Name = "labelTolJReal";
-            labelTolJReal.Size = new Size(45, 15);
+            labelTolJReal.Size = new Size(49, 15);
             labelTolJReal.TabIndex = 33;
-            labelTolJReal.Text = "TolJ(%)";
+            labelTolJReal.Text = "TolJReal";
             // 
             // labelDimension
             // 
             labelDimension.AutoSize = true;
-            labelDimension.Location = new Point(237, 9);
+            labelDimension.Location = new Point(337, 9);
             labelDimension.Name = "labelDimension";
             labelDimension.Size = new Size(65, 15);
             labelDimension.TabIndex = 35;
@@ -380,7 +381,7 @@
             // 
             // numericUpDownDimension
             // 
-            numericUpDownDimension.Location = new Point(237, 26);
+            numericUpDownDimension.Location = new Point(337, 26);
             numericUpDownDimension.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
             numericUpDownDimension.Name = "numericUpDownDimension";
             numericUpDownDimension.Size = new Size(65, 23);
@@ -394,7 +395,7 @@
             comboBoxLogLevel.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBoxLogLevel.Font = new Font("Malgun Gothic", 9F);
             comboBoxLogLevel.FormattingEnabled = true;
-            comboBoxLogLevel.Location = new Point(288, 150);
+            comboBoxLogLevel.Location = new Point(723, 150);
             comboBoxLogLevel.Name = "comboBoxLogLevel";
             comboBoxLogLevel.Size = new Size(100, 23);
             comboBoxLogLevel.TabIndex = 36;
@@ -403,7 +404,7 @@
             // labelLogLevel
             // 
             labelLogLevel.AutoSize = true;
-            labelLogLevel.Location = new Point(293, 132);
+            labelLogLevel.Location = new Point(728, 132);
             labelLogLevel.Name = "labelLogLevel";
             labelLogLevel.Size = new Size(58, 15);
             labelLogLevel.TabIndex = 37;
@@ -434,8 +435,6 @@
             // checkBoxSampleReuse
             // 
             checkBoxSampleReuse.AutoSize = true;
-            checkBoxSampleReuse.Checked = true;
-            checkBoxSampleReuse.CheckState = CheckState.Checked;
             checkBoxSampleReuse.Location = new Point(16, 167);
             checkBoxSampleReuse.Name = "checkBoxSampleReuse";
             checkBoxSampleReuse.Size = new Size(101, 19);
@@ -485,11 +484,21 @@
             groupBox1.TabStop = false;
             groupBox1.Text = "MODE";
             // 
+            // labelSpanJ
+            // 
+            labelSpanJ.AutoSize = true;
+            labelSpanJ.Location = new Point(558, 30);
+            labelSpanJ.Name = "labelSpanJ";
+            labelSpanJ.Size = new Size(38, 15);
+            labelSpanJ.TabIndex = 45;
+            labelSpanJ.Text = "SpanJ";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(853, 782);
+            ClientSize = new Size(853, 723);
+            Controls.Add(labelSpanJ);
             Controls.Add(groupBox1);
             Controls.Add(checkBoxStrictLimit);
             Controls.Add(label1);
@@ -580,5 +589,6 @@
         private Label label1;
         private CheckBox checkBoxStrictLimit;
         private GroupBox groupBox1;
+        private Label labelSpanJ;
     }
 }
