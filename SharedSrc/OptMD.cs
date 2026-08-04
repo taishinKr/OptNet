@@ -143,7 +143,7 @@ namespace OptNet
         public Func<T[], T> J;
         public ConcurrentQueue<string> DisplayMsgQueue;
         [Flags]
-        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, MThread = 1 << 4, SampleReuse = 1 << 5 }
+        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6 }
         private UInt32 mState = 0;
 
         public OptParam<T> OptParam { get; set; }
@@ -237,18 +237,20 @@ namespace OptNet
                 if (rdxIdx <= T.Zero)
                     throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
 
-                //T optidx = optResult[idxXlist].X[idxDim] * T.CreateChecked(rangeIdx);
-                ////T optidx = ConvXToIdx(optResult[idxXlist].X[idxDim], rangeIdx, rangeIdxHalf);
                 T optidx = (optResultReal[idxXlist].X[idxDim] - minX[idxDim]) / dX[idxDim];
                 T minIdx = optidx - rdxIdx / (T.One + T.One);
-                if (minIdx < T.Zero)
-                    minIdx = T.Zero;
                 T maxIdx = minIdx + rdxIdx;
-                if (maxIdx >= rangeIdx)
+                if (IsSetSysFlag(StaMaskEnum.StrictLimit))
                 {
-                    maxIdx = rangeIdx;
-                    minIdx = maxIdx - rdxIdx;
-                }
+                    if (minIdx < T.Zero)
+                        minIdx = T.Zero;
+                    maxIdx = minIdx + rdxIdx;
+                    if (maxIdx >= rangeIdx)
+                    {
+                        maxIdx = rangeIdx;
+                        minIdx = maxIdx - rdxIdx;
+                    }
+                }                 
 
                 int uMinIdx = (int)Math.Ceiling(double.CreateChecked(minIdx));
                 int uMaxIdx = (int)Math.Floor(double.CreateChecked(maxIdx));

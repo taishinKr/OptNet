@@ -469,6 +469,15 @@ namespace OptNet
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.SampleReuse);
             }
+
+            if (checkBoxStrictLimit.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.StrictLimit);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.StrictLimit);
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -927,6 +936,20 @@ namespace OptNet
             ResetUICtr();
             numericUpDownShrink.Value = old;
             mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.Done); // Set the Done flag to true after restoring state
+        }
+
+        private void checkBoxStrictLimit_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if (checkBoxStrictLimit.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.StrictLimit);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.StrictLimit);
+            }
         }
     }
 }
