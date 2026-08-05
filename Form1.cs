@@ -195,12 +195,12 @@ namespace OptNet
             mParamBeale = new OptParam<double>
             {
                 J = mTestFcn.Beale,
-                TolJ = 0.0005,
+                TolJ = 0.001, //0.00001,
                 TolX = 0.1,
                 DimN = 2,
-                Ns = [11, 11],
-                MinX = [-4.5, -4.5],
-                MaxX = [4.5, 4.5],
+                Ns = [11, 11], // [41, 41]
+                MinX = [-4.5, -4.5],// [3.0-0.5, 0.5-0.5],//[-4.5, -4.5],
+                MaxX = [4.5, 4.5], //                [3.0+0.5, 0.5+2.5],//[4.5, 4.5],
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = false,
                 Optima = [([3, 0.5], 0.0)]
@@ -478,6 +478,15 @@ namespace OptNet
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.StrictLimit);
             }
+
+            if (checkBoxAutoShrink.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
+            }
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -505,6 +514,8 @@ namespace OptNet
 
             labelTolJReal.Text = $"TolJReal: {mOptMD.TolJ:F4}";
             labelTolXReal.Text = $"TolXReal: {mOptMD.TolXReal:F4}";
+            labelSpanJ.Text = $"SpanJ:    {mOptMD.SpanJ:F4}";
+            labelSpanX.Text = $"SpanX:    {mOptMD.SpanX:F4}";
         }
 
         public void DisplayMessage(string message)
@@ -560,6 +571,8 @@ namespace OptNet
         {
             labelTolJReal.Text = $"TolJReal: {mOptMD.TolJReal:F4}";
             labelTolXReal.Text = $"TolXReal: {mOptMD.TolXReal:F4}";
+            labelSpanJ.Text = $"SpanJ:    {mOptMD.SpanJ:F4}";
+            labelSpanX.Text = $"SpanX:    {mOptMD.SpanX:F4}";
 
             if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Done))
             {
@@ -804,6 +817,8 @@ namespace OptNet
             mOptMD.TolJ = (double)(numericUpDownTolJ.Value / 100);
             labelTolJReal.Text = $"TolJReal: {mOptMD.TolJReal:F4}";
             labelTolXReal.Text = $"TolXReal: {mOptMD.TolXReal:F4}";
+            labelSpanJ.Text = $"SpanJ:    {mOptMD.SpanJ:F4}";
+            labelSpanX.Text = $"SpanX:    {mOptMD.SpanX:F4}";
         }
 
         private void NumericUpDownTolX_ValueChanged(object sender, EventArgs e)
@@ -953,6 +968,33 @@ namespace OptNet
             else
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.StrictLimit);
+            }
+        }
+
+        private void checkBoxAutoShrink_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if (checkBoxAutoShrink.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
+            }
+        }
+
+        private void checkBoxAutoShrink_CheckedChanged_1(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+            if (checkBoxAutoShrink.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
             }
         }
     }

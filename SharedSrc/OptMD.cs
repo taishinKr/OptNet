@@ -151,7 +151,11 @@ namespace OptNet
         public Func<T[], T> J;
         public ConcurrentQueue<string> DisplayMsgQueue;
         [Flags]
-        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6 }
+        public enum StaMaskEnum : UInt32 {
+            Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3,
+            MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6,
+            AutoShrink = 1 << 7
+        }
         private UInt32 mState = 0;
 
         public OptParam<T> OptParam { get; set; }
@@ -220,7 +224,7 @@ namespace OptNet
         }
         
         private StateSnapshot<T> oldDataBeforeShrink = new StateSnapshot<T>();
-        public void ShrinkBy(T ratio, int idxXlist) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
+        public void ShrinkBy(T factorSelected, int optSelected) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
             var minx = new T[dimN];
             var maxx = new T[dimN];
@@ -237,16 +241,48 @@ namespace OptNet
             T[] maxIdxNext = new T[dimN];
 
             bool isReusableSample = IsSetSysFlag(StaMaskEnum.SampleReuse); // flag to indicate whether the previous samples can be reused
+            bool isAutoShrink = IsSetSysFlag(StaMaskEnum.AutoShrink); // flag to indicate whether the shrink ratio is automatically adjusted based on the optimization results
 
             for (int idxDim = 0; idxDim < dimN; idxDim++)
             {
+                var optCenter = 0;
+                T ratio = T.One;
+
+                if (isAutoShrink)
+                {
+                    if(optResultReal.Length <= 1) // if there is only one optimal result, use the user-selected optimal result and shrink ratio
+                    {
+                        optCenter = optSelected; 
+                        ratio = factorSelected;
+                    }
+                    else
+                    {
+                        optCenter = optResultReal.Length - 1;   // if AutoShrink is enabled, use the last optimal result as the center for shrinking
+                                                                // , which is the weighted centroid of the previous optimization results,
+                                                                // and is expected to be closer to the true optimal solution.
+                        var centerValue = optResultReal[optCenter].X[idxDim];
+
+                        T lengthLimit = (T.One + T.One) * optResultReal
+                                    .Select(e => (dynamic)Math.Abs((dynamic)e.X[idxDim] - (dynamic)centerValue))
+                                    .Max();
+                        //lengthLimit += T.CreateChecked(0.1) * (maxX[idxDim] - minX[idxDim]); // add a margin based on the user-selected shrink ratio to avoid excessive shrinking
+                        ratio = lengthLimit / (maxX[idxDim] - minX[idxDim]);
+                        ratio = T.Max(ratio, factorSelected);
+                    }                    
+                }
+                else
+                {
+                    optCenter = optSelected; // if AutoShrink is disabled, use the user-selected optimal result as the center for shrinking
+                    ratio = factorSelected; // if AutoShrink is disabled, use the user-selected shrink ratio
+                }
+
                 T rangeIdx = T.CreateChecked(Ns[idxDim] - 1); // range of the current dimension in terms of index
                 T rangeIdxHalf = rangeIdx / T.CreateChecked(2);
                 T rdxIdx = ratio * rangeIdx; // shrinked range of the current dimension in terms of index
                 if (rdxIdx <= T.Zero)
                     throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
 
-                T optidx = (optResultReal[idxXlist].X[idxDim] - minX[idxDim]) / dX[idxDim];
+                T optidx = (optResultReal[optCenter].X[idxDim] - minX[idxDim]) / dX[idxDim];
                 T minIdx = optidx - rdxIdx / (T.One + T.One);
                 T maxIdx = minIdx + rdxIdx;
                 if (IsSetSysFlag(StaMaskEnum.StrictLimit))
@@ -455,6 +491,8 @@ namespace OptNet
             CalResultPrj();
 
             SetSysFlag(StaMaskEnum.Done);
+
+            AddDispMsg(Environment.NewLine, LogLevel.Info0);
             AddDispMsg(ResultMsg(), LogLevel.Info0);
         }
         /// <summary>
@@ -536,14 +574,14 @@ namespace OptNet
                 }
             }
 
-            AddWeightedCentroid(ref newResult); // Add the weighted centroid of the clusters to the result
+            AddWeightedCentroid(ref newResult, optj); // Add the weighted centroid of the clusters to the result
             return newResult;
         }
         /// <summary>
         /// Calculates and adds the weighted centroid of the given results to the end of the array.
         /// </summary>
         /// <param name="newResult"></param>
-        public static void AddWeightedCentroid(ref (T[] X, T J)[] newResult)
+        public void AddWeightedCentroid(ref (T[] X, T J)[] newResult, T optj)
         {
             if (newResult.Length <= 1)
                 return;
@@ -552,13 +590,39 @@ namespace OptNet
             int dimension = newResult[0].X.Length;
             T[] weightedSum = new T[dimension];
 
+            // calculate the maximum value of J + |optj| for normalization
+            /*var maxTmp = newResult
+                                .SelectMany(e => e.X.Select(optj => (dynamic)e.J + Math.Abs((dynamic)optj)))
+                                .Max();*/
+            T maxTmp = T.Zero;
+
+            foreach (var element in newResult)
+            {
+                    T value = element.J + T.Abs(optj);
+
+                    if (value > maxTmp)
+                    {
+                        maxTmp = value;
+                    }
+            }
+
             foreach (var (X, J) in newResult)
             {
-                totalWeight += J;
+                T weight = T.Zero;
+                if (mode == StaMaskEnum.Min) // For minimization, weight is inversely proportional to J and non-negative 
+                {
+                    weight = maxTmp - (J + T.Abs(optj));
+                }                    
+                else if (mode == StaMaskEnum.Max) // For maximization, weight is directly proportional to J and non-negative
+                {
+                    weight = J + T.Abs(optj);
+                }
+
+                totalWeight += weight;
 
                 for (int i = 0; i < dimension; i++)
                 {
-                    weightedSum[i] += X[i] * J;
+                    weightedSum[i] += X[i] * weight;
                 }
             }
 
