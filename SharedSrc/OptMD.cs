@@ -6,6 +6,7 @@ namespace OptNet
 {
     public class OptParam<T> where T : struct, INumber<T>, ITrigonometricFunctions<T>, IExponentialFunctions<T>, IRootFunctions<T>, IPowerFunctions<T>
     {
+        public string Name { get; set; }
         public Func<T[], uint, T> J { get; set; }
         public double TolJ { get; set; } //
         public double TolX { get; set; } // tolerance(ratio, %) for the input vector, X, to be considered as converged.
@@ -19,6 +20,7 @@ namespace OptNet
 
         public OptParam()
         {
+            Name = "Default";
             var testFcn = new TestFcn<T>();
             J = testFcn.JTest2D;
             TolJ = 0.001;
@@ -44,8 +46,10 @@ namespace OptNet
                     // 나머지 값은 X[1]로 채우기
                     for (uint i = this.DimN; i < dimN; i++)
                         newX[i] = o.X[1];
-
-                    return (newX, o.J);
+                    if (optparm.Name == "Styblinski­Tang")
+                        return (newX, T.CreateChecked(-39.16599 * dimN));
+                    else
+                        return (newX, o.J);
                 }).ToArray();
             }
             else // UI의 combobox에서 dimN을 변경하지 않은 경우
@@ -55,7 +59,8 @@ namespace OptNet
                     .ToArray();
             }
 
-            this.J = optparm.J;
+            this.Name = optparm.Name;
+            this.J = optparm.J;            
             this.TolJ = optparm.TolJ;
             this.TolX = optparm.TolX < 0.0 ? 0.001 : optparm.TolX; // default value if tolX is negative
             this.DimN = dimN;
@@ -72,6 +77,7 @@ namespace OptNet
             this.Mode = optparm.Mode;
         }
         public OptParam(
+            in string Name,
             in Func<T[], uint, T> J,
             in double TolJ,
             in double TolX,
@@ -81,6 +87,7 @@ namespace OptNet
             in T[] MaxX,
             in OptMD<T>.StaMaskEnum Mode)
         {
+            this.Name = Name;
             this.J = J;
             this.TolJ = TolJ;
             this.TolX = TolX < 0.0 ? 0.001 : TolX; // default value if tolX is negative
@@ -626,15 +633,25 @@ namespace OptNet
                 }
             }
 
-            // 무게 중심(가중 평균) 계산
-            T[] centroid = new T[dimension];
-            for (int i = 0; i < dimension; i++)
-            {
-                centroid[i] = weightedSum[i] / totalWeight;
-            }
+            (T[], T) newItem = new ();
 
-            // 결과를 newResult 마지막에 추가
-            var newItem = (centroid, totalWeight);
+            if ( T.Abs(totalWeight) < T.CreateChecked(0.0000001) )
+            {
+                AddDispMsg("Warning: All weights are identical, Possible multi Optima", LogLevel.Warning);
+                newItem = (new T[dimension], T.Zero); // If all weights are identical, return a zero vector and zero weight
+            }
+            else
+            {
+                // 무게 중심(가중 평균) 계산
+                T[] centroid = new T[dimension];
+                for (int i = 0; i < dimension; i++)
+                {
+                    centroid[i] = weightedSum[i] / totalWeight;
+                }
+                // 결과를 newResult 마지막에 추가
+                newItem = (centroid, totalWeight);
+            }
+            
             Array.Resize(ref newResult, newResult.Length + 1);
             newResult[^1] = newItem;
         }

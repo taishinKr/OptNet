@@ -229,7 +229,12 @@ namespace OptNet
                 MaxX = [10, 10],
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = false,
-                Optima = [([0, 0], 0.0)]
+                Optima = [
+                    ([1.34941, -1.34941], -2.06261),
+                    ([-1.34941, 1.34941], -2.06261),
+                    ([1.34941, 1.34941], -2.06261),
+                    ([-1.34941, -1.34941], -2.06261)
+                ]
             };
             mParamDropWave = new OptParam<double>
             {
@@ -412,6 +417,7 @@ namespace OptNet
             };
             mParamStyblinskiTang = new OptParam<double>
             {
+                Name = "Styblinski­Tang",
                 J = mTestFcn.StyblinskiTang,
                 TolJ = 0.001,
                 TolX = 0.1,
@@ -741,6 +747,7 @@ namespace OptNet
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "StyblinskiTang":
+                    mParamStyblinskiTang.Optima = [([-2.903534, -2.903534, -2.903534], -39.16599 * mParamStyblinskiTang.DimN)];
                     mOptMD = new OptMD<double>(mParamStyblinskiTang);
                     buttonOptimzeMD.Enabled = true;
                     break;
