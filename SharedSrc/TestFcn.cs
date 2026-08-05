@@ -303,7 +303,7 @@ namespace OptNet
         public T CrossInTray(T[] xT, uint dim = 2)
         {
             T x = xT[0], y = xT[1];
-            T expTerm = T.Exp(T.Abs(T.One - (T.Sqrt((x * x) + (y * y)) / T.CreateChecked(Math.PI))));
+            T expTerm = T.Exp(T.Abs(T.CreateChecked(100.0) - (T.Sqrt((x * x) + (y * y)) / T.CreateChecked(Math.PI))));
             T sinTerm = T.Sin(x) * T.Sin(y);
             return -T.CreateChecked(0.0001) * T.Pow(T.Abs(sinTerm * expTerm) + T.One, T.CreateChecked(0.1));
 
