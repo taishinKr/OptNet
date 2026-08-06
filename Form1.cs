@@ -293,7 +293,9 @@ namespace OptNet
                     ([3.584428, -1.848126], 0.0)
                 ]
             };
-            mParamHolderTable = new OptParam<double>
+            mParamHolderTable = new OptParam<double> // Required StrictLimit to be set to true,
+                                                     //          AutoShrink to be set to false, and
+                                                     //          Factor 0.5
             {
                 J = mTestFcn.HolderTable,
                 TolJ = 0.001,
@@ -391,7 +393,7 @@ namespace OptNet
             };
             mParamRosenbrock = new OptParam<double>
             {
-                J = mTestFcn.Rosenbrock,
+                J = mTestFcn.Rosenbrock,   // TolJ 조정필요
                 TolJ = 0.001,
                 TolX = 0.1,
                 DimN = 3,
@@ -542,6 +544,17 @@ namespace OptNet
             comboBoxIdxXlist.Enabled = false;
 
             mOptMD.OptimizeMD();
+
+            var lastIdx = mOptMD.optResultReal.Length - 1;
+
+            if (
+                     (lastIdx != 0) && (mOptMD.optResultReal[lastIdx].J < 0)
+                )// If the last result's J value is negative,
+                                                      // , which means that multiple optima are found,
+                                                      // we disable the auto-shrink checkbox to select the first optimum only.
+            {
+                checkBoxAutoShrink.Checked = false;
+            }
         }
         private void ButtonShrink_Click(object sender, EventArgs e)
         {
@@ -788,7 +801,7 @@ namespace OptNet
 
         private void ResetUICtr()
         {
-            numericUpDownShrink.Value = 0.25M; // Default value for numericUpDown                        
+            numericUpDownShrink.Value = 0.5M; // Default value for numericUpDown                        
             numericUpDownTolX.Value = (decimal)mOptMD.TolX * 100; // Reset the tolerance value
 
             comboBoxMinX.Items.Clear();

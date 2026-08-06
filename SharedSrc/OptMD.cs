@@ -637,8 +637,9 @@ namespace OptNet
 
             if ( T.Abs(totalWeight) < T.CreateChecked(0.0000001) )
             {
-                AddDispMsg("Warning: All weights are identical, Possible multi Optima", LogLevel.Warning);
-                newItem = (new T[dimension], T.Zero); // If all weights are identical, return a zero vector and zero weight
+                AddDispMsg("Warning: All weights are identical, Possible multi Optima" + Environment.NewLine, LogLevel.Warning);
+                AddDispMsg("Warning: AutoShrink is disabled, and First solution is selected for shrinkage.", LogLevel.Warning);
+                newItem = (new T[dimension], T.CreateChecked(-1)); // If all weights are identical, return a zero vector and a negative J value to indicate an issue
             }
             else
             {
@@ -1048,8 +1049,8 @@ namespace OptNet
             if ((axisIdx != 0) && (idxDim == axisIdx))
             {
                 var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
-                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, optIntV1D);
-                //opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, null);
+                //opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, optIntV1D);
+                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, null);
             }
             // If not at the specified axis, create an instance of the Opt1D class without specifying intervals
             else
