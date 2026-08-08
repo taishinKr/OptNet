@@ -485,6 +485,15 @@ namespace OptNet
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.MThread);
             }
 
+            if (checkBoxSampledOpt.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.SampledOptimal);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.SampledOptimal);
+            }
+
             if (checkBoxSampleReuse.Checked)
             {
                 mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.SampleReuse);
@@ -567,8 +576,8 @@ namespace OptNet
             if (
                      (lastIdx != 0) && (mOptMD.optResultReal[lastIdx].J < 0)
                 )// If the last result's J value is negative,
-                                                      // , which means that multiple optima are found,
-                                                      // we disable the auto-shrink checkbox to select the first optimum only.
+                 // , which means that multiple optima are found,
+                 // we disable the auto-shrink checkbox to select the first optimum only.
             {
                 checkBoxAutoShrink.Checked = false;
             }
@@ -1039,6 +1048,21 @@ namespace OptNet
             else
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
+            }
+        }
+
+        private void checkBoxSampledOpt_CheckedChanged(object sender, EventArgs e)
+        {
+
+            if (_initializing) return;
+
+            if(checkBoxSampledOpt.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.SampledOptimal);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.SampledOptimal);
             }
         }
     }

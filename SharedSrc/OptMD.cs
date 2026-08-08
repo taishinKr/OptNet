@@ -161,7 +161,7 @@ namespace OptNet
         public enum StaMaskEnum : UInt32 {
             Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3,
             MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6,
-            AutoShrink = 1 << 7
+            AutoShrink = 1 << 7, SampledOptimal = 1 << 8
         }
         private UInt32 mState = 0;
 
@@ -1540,8 +1540,14 @@ namespace OptNet
                     msgOptX1 = "Centroid      ";
                 }
 
-
-                msgOptX1 += string.Format("{0,8:G5} at ", opt.J);
+                if (!IsSetSysFlag(StaMaskEnum.SampledOptimal))
+                {
+                    msgOptX1 += string.Format("{0,8:G5}    at ", opt.J);
+                }
+                else
+                {
+                    msgOptX1 += string.Format("{0,8:G5} ({1,8:G5})    at ", opt.J, J(opt.X));
+                }
 
                 for (int i = 0; i < dimN; i++)
                 {

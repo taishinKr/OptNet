@@ -72,6 +72,7 @@
             labelSpanX = new Label();
             labelSpanJ = new Label();
             checkBoxAutoShrink = new CheckBox();
+            checkBoxSampledOpt = new CheckBox();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -529,11 +530,23 @@
             checkBoxAutoShrink.UseVisualStyleBackColor = true;
             checkBoxAutoShrink.CheckedChanged += checkBoxAutoShrink_CheckedChanged_1;
             // 
+            // checkBoxSampledOpt
+            // 
+            checkBoxSampledOpt.AutoSize = true;
+            checkBoxSampledOpt.Location = new Point(16, 165);
+            checkBoxSampledOpt.Name = "checkBoxSampledOpt";
+            checkBoxSampledOpt.Size = new Size(93, 19);
+            checkBoxSampledOpt.TabIndex = 49;
+            checkBoxSampledOpt.Text = "SampledOpt";
+            checkBoxSampledOpt.UseVisualStyleBackColor = true;
+            checkBoxSampledOpt.CheckedChanged += checkBoxSampledOpt_CheckedChanged;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(853, 723);
+            Controls.Add(checkBoxSampledOpt);
             Controls.Add(checkBoxAutoShrink);
             Controls.Add(labelSpanJ);
             Controls.Add(labelSpanX);
@@ -632,5 +645,6 @@
         private Label labelSpanX;
         private Label labelSpanJ;
         private CheckBox checkBoxAutoShrink;
+        private CheckBox checkBoxSampledOpt;
     }
 }
