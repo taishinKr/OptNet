@@ -9,6 +9,7 @@ namespace OptNet
         private OptMD<double> mOptMD;
         private Opt1D<double> mOpt1D;
 
+        public OptParam<double> mParamDefault;
         public OptParam<double> mParamTst1D;
         public OptParam<double> mParamTst2D;
         public OptParam<double> mParamTst3D;
@@ -48,6 +49,21 @@ namespace OptNet
 
             mTestFcn = new TestFcn<double>();
             mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.01, 11, 0, 1, new OfflineGet<double>(11), Opt1D<double>.StaMaskEnum.Max, null);  // "Min", "Max", or "Both"
+
+            mParamDefault = new OptParam<double>
+            {
+                J = mTestFcn.Rosenbrock,   // TolJ 조정필요
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                //[0, 0] [2 2] 인경우는 shrink ratio 0.5, strict limit true 만으로 가능
+                MinX = [-5, -5],//[-5, -5],
+                MaxX = [10, 10],//[10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([1, 1], 0.0)]
+            };
 
             mParamTst1D = new OptParam<double>
             {
@@ -445,8 +461,8 @@ namespace OptNet
                 Optima = [([0, 0], 0.0)]
             };
             //mOptMD = new OptMD<double>(mParamAckleyN1); // Default to AckleyN1 function
-            mOptMD = new OptMD<double>(mParamBeale); // Default to Beale function
-
+            //mOptMD = new OptMD<double>(mParamBeale); // Default to Beale function
+            mOptMD = new OptMD<double>(mParamDefault);
 
             SetModeOfNewOptMD();
         }
@@ -502,12 +518,13 @@ namespace OptNet
             // Form load event handler          
 
             comboBoxBenchFcn.Items.AddRange([
+                "Default",
                 "JTest1D", "JTest2D", "JTest3D", "Bird2D", "1DOnly", "AckleyN1", "Griewank", "Rastrigin", "Schwefel", "Alpine", "ExpandedSchafferF6", "Salomons"
                 ,"Beale", "Booth", "CrossInTray", "DropWave", "Easom", "GoldsteinPrice", "Himmelblau", "HolderTable", "LevyN13", "Matyas", "SchafferN2", "ThreeHumpCamel"
                 ,"ExpandedZakharov", "Michalewicz", "Rosenbrock", "Sphere", "StyblinskiTang", "SchafferF6"
             ]);
             //comboBoxBenchFcn.SelectedIndex = 5; // Default to the last item
-            comboBoxBenchFcn.SelectedIndex = 12; // Default to the last item
+            comboBoxBenchFcn.SelectedIndex = 0; // Default to the last item
 
             comboBoxLogLevel.Items.AddRange([
                 "None", "Error", "Warning", "Info0", "Info1","Info2","Info3","Debug", "Verbose"
@@ -574,10 +591,10 @@ namespace OptNet
         {
             DisplayMessage("Initializing...");
             //mOptMD = new OptMD<double>(mParamAckleyN1); // Reset to AckleyN1 function
-            mOptMD = new OptMD<double>(mParamBeale); // Reset to Beale function
+            mOptMD = new OptMD<double>(mParamDefault); // Reset to default function
 
             DisplayMessage("Done." + Environment.NewLine);
-            comboBoxBenchFcn.SelectedIndex = 12; // for Beale  // 5 for AckleyN;
+            comboBoxBenchFcn.SelectedIndex = 0; // for Beale  // 5 for AckleyN;
             comboBoxLogLevel.SelectedIndex = 3;
             buttonShrink.Enabled = false;
             //buttonUndo.Enabled = false;
@@ -651,6 +668,10 @@ namespace OptNet
             DisplayMessage("Initializing...");
             switch (selectedItem)
             {
+                case "Default":
+                    mOptMD = new OptMD<double>(mParamDefault);
+                    buttonOptimzeMD.Enabled = true;
+                    break;
                 case "JTest1D":
                     mOptMD = new OptMD<double>(mParamTst1D);
                     buttonOptimzeMD.Enabled = true;
@@ -801,7 +822,7 @@ namespace OptNet
 
         private void ResetUICtr()
         {
-            numericUpDownShrink.Value = 0.5M; // Default value for numericUpDown                        
+            numericUpDownShrink.Value = 0.25M; // Default value for numericUpDown                        
             numericUpDownTolX.Value = (decimal)mOptMD.TolX * 100; // Reset the tolerance value
 
             comboBoxMinX.Items.Clear();
@@ -826,6 +847,9 @@ namespace OptNet
             _isChangedFromUI = false; // Prevent triggering ValueChanged event during initialization
             numericUpDownDimension.Value = mOptMD.DimN; // Reset the dimension value
             _isChangedFromUI = true; // Re-enable ValueChanged event after initialization
+
+            numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100);
+            numericUpDownTolX.Value = (decimal)(mOptMD.TolX * 100);
 
             numericUpDownDimension.Enabled = mOptMD.OptParam.IsScalable;
 

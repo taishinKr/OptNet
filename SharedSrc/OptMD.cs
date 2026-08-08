@@ -551,6 +551,21 @@ namespace OptNet
                 var initialMinItems = clusters
                                             .Where(cluster => cluster.Count > 0)
                                             .Select(cluster => cluster.MinBy(item => item.J))
+                                            /*.Select(cluster =>
+                                            {
+                                                // X[] 평균 (각 인덱스별 평균)
+                                                int length = cluster[0].X.Length;
+                                                var avgX = new T[length];
+                                                for (int i = 0; i < length; i++)
+                                                {
+                                                    // 각 item.X[i]의 평균
+                                                    double avg = cluster.Average(item => Convert.ToDouble(item.X[i]));
+                                                    avgX[i] = (T)Convert.ChangeType(avg, typeof(T));
+                                                }
+                                                
+                                                var avgJ = J(avgX);
+                                                return (X: avgX, J: (T)Convert.ChangeType(avgJ, typeof(T)));
+                                            })*/
                                             .ToList();
 
                 if (initialMinItems.Count > 0)
@@ -560,6 +575,7 @@ namespace OptNet
                     // Filter the results to include only those within TolJReal of the optimal J value and order the results by J value in ascending order
                     newResult = [.. initialMinItems
                                             .Where(item => T.Abs(item.J - optj) <= TolJReal)
+                                            //.Select(item => (item.X, J:J(item.X)))
                                             .OrderBy(item => item.J)];
                 }
 
@@ -571,12 +587,29 @@ namespace OptNet
                 var initialMaxItems = clusters
                                             .Where(cluster => cluster.Count > 0)
                                             .Select(cluster => cluster.MaxBy(item => item.J))
+                                            /*.Select(cluster =>
+                                            {
+                                                // X[] 평균 (각 인덱스별 평균)
+                                                int length = cluster[0].X.Length;
+                                                var avgX = new T[length];
+                                                for (int i = 0; i < length; i++)
+                                                {
+                                                    // 각 item.X[i]의 평균
+                                                    double avg = cluster.Average(item => Convert.ToDouble(item.X[i]));
+                                                    avgX[i] = (T)Convert.ChangeType(avg, typeof(T));
+                                                }
+                                                // J 평균
+                                                var avgJ = cluster.Average(item => Convert.ToDouble(item.J));
+
+                                                return (X: avgX, J: (T)Convert.ChangeType(avgJ, typeof(T)));
+                                            })*/
                                             .ToList();
                 if(initialMaxItems.Count > 0)
                 {
                     optj = initialMaxItems.Max(item => item.J);
                     newResult = [.. initialMaxItems
                                             .Where(item => T.Abs(item.J - optj) <= TolJReal)
+                                            //.Select(item => (item.X, J:J(item.X)))
                                             .OrderByDescending(item => item.J)];
                 }
             }
@@ -635,7 +668,7 @@ namespace OptNet
 
             (T[], T) newItem = new ();
 
-            if ( T.Abs(totalWeight) < T.CreateChecked(0.0000001) )
+            if ( T.Abs(totalWeight) < T.CreateChecked(0.000001) )
             {
                 AddDispMsg("Warning: All weights are identical, Possible multi Optima" + Environment.NewLine, LogLevel.Warning);
                 AddDispMsg("Warning: AutoShrink is disabled, and First solution is selected for shrinkage.", LogLevel.Warning);
@@ -1493,11 +1526,21 @@ namespace OptNet
         public string ResultMsg()
         {
             string msgOptX = "";
+            string msgOptX1 = string.Empty; 
             int j = 0;
             foreach (var opt in optResultReal)
             {
-                string msgOptX1 = "Optimum(";
-                msgOptX1 += string.Format("{0,1:G3}) ", j);
+                if( (j==0) || (j!= 0 && j != optResultReal.Length - 1))
+                {
+                    msgOptX1 = "Optimum(";
+                    msgOptX1 += string.Format("{0,1:G3}) ", j);
+                }
+                else
+                {
+                    msgOptX1 = "Centroid      ";
+                }
+
+
                 msgOptX1 += string.Format("{0,8:G5} at ", opt.J);
 
                 for (int i = 0; i < dimN; i++)
