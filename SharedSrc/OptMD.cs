@@ -250,32 +250,26 @@ namespace OptNet
             bool isReusableSample = IsSetSysFlag(StaMaskEnum.SampleReuse); // flag to indicate whether the previous samples can be reused
             bool isAutoShrink = IsSetSysFlag(StaMaskEnum.AutoShrink); // flag to indicate whether the shrink ratio is automatically adjusted based on the optimization results
 
+            //AdjustResult(optSelected);
+
             for (int idxDim = 0; idxDim < dimN; idxDim++)
             {
                 var optCenter = 0;
                 T ratio = T.One;
 
-                if (isAutoShrink)
+                if ( isAutoShrink && (optResultReal.Length > 1))
                 {
-                    if(optResultReal.Length <= 1) // if there is only one optimal result, use the user-selected optimal result and shrink ratio
-                    {
-                        optCenter = optSelected; 
-                        ratio = factorSelected;
-                    }
-                    else
-                    {
-                        optCenter = optResultReal.Length - 1;   // if AutoShrink is enabled, use the last optimal result as the center for shrinking
-                                                                // , which is the weighted centroid of the previous optimization results,
-                                                                // and is expected to be closer to the true optimal solution.
-                        var centerValue = optResultReal[optCenter].X[idxDim];
+                    optCenter = optResultReal.Length - 1;   // if AutoShrink is enabled, use the last optimal result as the center for shrinking
+                                                            // , which is the weighted centroid of the previous optimization results,
+                                                            // and is expected to be closer to the true optimal solution.
+                    var centerValue = optResultReal[optCenter].X[idxDim];
 
-                        T lengthLimit = (T.One + T.One) * optResultReal
-                                    .Select(e => (dynamic)Math.Abs((dynamic)e.X[idxDim] - (dynamic)centerValue))
-                                    .Max();
-                        //lengthLimit += T.CreateChecked(0.1) * (maxX[idxDim] - minX[idxDim]); // add a margin based on the user-selected shrink ratio to avoid excessive shrinking
-                        ratio = lengthLimit / (maxX[idxDim] - minX[idxDim]);
-                        ratio = T.Max(ratio, factorSelected);
-                    }                    
+                    T lengthLimit = (T.One + T.One) * optResultReal
+                                .Select(e => (dynamic)Math.Abs((dynamic)e.X[idxDim] - (dynamic)centerValue))
+                                .Max();
+                    //lengthLimit += T.CreateChecked(0.1) * (maxX[idxDim] - minX[idxDim]); // add a margin based on the user-selected shrink ratio to avoid excessive shrinking
+                    ratio = lengthLimit / (maxX[idxDim] - minX[idxDim]);
+                    ratio = T.Max(ratio, factorSelected);                   
                 }
                 else
                 {
@@ -491,16 +485,9 @@ namespace OptNet
                 // for Serial running ***************************************
                 var Optlist = OptimaizeMdRecur(0, sampleJtot, Opt);
                 optResult = Optlist.ToArray();
-            }            
-
-            CalResultReal();
-            optResultReal = AdjustResult(); // optResultReal = adjustResult().ToArray();
-            CalResultPrj();
-
-            SetSysFlag(StaMaskEnum.Done);
-
-            AddDispMsg(Environment.NewLine, LogLevel.Info0);
-            AddDispMsg(ResultMsg(), LogLevel.Info0);
+            }
+            
+            AdjustResult(); // optResultReal = adjustResult().ToArray();            
         }
         /// <summary>
         /// Adjusts the result by clustering items based on their distance and selecting representative items from each
@@ -516,8 +503,10 @@ namespace OptNet
         /// <returns>An array of tuples, where each tuple contains: <list type="bullet"> <item> <description><c>X</c>: An array
         /// representing the clustered items.</description> </item> <item> <description><c>J</c>: The selected
         /// representative value from the cluster.</description> </item> </list></returns>
-        private (T[] X, T J)[] AdjustResult()
+        public void AdjustResult()
         {
+            CalResultReal();
+
             var clusters = new List<List<(T[] X, T J)>>();
             if (TolX < T.One)
             {
@@ -614,39 +603,80 @@ namespace OptNet
                 }
             }
 
-            AddWeightedCentroid(ref newResult, optj); // Add the weighted centroid of the clusters to the result
-            return newResult;
+            //AddWeightedCentroid(ref newResult, optj, newResult.Length - 1); // Add the weighted centroid of the clusters to the result
+            //AddWeightedCentroid(ref newResult, optj, newResult.Length - 1); // Add the weighted centroid of the clusters to the result
+            if (newResult.Length > 1)
+            {
+                var centroid = CalculateWeightedCentroid(ref newResult, optj, newResult.Length - 1);
+                Array.Resize(ref newResult, newResult.Length + 1);
+                newResult[^1] = centroid;
+            }
+
+            optResultReal = newResult;
+            CalResultPrj();
+
+            SetSysFlag(StaMaskEnum.Done);
+            AddDispMsg(
+                Environment.NewLine +
+                ResultMsg(optResult.Length - 1),
+                LogLevel.Info0
+            );
         }
         /// <summary>
-        /// Calculates and adds the weighted centroid of the given results to the end of the array.
+        /// Calculates the weighted centroid of a set of points based on their objective function values and a reference optimal value.
         /// </summary>
         /// <param name="newResult"></param>
-        public void AddWeightedCentroid(ref (T[] X, T J)[] newResult, T optj)
+        /// <param name="optj"></param>
+        /// <param name="maxIdx"></param>
+        /// <returns></returns>
+        public (T[] X, T J) CalculateWeightedCentroid(ref (T[] X, T J)[] newResult, T? optjGiven, int maxIdx)
         {
+            T optj = T.Zero;
+            if(optjGiven.HasValue)
+                optj = optjGiven.Value;
+            else
+            {
+                if (mode == StaMaskEnum.Min)
+                {
+                    optj = newResult.Min(item => item.J);
+                }
+                else if (mode == StaMaskEnum.Max)
+                {
+                    optj = newResult.Max(item => item.J);
+                }
+            }
+
             if (newResult.Length <= 1)
-                return;
+                return newResult[0];
             // 전체 가중치 합
             T totalWeight = T.Zero;
             int dimension = newResult[0].X.Length;
-            T[] weightedSum = new T[dimension];
+            T[] weightedSum = new T[dimension];            
 
-            // calculate the maximum value of J + |optj| for normalization
-            /*var maxTmp = newResult
-                                .SelectMany(e => e.X.Select(optj => (dynamic)e.J + Math.Abs((dynamic)optj)))
-                                .Max();*/
-            T maxTmp = T.Zero;
-
-            foreach (var element in newResult)
+            for (int idx = 0; idx <= maxIdx && idx < newResult.Length; idx++)
             {
-                    T value = element.J + T.Abs(optj);
+                var (X, J) = newResult[idx];
+                T weight = T.Zero;
+                if (mode == StaMaskEnum.Min)
+                {
+                    // calculate the maximum value of J + |optj| for normalization
+                    var offset = CalculateOffsetWeightForCentroid(ref newResult, maxIdx, optj);
+                    weight = offset - (J + T.Abs(optj));
+                }
+                else if (mode == StaMaskEnum.Max)
+                {
+                    weight = J + T.Abs(optj);
+                }
 
-                    if (value > maxTmp)
-                    {
-                        maxTmp = value;
-                    }
+                totalWeight += weight;
+
+                for (int i = 0; i < dimension; i++)
+                {
+                    weightedSum[i] += X[i] * weight;
+                }
             }
 
-            foreach (var (X, J) in newResult)
+            /*foreach (var (X, J) in newResult)
             {
                 T weight = T.Zero;
                 if (mode == StaMaskEnum.Min) // For minimization, weight is inversely proportional to J and non-negative 
@@ -664,7 +694,7 @@ namespace OptNet
                 {
                     weightedSum[i] += X[i] * weight;
                 }
-            }
+            }*/
 
             (T[], T) newItem = new ();
 
@@ -685,9 +715,32 @@ namespace OptNet
                 // 결과를 newResult 마지막에 추가
                 newItem = (centroid, totalWeight);
             }
-            
-            Array.Resize(ref newResult, newResult.Length + 1);
-            newResult[^1] = newItem;
+
+            return newItem;
+        }
+        private T CalculateOffsetWeightForCentroid(ref (T[] X, T J)[] newResult, int maxIdx, T optj)
+        {
+            T offset = T.Zero;
+            /*foreach (var element in newResult)
+            {
+                T value = element.J + T.Abs(optj);
+
+                if (value > maxTmp)
+                {
+                    maxTmp = value;
+                }
+            }*/
+            for (int i = 0; i <= maxIdx && i < newResult.Length; i++)
+            {
+                var element = newResult[i];
+                T value = element.J + T.Abs(optj);
+
+                if (value > offset)
+                {
+                    offset = value;
+                }
+            }
+            return offset;
         }
 
         /// <summary>
@@ -1394,8 +1447,11 @@ namespace OptNet
         /// stored in the <see cref="optResult"/> array.</remarks>
         private void CalResultPrj()
         {
-            optResult = new (T[] X, T J)[optResultReal.Length];
-            for (int i = 0; i < optResultReal.Length; i++) // Iterate over the array of tuples
+            if(optResultReal.Length >= 3) // optResultReal contains the centroid as the last element, so we exclude it from the projection
+                optResult = new (T[] X, T J)[optResultReal.Length - 1];
+            else
+                optResult = new (T[] X, T J)[optResultReal.Length];
+            for (int i = 0; i < optResult.Length; i++) // Iterate over the array of tuples
             {
                 optResult[i] = (new T[dimN], optResultReal[i].J);
                 for (int j = 0; j < dimN; j++) // Iterate over the dimensions
@@ -1523,12 +1579,19 @@ namespace OptNet
         /// parameter values.</remarks>
         /// <returns>A string containing the formatted message. Each line represents an optimum result,  with the optimum value
         /// and its associated parameters separated by spaces.</returns>
-        public string ResultMsg()
+        public string ResultMsg(int maxIdx)
         {
             string msgOptX = "";
-            string msgOptX1 = string.Empty; 
-            int j = 0;
-            foreach (var opt in optResultReal)
+            string msgOptX1 = string.Empty;
+            
+            var numItem = 0;
+
+            if(optResultReal.Length > 1)
+                numItem = optResultReal.Length - 1; // Exclude the last element, which is the centroid
+            else
+                numItem = optResultReal.Length;
+
+            /*foreach (var opt in optResultReal)
             {
                 if( (j==0) || (j!= 0 && j != optResultReal.Length - 1))
                 {
@@ -1537,7 +1600,8 @@ namespace OptNet
                 }
                 else
                 {
-                    msgOptX1 = "Centroid      ";
+                    msgOptX1 = "Centroid(";
+                    msgOptX1 += string.Format("{0,1:G3})  ", maxIdx);
                 }
 
                 if (!IsSetSysFlag(StaMaskEnum.SampledOptimal))
@@ -1555,6 +1619,29 @@ namespace OptNet
                 }
                 msgOptX += msgOptX1 + Environment.NewLine;
                 j++;
+            }*/
+            for (int j = 0; j < numItem; j++)
+            {
+                var opt = optResultReal[j];
+                
+                msgOptX1 = "Optimum(";
+                msgOptX1 += string.Format("{0,1:G3}) ", j);
+                
+
+                if (!IsSetSysFlag(StaMaskEnum.SampledOptimal))
+                {
+                    msgOptX1 += string.Format("{0,8:G5}    at ", opt.J);
+                }
+                else
+                {
+                    msgOptX1 += string.Format("{0,8:G5} ({1,8:G5})    at ", opt.J, J(opt.X));
+                }
+
+                for (int i = 0; i < dimN; i++)
+                {
+                    msgOptX1 += string.Format("{0,8:G5} ", opt.X[i]);
+                }
+                msgOptX += msgOptX1 + Environment.NewLine;
             }
 
             //DisplayMsgFunc(msgOptX);

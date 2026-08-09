@@ -150,6 +150,7 @@
             comboBoxIdxXlist.Name = "comboBoxIdxXlist";
             comboBoxIdxXlist.Size = new Size(65, 23);
             comboBoxIdxXlist.TabIndex = 3;
+            comboBoxIdxXlist.SelectedIndexChanged += comboBoxIdxXlist_SelectedIndexChanged;
             comboBoxIdxXlist.EnabledChanged += ComboBoxIdxXlist_EnabledChanged;
             // 
             // comboBoxBenchFcn

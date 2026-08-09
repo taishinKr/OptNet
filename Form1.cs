@@ -656,7 +656,12 @@ namespace OptNet
                 {
                     comboBoxIdxXlist.Items.Add(i.ToString());
                 }
-                comboBoxIdxXlist.SelectedIndex = 0;
+
+                if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.AutoShrink) && (mOptMD.optResultReal.Length > 1))
+                    comboBoxIdxXlist.SelectedIndex = mOptMD.optResultReal.Length - 2;
+                else
+                    if (comboBoxIdxXlist.Items.Count > 0)
+                        comboBoxIdxXlist.SelectedIndex = 0;
             }
             else
             {
@@ -1056,13 +1061,53 @@ namespace OptNet
 
             if (_initializing) return;
 
-            if(checkBoxSampledOpt.Checked)
+            if (checkBoxSampledOpt.Checked)
             {
                 mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.SampledOptimal);
             }
             else
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.SampledOptimal);
+            }
+        }
+
+        private void comboBoxIdxXlist_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.AutoShrink) && (mOptMD.optResultReal.Length > 1))
+            {
+                var centroid = mOptMD.CalculateWeightedCentroid(ref mOptMD.optResultReal, null, comboBoxIdxXlist.SelectedIndex);
+                mOptMD.optResultReal[^1] = centroid;
+
+                DisplayMessage(
+                        Environment.NewLine +
+                        $"AutoShrink is enabled. Selected index: {comboBoxIdxXlist.SelectedIndex}" +
+                        Environment.NewLine
+                );
+
+                string msg = "Centroid(";
+                msg += string.Format("{0,1:G3})  ", comboBoxIdxXlist.SelectedIndex);              
+
+                if (!mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.SampledOptimal))
+                {
+                    msg += string.Format("{0,8:G5}    at ", centroid.J);
+                }
+                else
+                {
+                    msg += string.Format("{0,8:G5} ({1,8:G5})    at ", centroid.J, mOptMD.J(centroid.X));
+                }
+
+                for (int i = 0; i < centroid.X.Length; i++)
+                {
+                    msg += string.Format("{0,8:G5} ", centroid.X[i]);
+                }
+                DisplayMessage(msg + Environment.NewLine);
+            }
+            else
+            {
+                DisplayMessage(
+                    Environment.NewLine +
+                    $"AutoShrink is disabled or Only one optimization result available. Selected index: {comboBoxIdxXlist.SelectedIndex}" + Environment.NewLine
+                );
             }
         }
     }
