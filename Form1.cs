@@ -169,7 +169,7 @@ namespace OptNet
                 IsScalable = true,
                 Optima = [([420.9687, 420.9687, 420.9687], 0)]
             };
-            mParamAlpine = new OptParam<double>
+            mParamAlpine = new OptParam<double> // do not converge at default setting, but the error is small enough
             {
                 J = mTestFcn.Alpine,
                 TolJ = 0.001,
@@ -409,7 +409,7 @@ namespace OptNet
             };
             mParamRosenbrock = new OptParam<double>
             {
-                J = mTestFcn.Rosenbrock,   // TolJ 조정필요
+                J = mTestFcn.Rosenbrock,   // Converge if TolJ = 0.01(=1%), Factor = 0.5
                 TolJ = 0.001,
                 TolX = 0.1,
                 DimN = 3,

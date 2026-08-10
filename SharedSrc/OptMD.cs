@@ -632,40 +632,33 @@ namespace OptNet
         public (T[] X, T J) CalculateWeightedCentroid(ref (T[] X, T J)[] newResult, T? optjGiven, int maxIdx)
         {
             T optj = T.Zero;
-            if(optjGiven.HasValue)
+            if (optjGiven.HasValue)
                 optj = optjGiven.Value;
             else
-            {
-                if (mode == StaMaskEnum.Min)
-                {
-                    optj = newResult.Min(item => item.J);
-                }
-                else if (mode == StaMaskEnum.Max)
-                {
-                    optj = newResult.Max(item => item.J);
-                }
-            }
+                optj = mode == StaMaskEnum.Min
+                    ? newResult.Min(item => item.J)
+                    : newResult.Max(item => item.J);
 
             if (newResult.Length <= 1)
                 return newResult[0];
             // 전체 가중치 합
             T totalWeight = T.Zero;
             int dimension = newResult[0].X.Length;
-            T[] weightedSum = new T[dimension];            
+            T[] weightedSum = new T[dimension];
+
+            T offset = T.Zero;
+            if (mode == StaMaskEnum.Min)
+                offset = calculateOffsetWeightForCentroid(newResult,maxIdx,optj);
 
             for (int idx = 0; idx <= maxIdx && idx < newResult.Length; idx++)
             {
                 var (X, J) = newResult[idx];
-                T weight = T.Zero;
+
+                T weight = J + T.Abs(optj); // J + |optj| is always non-negative, and the larger J is, the larger the weight will be.
+
                 if (mode == StaMaskEnum.Min)
                 {
-                    // calculate the maximum value of J + |optj| for normalization
-                    var offset = CalculateOffsetWeightForCentroid(ref newResult, maxIdx, optj);
-                    weight = offset - (J + T.Abs(optj));
-                }
-                else if (mode == StaMaskEnum.Max)
-                {
-                    weight = J + T.Abs(optj);
+                    weight = offset - weight;
                 }
 
                 totalWeight += weight;
@@ -718,29 +711,33 @@ namespace OptNet
 
             return newItem;
         }
-        private T CalculateOffsetWeightForCentroid(ref (T[] X, T J)[] newResult, int maxIdx, T optj)
+        /// <summary>
+        /// Calculates an offset weight for the centroid based on the provided results, maximum index, and optimal value.
+        /// </summary>
+        /// <param name="newResult"></param>
+        /// <param name="maxIdx"></param>
+        /// <param name="optj"></param>
+        /// <returns></returns>
+        private T calculateOffsetWeightForCentroid((T[] X, T J)[] newResult, int maxIdx, T optj)
         {
-            T offset = T.Zero;
-            /*foreach (var element in newResult)
-            {
-                T value = element.J + T.Abs(optj);
+            T sum = T.Zero;
+            T max = newResult[0].J + T.Abs(optj);
+            int count = 0;
 
-                if (value > maxTmp)
-                {
-                    maxTmp = value;
-                }
-            }*/
-            for (int i = 0; i <= maxIdx && i < newResult.Length; i++)
+            for (int i = 0; i <= maxIdx; i++)
             {
-                var element = newResult[i];
-                T value = element.J + T.Abs(optj);
-
-                if (value > offset)
-                {
-                    offset = value;
-                }
+                T value = newResult[i].J + T.Abs(optj);
+                if (value > max) max = value;
+                sum += value;
+                count++;
             }
-            return offset;
+
+            T avg = sum / T.CreateChecked(count);
+            T offset = max + avg / T.CreateChecked(2); // max - (J + |optj|) is always non-negative, but minimum is always 0
+                                  // so we need to add (avg/2) to make it larger than 0.
+                                  // If offset is too small, the weight will be too small, and
+                                  // the centroid will be biased towards the first item.
+            return offset; 
         }
 
         /// <summary>
