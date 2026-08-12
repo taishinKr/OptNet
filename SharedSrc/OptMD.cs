@@ -161,7 +161,8 @@ namespace OptNet
         public enum StaMaskEnum : UInt32 {
             Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3,
             MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6,
-            AutoShrink = 1 << 7, SampledOptimal = 1 << 8
+            AutoShrink = 1 << 7, SampledOptimal = 1 << 8,
+            ReSampling = 1 << 9, AxisChanging = 1 << 10,
         }
         private UInt32 mState = 0;
 
@@ -228,6 +229,8 @@ namespace OptNet
             ClrSysFlag(StaMaskEnum.Done);
             ClrSysFlag(StaMaskEnum.MThread);
             SetSysFlag(StaMaskEnum.SampleReuse);
+            SetSysFlag(StaMaskEnum.ReSampling);
+            ClrSysFlag(StaMaskEnum.AxisChanging);
         }
         
         private StateSnapshot<T> oldDataBeforeShrink = new StateSnapshot<T>();
@@ -760,8 +763,18 @@ namespace OptNet
 
             var Optlist = new List<(T[] X, T J)>();
 
-            // Optimize the current axis and get the optimal values and intervals
-            var (optlist1Axis, optintv) = OptimizeMD1Axis(samplejtot, axisIdx);
+            (T X, T J)[] optlist1Axis;
+            double[][] optintv;
+
+            if (IsSetSysFlag(StaMaskEnum.ReSampling))
+            {
+                // Optimize the current axis and get the optimal values and intervals
+                (optlist1Axis, optintv) = OptimizeMD1Axis(samplejtot, axisIdx);
+            }
+            else // IsSetSysFlag(StaMaskEnum.AxisChanging)
+            {
+                (optlist1Axis, optintv) = OptimizeMD1Axis(samplejtot, 0);
+            }
 
             if (axisIdx == 0)
                 IntvX = optintv;
@@ -784,14 +797,46 @@ namespace OptNet
                 {
                     List<T> newSample = []; // new List<T>()
                     var inputIdx = new uint[dimN];
-                    ReSampleRecur(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
 
-                    var OptlistNew = OptimaizeMdRecur(axisIdx + 1, [.. newSample], Opt); // newSample.ToImmutableList();
+                    List<(T[] X, T J)> OptlistNew;
+                    if (IsSetSysFlag(StaMaskEnum.ReSampling))
+                    {
+                        ReSampleRecur(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
+                    }
+                    else // IsSetSysFlag(StaMaskEnum.AxisChanging)
+                    {
+                        AxisChangeSampleRecur(axisIdx + 1, 0, ref inputIdx, ref samplejtot, ref newSample);
+                    }
+
+                    OptlistNew = OptimaizeMdRecur(axisIdx + 1, [.. newSample], Opt); // newSample.ToImmutableList();
                     Optlist.AddRange(OptlistNew);
                 }
             }
             return Optlist;
         }
+        private void AxisChangeSampleRecur(int axisIdx, int idxDim, ref uint[] inputIdx, ref ImmutableList<T> iSample, ref List<T> oSample)
+        {
+            int idxDimCur;
+
+            if (idxDim == 0)
+                idxDimCur = axisIdx;
+            else if (idxDim == axisIdx)
+                idxDimCur = 0;
+            else
+                idxDimCur = idxDim;
+
+            for (uint n = 0; n < Ns[idxDimCur]; n++)
+            {
+                inputIdx[idxDimCur] = n;
+                if (idxDim == dimN - 1)
+                {
+                    oSample.Add(iSample[(int)GetIdTot(inputIdx)]);
+                }
+                else
+                    AxisChangeSampleRecur(axisIdx, idxDim + 1, ref inputIdx, ref iSample, ref oSample);
+            }
+        }
+
         /// <summary>
         /// Recursively optimizes a multi-dimensional function along specified axes and returns a list of optimal
         /// solutions.

@@ -49,7 +49,426 @@ namespace OptNet
 
             mTestFcn = new TestFcn<double>();
             mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.01, 11, 0, 1, new OfflineGet<double>(11), Opt1D<double>.StaMaskEnum.Max, null);  // "Min", "Max", or "Both"
+            /*mParamDefault = new OptParam<double>
+            {
+                J = mTestFcn.ExpandedSchafferF6,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-2.5, -2.5, -2.5],
+                MaxX = [5, 5, 5],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([0, 0, 0], 0.0)]
+                *//*J = mTestFcn.Rosenbrock,   // TolJ 조정필요
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                //[0, 0] [2 2] 인경우는 shrink ratio 0.5, strict limit true 만으로 가능
+                MinX = [-5, -5],//[-5, -5],
+                MaxX = [10, 10],//[10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([1, 1], 0.0)]*//*
+            };
 
+            mParamTst1D = new OptParam<double>
+            {
+                J = mTestFcn.JTest1D,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 1,
+                Ns = [11],
+                MinX = [0],
+                MaxX = [1],
+                Mode = OptMD<double>.StaMaskEnum.Max,
+                IsScalable = false,
+                Optima = [([0.82153], 2.2702)]
+            };
+            mParamTst2D = new OptParam<double>
+            {
+                J = mTestFcn.JTest2D,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [0, 0],
+                MaxX = [1, 1],
+                Mode = OptMD<double>.StaMaskEnum.Max,
+                IsScalable = false,
+                Optima = [([0.5877, 0.4123], 0.73998)]
+            };
+            mParamTst3D = new OptParam<double>
+            {
+                J = mTestFcn.JTest3D,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [0, 0, 0],
+                MaxX = [1, 1, 1],
+                Mode = OptMD<double>.StaMaskEnum.Max,
+                IsScalable = false,
+                Optima = [([0.5877, 0.4123, 0.5], 0.73998)]
+            };
+            mParamBird = new OptParam<double>
+            {
+                J = mTestFcn.Bird2D,
+                TolJ = 0.1,
+                TolX = 0.3,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-6, -6],
+                MaxX = [6, 6],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([4.70104, 3.15294], -106.7645), ([-1.58214, -3.13024], -106.7645)]
+            };
+            mParamAckleyN1 = new OptParam<double>
+            {
+                J = mTestFcn.AckleyN1,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-16, -16, -16],
+                MaxX = [32, 32, 32],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([0, 0, 0], 0.0)]
+            };
+            mParamGriewank = new OptParam<double>
+            {
+                J = mTestFcn.Griewank,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-3, -3, -3],//[-300, -300, -300],
+                MaxX = [6, 6, 6],//[600, 600, 600],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([0, 0, 0], 0.0)]
+            };
+            mParamRastrigin = new OptParam<double>
+            {
+                J = mTestFcn.Rastrigin,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-2.5, -2.5, -2.5],
+                MaxX = [5.12, 5.12, 5.12],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([0, 0, 0], 0.0)]
+            };
+            mParamSchwefel = new OptParam<double>
+            {
+                J = mTestFcn.Schwefel,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-250, -250, -250],
+                MaxX = [500, 500, 500],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([420.9687, 420.9687, 420.9687], 0)]
+            };
+            mParamAlpine = new OptParam<double> // should not the strict limit be set
+            {
+                J = mTestFcn.Alpine,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-5, -5, -5],
+                MaxX = [10, 10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([0, 0, 0], 0.0)]
+            };
+            mParamExpandedSchafferF6 = new OptParam<double>
+            {
+                J = mTestFcn.ExpandedSchafferF6,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-50, -50, -50],
+                MaxX = [100, 100, 100],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([0, 0, 0], 0.0)]
+            };
+            mParamSalomons = new OptParam<double>
+            {
+                J = mTestFcn.Salomons,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-50, -50, -50],
+                MaxX = [100, 100, 100],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([0, 0, 0], 0.0)]
+            };
+            mParamBeale = new OptParam<double>
+            {
+                J = mTestFcn.Beale,
+                TolJ = 0.001, //0.00001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11], // [41, 41]
+                MinX = [-4.5, -4.5],// when [-2.5, -2.5], AutoShrink should be off
+                MaxX = [4.5, 4.5], //                [3.0+0.5, 0.5+2.5],//[4.5, 4.5],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([3, 0.5], 0.0)]
+            };
+            mParamBooth = new OptParam<double>
+            {
+                J = mTestFcn.Booth,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-5, -5],
+                MaxX = [10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([1, 3], 0.0)]
+            };
+            mParamCrossInTray = new OptParam<double>
+            {
+                J = mTestFcn.CrossInTray,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-5, -5],
+                MaxX = [10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [
+                    ([1.34941, -1.34941], -2.06261),
+                    ([-1.34941, 1.34941], -2.06261),
+                    ([1.34941, 1.34941], -2.06261),
+                    ([-1.34941, -1.34941], -2.06261)
+                ]
+            };
+            mParamDropWave = new OptParam<double>
+            {
+                J = mTestFcn.DropWave,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-2.5, -2.5],
+                MaxX = [5.12, 5.12],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([0, 0], -1.0)]
+            };
+            mParamEasom = new OptParam<double>
+            {
+                J = mTestFcn.Easom,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-50, -50],
+                MaxX = [100, 100],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([Math.PI, Math.PI], -1.0)]
+            };
+            mParamGoldsteinPrice = new OptParam<double>
+            {
+                J = mTestFcn.GoldsteinPrice,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-2, -2],
+                MaxX = [2, 2], // for [1, 1], TolJ = 1.0
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([0, -1], 3.0)]
+            };
+            mParamHimmelblau = new OptParam<double>
+            {
+                J = mTestFcn.Himmelblau,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-5, -5],
+                MaxX = [5, 5],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [
+                    ([3, 2], 0.0),
+                    ([-2.805118, 3.131313], 0.0),
+                    ([-3.779310, -3.283186], 0.0),
+                    ([3.584428, -1.848126], 0.0)
+                ]
+            };
+            mParamHolderTable = new OptParam<double> // Required StrictLimit to be set to true,
+                                                     //          AutoShrink to be set to false, and
+                                                     //          Factor 0.5
+            {
+                J = mTestFcn.HolderTable,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-10, -10],
+                MaxX = [10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [
+                    ([8.05502, 9.66459], -19.2085),
+                    ([-8.05502, 9.66459], -19.2085),
+                    ([8.05502, -9.66459], -19.2085),
+                    ([-8.05502, -9.66459], -19.2085)
+                ]
+            };
+            mParamLevyN13 = new OptParam<double>
+            {
+                J = mTestFcn.LeviN13,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-10, -10],
+                MaxX = [10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([1, 1], 0.0)]
+            };
+            mParamMatyas = new OptParam<double>
+            {
+                J = mTestFcn.Matyas,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-5, -5],
+                MaxX = [10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([0, 0], 0.0)]
+            };
+            mParamSchafferN2 = new OptParam<double>
+            {
+                J = mTestFcn.SchafferN2,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-50, -50],
+                MaxX = [100, 100],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([0, 0], 0.0)]
+            };
+            mParamThreeHumpCamel = new OptParam<double>
+            {
+                J = mTestFcn.ThreeHumpCamel,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-2.5, -2.5],
+                MaxX = [5, 5],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([0, 0], 0.0)]
+            };
+            mParamExpandedZakharov = new OptParam<double>
+            {
+                J = mTestFcn.ExpandedZakharov,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-5, -5, -5],
+                MaxX = [10, 10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([0, 0, 0], 0.0)]
+            };
+            mParamMichalewicz = new OptParam<double>
+            {
+                J = mTestFcn.Michalewicz,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [0, 0],
+                MaxX = [3.14, 3.14],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false, // scalable but the known optimum is for 2D, so we set IsScalable to false
+                Optima = [([2.2029, 1.5708], -1.8013)]
+            };
+            mParamRosenbrock = new OptParam<double>
+            {
+                J = mTestFcn.Rosenbrock,   // Converge if TolJ = 0.01(=1%), Factor = 0.5
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-5, -5, -5],
+                MaxX = [10, 10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([1, 1, 1], 0.0)]
+            };
+            mParamSphere = new OptParam<double>
+            {
+                J = mTestFcn.Sphere,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-5, -5, -5],
+                MaxX = [10, 10, 10],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([0, 0, 0], 0.0)]
+            };
+            mParamStyblinskiTang = new OptParam<double>
+            {
+                Name = "Styblinski­Tang",
+                J = mTestFcn.StyblinskiTang,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 3,
+                Ns = [11, 11, 11],
+                MinX = [-5, -5, -5],
+                MaxX = [5, 5, 5],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = true,
+                Optima = [([-2.903534, -2.903534, -2.903534], -39.16599)]
+            };
+            mParamSchafferF6 = new OptParam<double>
+            {
+                J = mTestFcn.SchafferF6,
+                TolJ = 0.001,
+                TolX = 0.1,
+                DimN = 2,
+                Ns = [11, 11],
+                MinX = [-50, -50],
+                MaxX = [100, 100],
+                Mode = OptMD<double>.StaMaskEnum.Min,
+                IsScalable = false,
+                Optima = [([0, 0], 0.0)]
+            };*/
             mParamDefault = new OptParam<double>
             {
                 J = mTestFcn.Rosenbrock,   // TolJ 조정필요
@@ -169,7 +588,7 @@ namespace OptNet
                 IsScalable = true,
                 Optima = [([420.9687, 420.9687, 420.9687], 0)]
             };
-            mParamAlpine = new OptParam<double> // do not converge at default setting, but the error is small enough
+            mParamAlpine = new OptParam<double> // should not the strict limit be set
             {
                 J = mTestFcn.Alpine,
                 TolJ = 0.001,
@@ -473,6 +892,8 @@ namespace OptNet
             //checkBoxThread.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.MThread);
             radioButtonMin.Checked = (mOptMD.Mode == OptMD<double>.StaMaskEnum.Min);
             radioButtonMax.Checked = (mOptMD.Mode == OptMD<double>.StaMaskEnum.Max);
+            radioButtonAxisChange.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.AxisChanging);
+            radioButtonReSample.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.ReSampling);
             //checkBoxVerbose.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             _initializing = false;
 
@@ -1085,7 +1506,7 @@ namespace OptNet
                 );
 
                 string msg = "Centroid(";
-                msg += string.Format("{0,1:G3})  ", comboBoxIdxXlist.SelectedIndex);              
+                msg += string.Format("{0,1:G3})  ", comboBoxIdxXlist.SelectedIndex);
 
                 if (!mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.SampledOptimal))
                 {
@@ -1109,6 +1530,25 @@ namespace OptNet
                     $"AutoShrink is disabled or Only one optimization result available. Selected index: {comboBoxIdxXlist.SelectedIndex}" + Environment.NewLine
                 );
             }
+        }
+
+        private void radioButtonReSample_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if (radioButtonReSample.Checked)
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.ReSampling);
+            else
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.ReSampling);
+        }
+
+        private void radioButtonAxisChange_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+            if (radioButtonAxisChange.Checked)
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AxisChanging);
+            else
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AxisChanging);
         }
     }
 }

@@ -73,11 +73,15 @@
             labelSpanJ = new Label();
             checkBoxAutoShrink = new CheckBox();
             checkBoxSampledOpt = new CheckBox();
+            radioButtonReSample = new RadioButton();
+            radioButtonAxisChange = new RadioButton();
+            groupBoxLowerAxis = new GroupBox();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownDimension).BeginInit();
             groupBox1.SuspendLayout();
+            groupBoxLowerAxis.SuspendLayout();
             SuspendLayout();
             // 
             // textBoxMsg
@@ -338,10 +342,10 @@
             radioButtonMin.AutoSize = true;
             radioButtonMin.Location = new Point(14, 22);
             radioButtonMin.Name = "radioButtonMin";
-            radioButtonMin.Size = new Size(75, 19);
+            radioButtonMin.Size = new Size(86, 19);
             radioButtonMin.TabIndex = 29;
             radioButtonMin.TabStop = true;
-            radioButtonMin.Text = "Minimize";
+            radioButtonMin.Text = "Minimizing";
             radioButtonMin.UseVisualStyleBackColor = true;
             radioButtonMin.CheckedChanged += radioButtonMin_CheckedChanged;
             // 
@@ -361,10 +365,10 @@
             radioButtonMax.AutoSize = true;
             radioButtonMax.Location = new Point(14, 43);
             radioButtonMax.Name = "radioButtonMax";
-            radioButtonMax.Size = new Size(77, 19);
+            radioButtonMax.Size = new Size(88, 19);
             radioButtonMax.TabIndex = 31;
             radioButtonMax.TabStop = true;
-            radioButtonMax.Text = "Maximize";
+            radioButtonMax.Text = "Maximizing";
             radioButtonMax.UseVisualStyleBackColor = true;
             radioButtonMax.CheckedChanged += radioButtonMax_CheckedChanged;
             // 
@@ -542,11 +546,47 @@
             checkBoxSampledOpt.UseVisualStyleBackColor = true;
             checkBoxSampledOpt.CheckedChanged += checkBoxSampledOpt_CheckedChanged;
             // 
+            // radioButtonReSample
+            // 
+            radioButtonReSample.AutoSize = true;
+            radioButtonReSample.Checked = true;
+            radioButtonReSample.Location = new Point(14, 22);
+            radioButtonReSample.Name = "radioButtonReSample";
+            radioButtonReSample.Size = new Size(89, 19);
+            radioButtonReSample.TabIndex = 29;
+            radioButtonReSample.TabStop = true;
+            radioButtonReSample.Text = "ReSampling";
+            radioButtonReSample.UseVisualStyleBackColor = true;
+            radioButtonReSample.CheckedChanged += radioButtonReSample_CheckedChanged;
+            // 
+            // radioButtonAxisChange
+            // 
+            radioButtonAxisChange.AutoSize = true;
+            radioButtonAxisChange.Location = new Point(14, 43);
+            radioButtonAxisChange.Name = "radioButtonAxisChange";
+            radioButtonAxisChange.Size = new Size(99, 19);
+            radioButtonAxisChange.TabIndex = 31;
+            radioButtonAxisChange.Text = "AxisChanging";
+            radioButtonAxisChange.UseVisualStyleBackColor = true;
+            radioButtonAxisChange.CheckedChanged += radioButtonAxisChange_CheckedChanged;
+            // 
+            // groupBoxLowerAxis
+            // 
+            groupBoxLowerAxis.Controls.Add(radioButtonReSample);
+            groupBoxLowerAxis.Controls.Add(radioButtonAxisChange);
+            groupBoxLowerAxis.Location = new Point(374, 132);
+            groupBoxLowerAxis.Name = "groupBoxLowerAxis";
+            groupBoxLowerAxis.Size = new Size(148, 72);
+            groupBoxLowerAxis.TabIndex = 50;
+            groupBoxLowerAxis.TabStop = false;
+            groupBoxLowerAxis.Text = "Lower Axis Handling";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(853, 723);
+            Controls.Add(groupBoxLowerAxis);
             Controls.Add(checkBoxSampledOpt);
             Controls.Add(checkBoxAutoShrink);
             Controls.Add(labelSpanJ);
@@ -597,6 +637,8 @@
             ((System.ComponentModel.ISupportInitialize)numericUpDownDimension).EndInit();
             groupBox1.ResumeLayout(false);
             groupBox1.PerformLayout();
+            groupBoxLowerAxis.ResumeLayout(false);
+            groupBoxLowerAxis.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -647,5 +689,8 @@
         private Label labelSpanJ;
         private CheckBox checkBoxAutoShrink;
         private CheckBox checkBoxSampledOpt;
+        private RadioButton radioButtonReSample;
+        private RadioButton radioButtonAxisChange;
+        private GroupBox groupBoxLowerAxis;
     }
 }
