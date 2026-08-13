@@ -1514,12 +1514,13 @@ namespace OptNet
                 }
                 else
                 {
-                    msg += string.Format("{0,8:G5} ({1,8:G5})    at ", centroid.J, mOptMD.J(centroid.X));
+                    double[] tmpx = [.. centroid.X.Select(row => row[0])];
+                    msg += string.Format("{0,8:G5} ({1,8:G5})    at ", centroid.J, mOptMD.J(tmpx));
                 }
 
                 for (int i = 0; i < centroid.X.Length; i++)
                 {
-                    msg += string.Format("{0,8:G5} ", centroid.X[i]);
+                    msg += string.Format("{0,8:G5} ", centroid.X[i][0]);
                 }
                 DisplayMessage(msg + Environment.NewLine);
             }

@@ -37,8 +37,8 @@ namespace OptNet
         /// <summary>
         /// Gets the list of optimal (X, J) pairs based on the specified optimization criteria (Max or Min) and the provided tolerance for J values.
         /// </summary>
-        public (T X, T J)[] Optlist { get; } = [];
-        public List<(T X, T J)> Lo { get; }
+        public (T[] X, T J)[] Optlist { get; } = [];
+        public List<(T[] X, T J)> Lo { get; }
 
         /// <summary>
         /// Initializes a new instance of the Opt1D class with the specified parameters, including sampleJs, tolerance for J values, number of samples, minimum and maximum X values, constant variables, optimization mode, and optional optimization interval.
@@ -66,7 +66,6 @@ namespace OptNet
             this.sampleJs = sampleJs;
             this.minX = minX;
             this.maxX = maxX;
-            var dxhalf = T.One / T.CreateChecked((Ns - 1)/2);
             dX = (maxX - minX) / T.CreateChecked((Ns - 1));
             dXHalf = dX / T.CreateChecked(2);
 
@@ -87,8 +86,10 @@ namespace OptNet
             Lo = GetLo((int)minDpK, (int)maxDpK);
             //Lo.Add((T.Zero, Jw(T.Zero)));
             //Lo.Add((T.One, Jw(T.One)));
-            Lo.Add((dxhalf, Jw(dxhalf)));
-            Lo.Add((T.One - dxhalf, Jw(T.One - dxhalf)));
+
+            var dxhalf = T.One / T.CreateChecked((Ns - 1) / 2);
+            Lo.Add(( new T[] { dxhalf, dxhalf }, Jw(dxhalf)));
+            Lo.Add(( new T[] { T.One - dxhalf, T.One - dxhalf }, Jw(T.One - dxhalf)));
 
             var maxJ = Lo.Max(item => item.J);
             var minJ = Lo.Min(item => item.J);
@@ -152,10 +153,11 @@ namespace OptNet
             C = GeneralMath<T>.LinearTransform(constVars.Rc.Data, Js, minDpK, maxDpK);
 
             Lo = GetLo((int)minDpK, (int)maxDpK);
-            T tmpoffset = T.CreateChecked(1.0 / 2.0 / Ns);
-            Lo.Add((tmpoffset, Jw(tmpoffset)));
-            Lo.Add((T.One - tmpoffset, Jw(T.One- tmpoffset)));
-            
+
+            var dxhalf = T.One / T.CreateChecked((Ns - 1) / 2);
+            Lo.Add((new T[] { dxhalf, dxhalf }, Jw(dxhalf)));
+            Lo.Add((new T[] { T.One - dxhalf, T.One - dxhalf }, Jw(T.One - dxhalf)));
+
 
             var maxJ = Lo.Max(item => item.J);
             var minJ = Lo.Min(item => item.J);
@@ -190,9 +192,9 @@ namespace OptNet
         /// Calculates the list of local optima (Lo) by solving quadratic equations derived from the coefficients A, B, and C for each interval defined by the constant variables. The method checks if the solutions are within the valid range and adds them to the list along with their corresponding J values.
         /// </summary>
         /// <returns></returns>
-        private List<(T X, T J)> GetLo(int minDpK, int maxDpK)
+        private List<(T[] X, T J)> GetLo(int minDpK, int maxDpK)
         {
-            var lo = new List<(T X, T J)>();
+            var lo = new List<(T[] X, T J)>();
             for (int k = 0; k < A.Length; k++)
             {
                 if((k<minDpK) || (k>maxDpK))
@@ -207,14 +209,14 @@ namespace OptNet
                     if (B[k] == T.Zero) // Constant equation
                     {
                         if (C[k] == T.Zero) // All x are solution
-                            lo.Add((constVars.Dp[k], T.Zero));
+                            lo.Add((new T[] { constVars.Dp[k], constVars.Dp[k] }, T.Zero));
                     }
                     else // Linear equation
                     {
                         x = -C[k] / B[k];
                         if (IsInCi(x, k))
-                            //lo.Add(x, objectJ.J(x));
-                            lo.Add((x, Jw(x)));
+                            //lo.Add((x, Jw(x)));
+                            lo.Add(( new T[] { x, x }, Jw(x)));
                         else
                             continue;
                     }
@@ -229,8 +231,7 @@ namespace OptNet
                     {
                         x = -B[k] / A[k] / (T.One + T.One);
                         if (IsInCi(x, k))
-                            //lo.Add(x, objectJ.J(x));
-                            lo.Add((x, Jw(x)));
+                            lo.Add(( new T[] { x, x }, Jw(x)));
                         else
                             continue;
                     }
@@ -239,11 +240,11 @@ namespace OptNet
                         x = (-B[k] - sqrtTmpD2) / A[k] / (T.One + T.One);
                         if (IsInCi(x, k))
                             //lo.Add(x, objectJ.J(x));
-                            lo.Add((x, Jw(x)));
+                            lo.Add(( new T[] { x, x }, Jw(x)));
                         x = (-B[k] + sqrtTmpD2) / A[k] / (T.One + T.One);
                         if (IsInCi(x, k))
                             //lo.Add(x, objectJ.J(x));
-                            lo.Add((x, Jw(x)));
+                            lo.Add((new T[] { x, x }, Jw(x)));
                     }
                 }
             }
@@ -309,7 +310,7 @@ namespace OptNet
             string msgTemplate = "Key = {0,8:G5},   Value = {1,8:G5}";
             string s = string.Empty;
 
-            foreach ((T X, T J) in Lo)
+            foreach ((T[] X, T J) in Lo)
             {
                 s += "Lo  " + string.Format(msgTemplate, CalcRealX(X), J) + Environment.NewLine;
             }
@@ -346,7 +347,9 @@ namespace OptNet
         /// </summary>
         /// <param name="projX"></param>
         /// <returns></returns>
-        public T CalcRealX(in T projX) => (maxX - minX + dX) * projX + minX - dXHalf;
+        public T[] CalcRealX(in T[] projX) => new T[] {
+                                                (maxX - minX + dX) * projX[0] + minX - dXHalf,
+                                                (maxX - minX + dX) * projX[1] + minX - dXHalf};
         /// <summary>
         /// Calculates the projected x-coordinate from the real-world x-coordinate.
         /// </summary>

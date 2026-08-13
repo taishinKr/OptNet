@@ -108,7 +108,7 @@ namespace OptNet
         public T[]? DXHalf { get; set; }
         public List<T>? SampleJtot { get; set; }
         //public T? TolX { get; set; }
-        public (T[] X, T J)[] OptResultReal { get; set; } 
+        public (T[][] X, T J)[] OptResultReal { get; set; } 
     }
 
 
@@ -132,8 +132,8 @@ namespace OptNet
 
         private uint[] inputXIdx;
         private T[] inputX;
-        public (T[] X, T J)[] optResult = [];
-        public (T[] X, T J)[] optResultReal = [];
+        public (T[][] X, T J)[] optResult = [];
+        public (T[][] X, T J)[] optResultReal = [];
 
         public T TolJ { get; set; } = T.CreateChecked(0.1); // tolerance(ratio) for the objective function, J, to be considered as converged.
         private T spanJ = T.Zero; // span of the objective function, J, from the initial sampling. 
@@ -265,10 +265,10 @@ namespace OptNet
                     optCenter = optResultReal.Length - 1;   // if AutoShrink is enabled, use the last optimal result as the center for shrinking
                                                             // , which is the weighted centroid of the previous optimization results,
                                                             // and is expected to be closer to the true optimal solution.
-                    var centerValue = optResultReal[optCenter].X[idxDim];
+                    var centerValue = optResultReal[optCenter].X[idxDim][0];
 
                     T lengthLimit = (T.One + T.One) * optResultReal
-                                .Select(e => (dynamic)Math.Abs((dynamic)e.X[idxDim] - (dynamic)centerValue))
+                                .Select(e => (dynamic)Math.Abs((dynamic)e.X[idxDim][0] - (dynamic)centerValue))
                                 .Max();
                     //lengthLimit += T.CreateChecked(0.1) * (maxX[idxDim] - minX[idxDim]); // add a margin based on the user-selected shrink ratio to avoid excessive shrinking
                     ratio = lengthLimit / (maxX[idxDim] - minX[idxDim]);
@@ -286,7 +286,7 @@ namespace OptNet
                 if (rdxIdx <= T.Zero)
                     throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
 
-                T optidx = (optResultReal[optCenter].X[idxDim] - minX[idxDim]) / dX[idxDim];
+                T optidx = (optResultReal[optCenter].X[idxDim][0] - minX[idxDim]) / dX[idxDim];
                 T minIdx = optidx - rdxIdx / (T.One + T.One);
                 T maxIdx = minIdx + rdxIdx;
                 if (IsSetSysFlag(StaMaskEnum.StrictLimit))
@@ -469,7 +469,7 @@ namespace OptNet
         public async void OptimizeMD()
         {
             //var xOpt = new T[dimN];
-            var Opt = (X: new T[dimN], J: default(T));
+            var Opt = (X: new T[dimN][], J: default(T));
 
             ClrSysFlag(StaMaskEnum.Done);
             // for Parallel running ***************************************
@@ -510,7 +510,7 @@ namespace OptNet
         {
             CalResultReal();
 
-            var clusters = new List<List<(T[] X, T J)>>();
+            var clusters = new List<List<(T[][] X, T J)>>();
             if (TolX < T.One)
             {
                 spanX = CalSpanX();
@@ -520,12 +520,12 @@ namespace OptNet
             }
             else // If TolX is greater than or equal to 1, treat all results as a single cluster
             {
-                clusters.Add(new List<(T[] X, T J)>());
+                clusters.Add(new List<(T[][] X, T J)>());
                 clusters[0] = optResultReal.ToList();
             }
 
 
-            (T[] X, T J)[] newResult = []; //Array.Empty<(T[], T)>();
+            (T[][] X, T J)[] newResult = []; //Array.Empty<(T[], T)>();
             T optj = T.Zero;
 
             if (mode == StaMaskEnum.Min) // If the mode is set to Min, select the item with the minimum J value from each cluster
@@ -632,7 +632,7 @@ namespace OptNet
         /// <param name="optj"></param>
         /// <param name="maxIdx"></param>
         /// <returns></returns>
-        public (T[] X, T J) CalculateWeightedCentroid(ref (T[] X, T J)[] newResult, T? optjGiven, int maxIdx)
+        public (T[][] X, T J) CalculateWeightedCentroid(ref (T[][] X, T J)[] newResult, T? optjGiven, int maxIdx)
         {
             T optj = T.Zero;
             if (optjGiven.HasValue)
@@ -668,7 +668,7 @@ namespace OptNet
 
                 for (int i = 0; i < dimension; i++)
                 {
-                    weightedSum[i] += X[i] * weight;
+                    weightedSum[i] += X[i][0] * weight;
                 }
             }
 
@@ -692,21 +692,33 @@ namespace OptNet
                 }
             }*/
 
-            (T[], T) newItem = new ();
+            (T[][], T) newItem = new ();            
 
             if ( T.Abs(totalWeight) < T.CreateChecked(0.000001) )
             {
                 AddDispMsg("Warning: All weights are identical, Possible multi Optima" + Environment.NewLine, LogLevel.Warning);
                 AddDispMsg("Warning: AutoShrink is disabled, and First solution is selected for shrinkage.", LogLevel.Warning);
-                newItem = (new T[dimension], T.CreateChecked(-1)); // If all weights are identical, return a zero vector and a negative J value to indicate an issue
+                // If all weights are identical, return a zero vector and a negative J value to indicate an issue                
+                newItem = (
+                            Enumerable.Range(0, (int)dimension)
+                                                      .Select(_ => new T[] { T.Zero, T.Zero })
+                                                      .ToArray(),
+                            T.CreateChecked(-1)
+                        );
             }
             else
             {
                 // 무게 중심(가중 평균) 계산
-                T[] centroid = new T[dimension];
+                //T[][] centroid = new T[dimension][];
+                T[][] centroid = (
+                    Enumerable.Range(0, dimension)
+                              .Select(_ => new T[] { T.Zero, T.Zero })
+                              .ToArray()
+                );
                 for (int i = 0; i < dimension; i++)
                 {
-                    centroid[i] = weightedSum[i] / totalWeight;
+                    centroid[i][0] = weightedSum[i] / totalWeight;
+                    centroid[i][1] = weightedSum[i] / totalWeight;
                 }
                 // 결과를 newResult 마지막에 추가
                 newItem = (centroid, totalWeight);
@@ -721,7 +733,7 @@ namespace OptNet
         /// <param name="maxIdx"></param>
         /// <param name="optj"></param>
         /// <returns></returns>
-        private T calculateOffsetWeightForCentroid((T[] X, T J)[] newResult, int maxIdx, T optj)
+        private T calculateOffsetWeightForCentroid((T[][] X, T J)[] newResult, int maxIdx, T optj)
         {
             T sum = T.Zero;
             T max = newResult[0].J + T.Abs(optj);
@@ -757,13 +769,13 @@ namespace OptNet
         /// <param name="Opt">A tuple containing the current best solution vector <c>X</c> and its corresponding objective value <c>J</c>.</param>
         /// <returns>A list of tuples, where each tuple contains an optimized solution vector <c>X</c> and its corresponding
         /// objective value <c>J</c>.</returns>
-        private List<(T[] X, T J)> OptimaizeMdRecur(int axisIdx, ImmutableList<T> samplejtot, (T[] X, T J) Opt)
+        private List<(T[][] X, T J)> OptimaizeMdRecur(int axisIdx, ImmutableList<T> samplejtot, (T[][] X, T J) Opt)
         {
             AddDispMsg(string.Format("MdRecur({0,0:G3})" + Environment.NewLine, axisIdx), LogLevel.Info1);
 
-            var Optlist = new List<(T[] X, T J)>();
+            var Optlist = new List<(T[][] X, T J)>();
 
-            (T X, T J)[] optlist1Axis;
+            (T[] X, T J)[] optlist1Axis;
             double[][] optintv;
 
             if (IsSetSysFlag(StaMaskEnum.ReSampling))
@@ -788,7 +800,7 @@ namespace OptNet
                 // If at the last dimension, clone the current solution and add it to the result list
                 if (axisIdx == dimN - 1)
                 {
-                    var opt = ((T[])Opt.X.Clone(), Opt.J);  // Optlist.Add only clones the reference, not the value.
+                    var opt = ((T[][])Opt.X.Clone(), Opt.J);  // Optlist.Add only clones the reference, not the value.
 
                     Optlist.Add(opt);
                 }
@@ -798,10 +810,10 @@ namespace OptNet
                     List<T> newSample = []; // new List<T>()
                     var inputIdx = new uint[dimN];
 
-                    List<(T[] X, T J)> OptlistNew;
+                    List<(T[][] X, T J)> OptlistNew;
                     if (IsSetSysFlag(StaMaskEnum.ReSampling))
                     {
-                        ReSampleRecur(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
+                        ReSampleRecur(opt1Axis.X[0], axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
                     }
                     else // IsSetSysFlag(StaMaskEnum.AxisChanging)
                     {
@@ -856,13 +868,13 @@ namespace OptNet
         /// contains: <list type="bullet"> <item><description>An array <see langword="X"/> representing a solution
         /// vector.</description></item> <item><description>The corresponding objective value <see langword="J"/> for
         /// the solution vector.</description></item> </list></returns>
-        private async Task<List<(T[] X, T J)>> OptimaizeMdRecurAsync(int axisIdx, ImmutableList<T> samplejtot, (T[] X, T J) Opt)
+        private async Task<List<(T[][] X, T J)>> OptimaizeMdRecurAsync(int axisIdx, ImmutableList<T> samplejtot, (T[][] X, T J) Opt)
         {
             AddDispMsg(string.Format("MdReur({0,0:G3})" + Environment.NewLine, axisIdx), LogLevel.Info1);
 
-            var Optlist = new List<(T[] X, T J)>();
+            var Optlist = new List<(T[][] X, T J)>();
 
-            (T X, T J)[] optlist1Axis = []; //Array.Empty<(T, T)>();
+            (T[] X, T J)[] optlist1Axis = []; //Array.Empty<(T, T)>();
             double[][] optintv = []; //Array.Empty<double[]>();
 
             await OptimizeMD1AxisAsync(samplejtot, axisIdx).ContinueWith(
@@ -882,7 +894,7 @@ namespace OptNet
 
                 if (axisIdx == dimN - 1)
                 {
-                    var opt = ((T[])Opt.X.Clone(), Opt.J);  // Optlist.Add only clones the reference, not the value.
+                    var opt = ((T[][])Opt.X.Clone(), Opt.J);  // Optlist.Add only clones the reference, not the value.
 
                     Optlist.Add(opt);
                 }
@@ -890,7 +902,7 @@ namespace OptNet
                 {
                     List<T> newSample = []; // new List<T>()
                     var inputIdx = new uint[dimN];
-                    ReSampleRecur(opt1Axis.X, axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
+                    ReSampleRecur(opt1Axis.X[0], axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
 
                     await OptimaizeMdRecurAsync(axisIdx + 1, [.. newSample], Opt).ContinueWith( // newSample.ToImmutableList();
                         t =>
@@ -916,7 +928,7 @@ namespace OptNet
         /// (<c>J</c>) for the specified axis.</description> </item> <item> <description>A two-dimensional array
         /// representing the intervals of the optimized values for the specified axis. The first sub-array contains the
         /// minimum values, and the second sub-array contains the maximum values.</description> </item> </list></returns>
-        private async Task<((T X, T J)[] Optlist1Axis, double[][] optIntv)> OptimizeMD1AxisAsync(ImmutableList<T> samplejtot, int idxDim)
+        private async Task<((T[] X, T J)[] Optlist1Axis, double[][] optIntv)> OptimizeMD1AxisAsync(ImmutableList<T> samplejtot, int idxDim)
         {
             Opt1D<T> opt1D;
             var sampleJs = new T[Ns[idxDim]];
@@ -930,7 +942,7 @@ namespace OptNet
                 ];
 
             var axisIdx = idxDim;
-            var tasks = new List<Task<((T X, T J)[] Optlist1Axis, double[][] optIntv)>>();
+            var tasks = new List<Task<((T[] X, T J)[] Optlist1Axis, double[][] optIntv)>>();
 
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
@@ -953,7 +965,7 @@ namespace OptNet
                 {
                     AddDispMsg(string.Format("    task: Md1Axis({0,0:G3},{1,0:G3})" + Environment.NewLine, idxDim, n), LogLevel.Info2);
 
-                    var task = pcQ.Enqueue<((T X, T J)[] Optlist1Axis, double[][] optIntv)>(
+                    var task = pcQ.Enqueue<((T[] X, T J)[] Optlist1Axis, double[][] optIntv)>(
                         () => OptimizeMD1AxisRecur(samplejtot, axisIdx, idxDim + 1, inputIndex)
                     );
                     tasks.Add(task);
@@ -1007,7 +1019,7 @@ namespace OptNet
 
                         foreach (var opt in opt1D.Optlist)
                         {
-                            var optidx = (int)(double.CreateChecked(opt.X) / dx);
+                            var optidx = (int)(double.CreateChecked(opt.X[0]) / dx);
                             if (optidx >= (Ns[idxDim] - 1))
                             {
                                 var idxlast = Ns[idxDim] - 1;
@@ -1054,8 +1066,8 @@ namespace OptNet
                     //}
 
                     // Adjust the intervals for the current dimension based on the optimized values and a margin
-                    optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X)) - marginDx;
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
+                    optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X[0])) - marginDx;
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X[0])) + marginDx;
 
                     if (optIntv[0][idxDim] < 0.0)
                     {
@@ -1083,11 +1095,11 @@ namespace OptNet
         /// the optimized value for the axis (<typeparamref name="T"/>) and its corresponding metric (<typeparamref
         /// name="T"/>).</description> </item> <item> <description>A jagged array of doubles representing the intervals
         /// associated with the optimization process.</description> </item> </list></returns>
-        private ((T X, T J)[] Optlist1Axis, double[][] optIntv) OptimizeMD1Axis(ImmutableList<T> samplejtot, int idx)
+        private ((T[] X, T J)[] Optlist1Axis, double[][] optIntv) OptimizeMD1Axis(ImmutableList<T> samplejtot, int idx)
         {
             var inputIndex = new uint[dimN];
 
-            ((T X, T J)[] Optlist1Axis, double[][] optIntv) = OptimizeMD1AxisRecur(samplejtot, idx, idx, inputIndex);
+            ((T[] X, T J)[] Optlist1Axis, double[][] optIntv) = OptimizeMD1AxisRecur(samplejtot, idx, idx, inputIndex);
             return (Optlist1Axis, optIntv);
         }
         /// <summary>
@@ -1108,7 +1120,7 @@ namespace OptNet
         /// </description> </item> <item> <description> A two-dimensional array representing the intervals of the
         /// optimization results for each dimension. The first sub-array contains the minimum values, and the second
         /// sub-array contains the maximum values. </description> </item> </list></returns>
-        private ((T X, T J)[] Optlist1Axis, double[][] optIntv) OptimizeMD1AxisRecur(ImmutableList<T> samplejtot, int axisIdx, int idxDim, uint[] inputIndex)
+        private ((T[] X, T J)[] Optlist1Axis, double[][] optIntv) OptimizeMD1AxisRecur(ImmutableList<T> samplejtot, int axisIdx, int idxDim, uint[] inputIndex)
         {
             Opt1D<T> opt1D;
             var sampleJs = new T[Ns[idxDim]];
@@ -1194,7 +1206,7 @@ namespace OptNet
 
                         foreach (var opt in opt1D.Optlist)
                         {
-                            var optidx = (int)(double.CreateChecked(opt.X) / dx);
+                            var optidx = (int)(double.CreateChecked(opt.X[0]) / dx);
                             // If the optimized index is at the last position, use the last intervals for the current dimension
                             if (optidx >= (Ns[idxDim] - 1))
                             {
@@ -1243,8 +1255,8 @@ namespace OptNet
                     //}
 
                     // Adjust the intervals for the current dimension based on the optimized values and a margin
-                    optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X)) - marginDx;
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X)) + marginDx;
+                    optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X[0])) - marginDx;
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X[0])) + marginDx;
 
                     if (optIntv[0][idxDim] < 0.0)
                     {
@@ -1471,13 +1483,21 @@ namespace OptNet
         /// dimension specified by <see cref="dimN"/>.</remarks>
         private void CalResultReal()
         {
-            optResultReal = new (T[] X, T J)[optResult.Length];
+            optResultReal = new (T[][] X, T J)[optResult.Length];
             for (int i = 0; i < optResult.Length; i++) // Iterate over the array of tuples
             {
-                optResultReal[i] = (new T[dimN], optResult[i].J);
+                //optResultReal[i] = (new T[dimN][], optResult[i].J);
+                optResultReal[i] = (
+                                        Enumerable.Range(0, (int)dimN)
+                                                      .Select(_ => new T[] { T.Zero, T.Zero })
+                                                      .ToArray(),
+                                        optResult[i].J
+                                    );
+
                 for (int j = 0; j < dimN; j++) // Iterate over the dimensions
                 {
-                    optResultReal[i].X[j] = CalcRealX(optResult[i].X[j], j); // Access the tuple's X array
+                    optResultReal[i].X[j][0] = CalcRealX(optResult[i].X[j][0], j); // Access the tuple's X array
+                    optResultReal[i].X[j][1] = CalcRealX(optResult[i].X[j][1], j); // Access the tuple's X array
                 }
             }
         }
@@ -1490,15 +1510,22 @@ namespace OptNet
         private void CalResultPrj()
         {
             if(optResultReal.Length >= 3) // optResultReal contains the centroid as the last element, so we exclude it from the projection
-                optResult = new (T[] X, T J)[optResultReal.Length - 1];
+                optResult = new (T[][] X, T J)[optResultReal.Length - 1];
             else
-                optResult = new (T[] X, T J)[optResultReal.Length];
+                optResult = new (T[][] X, T J)[optResultReal.Length];
             for (int i = 0; i < optResult.Length; i++) // Iterate over the array of tuples
             {
-                optResult[i] = (new T[dimN], optResultReal[i].J);
+                //optResult[i] = (new T[dimN][], optResultReal[i].J);
+                optResult[i] = (
+                                    Enumerable.Range(0, (int)dimN)
+                                                      .Select(_ => new T[] { T.Zero, T.Zero })
+                                                      .ToArray(),
+                                    optResultReal[i].J
+                                );
                 for (int j = 0; j < dimN; j++) // Iterate over the dimensions
                 {
-                    optResult[i].X[j] = CalcProjX(optResultReal[i].X[j], j); // Access the tuple's X array
+                    optResult[i].X[j][0] = CalcProjX(optResultReal[i].X[j][0], j); // Access the tuple's X array
+                    optResult[i].X[j][1] = CalcProjX(optResultReal[i].X[j][1], j); // Access the tuple's X array
                 }
             }
         }
@@ -1676,12 +1703,13 @@ namespace OptNet
                 }
                 else
                 {
-                    msgOptX1 += string.Format("{0,8:G5} ({1,8:G5})    at ", opt.J, J(opt.X));
+                    T[] tmpx = [.. opt.X.Select(row => row[0])];
+                    msgOptX1 += string.Format("{0,8:G5} ({1,8:G5})    at ", opt.J, J(tmpx));
                 }
 
                 for (int i = 0; i < dimN; i++)
                 {
-                    msgOptX1 += string.Format("{0,8:G5} ", opt.X[i]);
+                    msgOptX1 += string.Format("{0,8:G5} ", opt.X[i][0]);
                 }
                 msgOptX += msgOptX1 + Environment.NewLine;
             }
