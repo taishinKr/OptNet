@@ -1,4 +1,9 @@
-﻿using System.Numerics;
+﻿using System.ComponentModel;
+using System.Numerics;
+using System.Runtime.Intrinsics.Arm;
+using System.Security.Policy;
+using System.Xml.Linq;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace OptNet
 {
@@ -23,7 +28,14 @@ namespace OptNet
         private readonly double[]? optIntv;
 
         [Flags]
-        public enum StaMaskEnum : UInt32 { Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3, Verbose = 1 << 4 }
+        public enum StaMaskEnum : UInt32
+        {
+            Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3,
+            MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6,
+            AutoShrink = 1 << 7, SampledOptimal = 1 << 8,
+            ReSampling = 1 << 9, AxisChanging = 1 << 10,
+            PartialConstJ = 1 << 11,
+        }
         private UInt32 mState = 0;
 
         /// <summary>
@@ -40,6 +52,8 @@ namespace OptNet
         public (T[] X, T J)[] Optlist { get; } = [];
         public List<(T[] X, T J)> Lo { get; }
 
+        private T tolJ;
+
         /// <summary>
         /// Initializes a new instance of the Opt1D class with the specified parameters, including sampleJs, tolerance for J values, number of samples, minimum and maximum X values, constant variables, optimization mode, and optional optimization interval.
         /// </summary>
@@ -52,15 +66,18 @@ namespace OptNet
         /// <param name="mode"></param>
         /// <param name="optIntv"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        public Opt1D(in T[] sampleJs, T TolJ, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in StaMaskEnum mode, double[]? optIntv)
+
+        //public Opt1D(in T[] sampleJs, T TolJ, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in StaMaskEnum mode, double[]? optIntv)
+        public Opt1D(in T[] sampleJs, T TolJ, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in UInt32 mstate, double[]? optIntv)
         {
-            ClrSysFlag(StaMaskEnum.Max);
+            tolJ = TolJ;
+            mState = mstate;
+            /*ClrSysFlag(StaMaskEnum.Max);
             ClrSysFlag(StaMaskEnum.Min);
-            var modetmp = mode;
             // If both Max and Min flags are set, prioritize Max flag
             if (mode == (StaMaskEnum.Max | StaMaskEnum.Min))
                 modetmp = StaMaskEnum.Max;
-            SetSysFlag(modetmp);
+            SetSysFlag(modetmp);*/
 
             this.Ns = Ns;
             this.sampleJs = sampleJs;
@@ -87,7 +104,7 @@ namespace OptNet
             //Lo.Add((T.Zero, Jw(T.Zero)));
             //Lo.Add((T.One, Jw(T.One)));
 
-            var dxhalf = T.One / T.CreateChecked((Ns - 1) / 2);
+            var dxhalf = T.One / T.CreateChecked((double)Ns * 2.0);
             Lo.Add(( new T[] { dxhalf, dxhalf }, Jw(dxhalf)));
             Lo.Add(( new T[] { T.One - dxhalf, T.One - dxhalf }, Jw(T.One - dxhalf)));
 
@@ -103,12 +120,12 @@ namespace OptNet
             {
                 //Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked((item.J - maxJ) / spanJ)) <= TolJ)]; //.ToArray(); 
                 //Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked(item.J - maxJ)) <= TolJ)]; //.ToArray();
-                Optlist = [.. Lo.Where(item => T.Abs(item.J - maxJ) <= (T)TolJ)];
+                Optlist = [.. Lo.Where(item => T.Abs(item.J - maxJ) <= (T)tolJ)];
             }
             if (IsSetSysFlag(StaMaskEnum.Min))
             {
                 //Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked((item.J - minJ) / spanJ)) <= TolJ)]; //.ToArray();
-                Optlist = [.. Lo.Where(item => T.Abs(item.J - minJ) <= TolJ)]; //.ToArray();
+                Optlist = [.. Lo.Where(item => T.Abs(item.J - minJ) <= tolJ)]; //.ToArray();
             }
         }
         /// <summary>
@@ -123,11 +140,17 @@ namespace OptNet
         /// <param name="mode"></param>
         /// <param name="optIntv"></param>
         /// <exception cref="InvalidOperationException"></exception>
-        public Opt1D(in Func<T, T> j, double TolJ, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in StaMaskEnum mode, double[]? optIntv)
+        //public Opt1D(in Func<T, T> j, T TolJ, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, in StaMaskEnum mode, double[]? optIntv)
+        public Opt1D(in Func<T, T> j, T TolJ, in uint Ns, in T minX, in T maxX, in OfflineGet<T> constvars, UInt32 mstate, double[]? optIntv)
         {
-            ClrSysFlag(StaMaskEnum.Max);
+            /*ClrSysFlag(StaMaskEnum.Max);
             ClrSysFlag(StaMaskEnum.Min);
-            SetSysFlag(mode);
+            var modetmp = mode;
+            // If both Max and Min flags are set, prioritize Max flag
+            if (mode == (StaMaskEnum.Max | StaMaskEnum.Min))
+                modetmp = StaMaskEnum.Max;
+            SetSysFlag(modetmp);*/
+            mState = mstate;
 
             this.Ns = Ns;
             this.minX = minX;
@@ -169,11 +192,11 @@ namespace OptNet
 
             if (IsSetSysFlag(StaMaskEnum.Max))
             {
-                Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked((item.J - maxJ) / spanJ)) <= TolJ)]; //.ToArray();
+                Optlist = [.. Lo.Where(item => T.Abs((item.J - maxJ) / spanJ) <= TolJ)]; //.ToArray();
             }
             if (IsSetSysFlag(StaMaskEnum.Min))
             {
-                Optlist = [.. Lo.Where(item => Math.Abs(double.CreateChecked((item.J - minJ) / spanJ)) <= TolJ)]; //.ToArray();
+                Optlist = [.. Lo.Where(item => T.Abs((item.J - minJ) / spanJ) <= TolJ)]; //.ToArray();
             }
         }
         /// <summary>
@@ -189,11 +212,111 @@ namespace OptNet
             return tmpJs;
         }
         /// <summary>
+        /// GetSegOfConst finds the central segment around the first pivot element
+        /// (either minimum or maximum depending on system flags) in the array J.
+        /// It expands from the pivot index both left and right, forming the largest
+        /// contiguous segment where the difference between the smallest and largest
+        /// values does not exceed TolJ.
+        /// If the resulting segment contains only one element, the function returns null.
+        /// </summary>
+        /// <param name="J"></param>
+        /// <param name="TolJ"></param>
+        /// <returns></returns>
+        public (T startSeg, T endSeg, T J)? GetSegOfConst(T[] J, T TolJ)
+        {
+            if (J == null || J.Length == 0) return null;
+
+            // 1. Pivot index 선택
+            int pivotIndex = 0;
+            T candidate = J[0];
+
+            for (int i = 1; i < J.Length; i++)
+            {
+                if (IsSetSysFlag(StaMaskEnum.Min))
+                {
+                    if (Comparer<T>.Default.Compare(J[i], candidate) < 0)
+                    {
+                        candidate = J[i];
+                        pivotIndex = i;
+                    }
+                }
+                else if (IsSetSysFlag(StaMaskEnum.Max))
+                {
+                    if (Comparer<T>.Default.Compare(J[i], candidate) > 0)
+                    {
+                        candidate = J[i];
+                        pivotIndex = i;
+                    }
+                }
+            }
+
+            // 2. 중앙 그룹 확장 (좌우 모두)
+            int start = pivotIndex;
+            T minVal = J[pivotIndex];
+            T maxVal = J[pivotIndex];
+            T tol = TolJ;
+
+            // 왼쪽 확장
+            while (start - 1 >= 0)
+            {
+                T nextVal = J[start - 1];
+                minVal = nextVal < minVal ? nextVal : minVal;
+                maxVal = nextVal > maxVal ? nextVal : maxVal;
+                if (maxVal - minVal > tol) break;
+                start--;
+            }
+
+            int end = pivotIndex;
+            minVal = J[pivotIndex];
+            maxVal = J[pivotIndex];
+            // 오른쪽 확장
+            while (end + 1 <= J.Length - 1)
+            {
+                T nextVal = J[end + 1];
+                minVal = nextVal < minVal ? nextVal : minVal;
+                maxVal = nextVal > maxVal ? nextVal : maxVal;
+                if (maxVal - minVal > tol) break;
+                end++;
+            }
+
+            //// 3. 단일 원소 그룹이면 null 반환
+            //if (end == start) return null;
+            // 3. the number of element is less than 3, return null
+            if (end - start < 2) return null;
+
+            var dx = T.One / T.CreateChecked(Ns);
+            var dxhalf = dx / (T.One + T.One);
+            var margin = 0.8;
+
+            if (start - margin < 0.0)
+                start = (int)margin;
+            if (end + margin > (int)Ns -1)
+                end = (int)Ns - (int)margin -1;
+
+            T startReal = dxhalf + T.CreateChecked(start - margin) * dx;
+            T endReal = dxhalf + T.CreateChecked(end + margin) * dx;
+
+            if(startReal < dxhalf)
+                startReal = dxhalf;
+            if(endReal > T.One - dxhalf)
+                endReal = T.One - dxhalf;
+
+            return (
+                startReal,
+                endReal,
+                J[pivotIndex]
+            );
+        }
+        /// <summary>
         /// Calculates the list of local optima (Lo) by solving quadratic equations derived from the coefficients A, B, and C for each interval defined by the constant variables. The method checks if the solutions are within the valid range and adds them to the list along with their corresponding J values.
         /// </summary>
         /// <returns></returns>
         private List<(T[] X, T J)> GetLo(int minDpK, int maxDpK)
         {
+            (T startSeg, T endSeg, T valJ)? segConst = null;
+            if(IsSetSysFlag(StaMaskEnum.PartialConstJ))
+                segConst = GetSegOfConst(Js,tolJ);
+
             var lo = new List<(T[] X, T J)>();
             for (int k = 0; k < A.Length; k++)
             {
@@ -209,12 +332,18 @@ namespace OptNet
                     if (B[k] == T.Zero) // Constant equation
                     {
                         if (C[k] == T.Zero) // All x are solution
-                            lo.Add((new T[] { constVars.Dp[k], constVars.Dp[k] }, T.Zero));
+                        {
+                            x = constVars.Dp[k];
+                            if (IsSetSysFlag(StaMaskEnum.PartialConstJ))
+                                lo.Add((new T[] { constVars.Dp[k], constVars.Dp[k+1] }, Jw(x)));
+                            else
+                                lo.Add((new T[] { constVars.Dp[k], constVars.Dp[k] }, Jw(x)));
+                        }
                     }
                     else // Linear equation
                     {
                         x = -C[k] / B[k];
-                        if (IsInCi(x, k))
+                        if (IsInCi(x, k, segConst))
                             //lo.Add((x, Jw(x)));
                             lo.Add(( new T[] { x, x }, Jw(x)));
                         else
@@ -230,7 +359,7 @@ namespace OptNet
                     if (sqrtTmpD2 == T.Zero)
                     {
                         x = -B[k] / A[k] / (T.One + T.One);
-                        if (IsInCi(x, k))
+                        if (IsInCi(x, k, segConst))
                             lo.Add(( new T[] { x, x }, Jw(x)));
                         else
                             continue;
@@ -238,15 +367,20 @@ namespace OptNet
                     else
                     {
                         x = (-B[k] - sqrtTmpD2) / A[k] / (T.One + T.One);
-                        if (IsInCi(x, k))
+                        if (IsInCi(x, k, segConst))
                             //lo.Add(x, objectJ.J(x));
                             lo.Add(( new T[] { x, x }, Jw(x)));
                         x = (-B[k] + sqrtTmpD2) / A[k] / (T.One + T.One);
-                        if (IsInCi(x, k))
+                        if (IsInCi(x, k, segConst))
                             //lo.Add(x, objectJ.J(x));
                             lo.Add((new T[] { x, x }, Jw(x)));
                     }
                 }
+                
+            }
+            if (segConst != null)
+            {
+                lo.Add((new T[] { segConst.Value.startSeg, segConst.Value.endSeg }, segConst.Value.valJ));
             }
             return lo;
         }
@@ -286,46 +420,85 @@ namespace OptNet
             }*/
         }
         /// <summary>
+        /// IsInCi checks whether a value x lies within the Consistant Interval(CI) defined by constVars.Dp[k] and constVars.Dp[k+1],
+        /// If segConst is null, the check is simply that x >= Dp[k]-tol and x<Dp[k + 1]+tol.
+        /// If segConst is not null, then x must also lie outside the segment defined by minSeg and maxSeg
+        /// (i.e., x<minSeg or x > maxSeg) to return true.
+        /// </summary>
+        /// <param name="x"></param>
+        /// <param name="k"></param>
+        /// <param name="segConst"></param>
+        /// <returns></returns>
+        private bool IsInCi(in T x, in int k, (T startSeg, T endSeg, T valJ)? segConst)
+        {
+            var tol = T.CreateChecked(0.00001); // T.CreateChecked(0.001);
+
+            // 기본 조건
+            if (x < constVars.Dp[k] - tol || x >= constVars.Dp[k + 1] + tol)
+                return false;
+
+            // segConst가 null이면 기본 조건만으로 true            
+            if (segConst == null) // null means IsSetSysFlag(StaMaskEnum.PartialConstJ) == false or there's no constantJ segment.
+                return true;
+
+            // segConst가 존재하면 추가 조건 적용
+            // x가 minSeg 미만이거나 maxSeg 초과일 때만 true
+            return (x < segConst.Value.startSeg || x > segConst.Value.endSeg);
+            //return (x < minSeg || x > maxSeg);
+        }
+        /*/// <summary>
         /// Checks if the given value x is within the interval defined by the k-th and (k+1)-th elements of the constant variables' Dp array. Returns true if x is within the interval, otherwise returns false.
         /// </summary>
         /// <param name="x"></param>
         /// <param name="k"></param>
         /// <returns></returns>
-        private bool IsInCi(in T x, in int k)
+        private bool IsInCi(in T x, in int k, (int startIdx, int endIdx)? segConst)
         {
             //var a = T.Abs(x- constVars.Dp[k]);
             //var b = T.Abs(x- constVars.Dp[k + 1]);
-            var tol = T.CreateChecked(0.001);
-            if ((x >= constVars.Dp[k]-tol) && (x < constVars.Dp[k + 1]+tol))
+            var tol = T.CreateChecked(0.00001); // T.CreateChecked(0.001);
+            T minCi = constVars.Dp[k] - tol;
+            T maxCi = constVars.Dp[k + 1] + tol;
+
+
+            if (segConst != null) // IsSetSysFlag(StaMaskEnum.PartialConstJ) == true and there's a constantJ segment.
+            {
+
+            }
+
+            if ((x >= minCi) && (x < maxCi))
                 return true;
             else
                 return false;
-        }
+        }*/
         /// <summary>
         /// Generates a formatted string representation of the optimization results, including the local optima (Lo) and the optimal values (Optlist) based on the specified optimization criteria (Max or Min). The method constructs a message template and iterates through the Lo and Optlist to create a string that displays the key-value pairs of X and J values. The resulting string is returned for display or logging purposes.
         /// </summary>
         /// <returns></returns>
         public string ResultMsg()
         {
-            string msgTemplate = "Key = {0,8:G5},   Value = {1,8:G5}";
+            string msgTemplate = "Key = ({0,8:G5}, {1,8:G5})  Value = {2,8:G5}";
             string s = string.Empty;
 
             foreach ((T[] X, T J) in Lo)
             {
-                s += "Lo  " + string.Format(msgTemplate, CalcRealX(X), J) + Environment.NewLine;
+                T[] realX = CalcRealX(X);
+                s += "Lo  " + string.Format(msgTemplate, realX[0], realX[1], J) + Environment.NewLine;
             }
             if (IsSetSysFlag(StaMaskEnum.Max))
             {
                 foreach (var (X, J) in Optlist)
                 {
-                    s += "Max:  " + string.Format(msgTemplate, CalcRealX(X), J) + Environment.NewLine;
+                    T[] realX = CalcRealX(X);
+                    s += "Max:  " + string.Format(msgTemplate, realX[0], realX[1], J) + Environment.NewLine;
                 }
             }
             if (IsSetSysFlag(StaMaskEnum.Min))
             {
                 foreach (var (X, J) in Optlist)
                 {
-                    s += "Min:  " + string.Format(msgTemplate, CalcRealX(X), J) + Environment.NewLine;
+                    T[] realX = CalcRealX(X);
+                    s += "Min:  " + string.Format(msgTemplate, realX[0], realX[1], J) + Environment.NewLine;
                 }
             }
             return s;
@@ -339,7 +512,7 @@ namespace OptNet
         {
             T sum = T.Zero;
             for (uint n = 0; n <= Ns - 1; n++)
-                sum += W[n] * T.CreateChecked(Math.Cos(n * Math.PI * double.CreateChecked(x))); // Convert T to double    
+                sum += W[n] * T.Cos( T.CreateChecked(n) * T.Pi * x); // Convert T to double    
             return sum;
         }
         /// <summary>

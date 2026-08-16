@@ -34,25 +34,33 @@ namespace OptNet
 
         public OptParam( OptParam<T> optparm, uint dimN)
         {
-            if (optparm.IsScalable) // UI의 combobox에서 dimN을 변경한 경우
+            if (optparm.IsScalable && dimN != 0) // UI의 combobox에서 dimN을 변경한 경우
             {
                 this.Optima = optparm.Optima.Select(o =>
                 {
                     var newX = new T[dimN];
 
-                    // 기존 값 복사
-                    for (int i = 0; i < this.DimN; i++)
-                        newX[i] = o.X[i];
-                    // 나머지 값은 X[1]로 채우기
-                    for (uint i = this.DimN; i < dimN; i++)
-                        newX[i] = o.X[1];
+                    if (dimN < o.X.Length)
+                    {
+                        for (int i = 0; i < dimN; i++)
+                            newX[i] = o.X[i];
+                    }
+                    else
+                    {
+                        // 기존 값 복사
+                        for (int i = 0; i < o.X.Length; i++)
+                            newX[i] = o.X[i];
+                        // 나머지 값은 X[0]로 채우기
+                        for (int i = o.X.Length; i < dimN; i++)
+                            newX[i] = o.X[0];
+                    }
                     if (optparm.Name == "Styblinski­Tang")
                         return (newX, T.CreateChecked(-39.16599 * dimN));
                     else
                         return (newX, o.J);
                 }).ToArray();
             }
-            else // UI의 combobox에서 dimN을 변경하지 않은 경우
+            else // UI의 combobox에서 dimN을 변경하지 않은 경우나 Ns가 변경된 경우
             {
                 Optima = optparm.Optima
                     .Select(o => (o.X, o.J))
@@ -63,14 +71,15 @@ namespace OptNet
             this.J = optparm.J;            
             this.TolJ = optparm.TolJ;
             this.TolX = optparm.TolX < 0.0 ? 0.001 : optparm.TolX; // default value if tolX is negative
-            this.DimN = dimN;
-            this.Ns = new uint[dimN];
-            this.MinX = new T[dimN];
-            this.MaxX = new T[dimN];
+            var dim = dimN==0 ? optparm.DimN : dimN;
+            this.DimN = dim;
+            this.Ns = new uint[dim];
+            this.MinX = new T[dim];
+            this.MaxX = new T[dim];
             this.IsScalable = optparm.IsScalable;
-            for(int i = 0; i < dimN; i++)
+            for(int i = 0; i < dim; i++)
             {
-                this.Ns[i] = optparm.Ns[0];
+                this.Ns[i] = optparm.Ns[0];                
                 this.MinX[i] = optparm.MinX[0];
                 this.MaxX[i] = optparm.MaxX[0];
             }
@@ -151,7 +160,12 @@ namespace OptNet
         public T[] MaxX => [.. maxX]; // maxX.ToArray();
         public T[] DXHalf => [.. dXHalf]; // dXHalf.ToArray();
         public uint DimN => dimN;
-        public uint[] Nsample => [.. Ns]; // Assuming all dimensions have the same number of samples
+        //public uint[] Nsample => [.. Ns]; // Assuming all dimensions have the same number of samples
+        public uint[] Nsample
+        {
+            get => Ns.ToArray(); // ImmutableArray → 배열 변환
+            set => Ns = ImmutableArray.Create(value); // 배열 → ImmutableArray 변환
+        }
         public StaMaskEnum Mode { get => mode; set => mode = value; }
 
         public double[][] IntvX { get; set; } // minX, maxX
@@ -163,6 +177,7 @@ namespace OptNet
             MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6,
             AutoShrink = 1 << 7, SampledOptimal = 1 << 8,
             ReSampling = 1 << 9, AxisChanging = 1 << 10,
+            PartialConstJ = 1 << 11,
         }
         private UInt32 mState = 0;
 
@@ -200,11 +215,46 @@ namespace OptNet
             // 'mode' is dedicated to specifying the optimization goal (Min or Max) and should not be combined.
             if (mode == (StaMaskEnum.Max | StaMaskEnum.Min))
                 this.mode = StaMaskEnum.Max;
+            if (mode == StaMaskEnum.Max)
+                SetSysFlag(StaMaskEnum.Max);
+            else if (mode == StaMaskEnum.Min)
+                SetSysFlag(StaMaskEnum.Min);
 
             inputX = new T[dimN];
             inputXIdx = new uint[dimN];
             lutConstant = ImmutableDictionary<uint, OfflineGet<T>>.Empty;
 
+            var dx = new T[dimN];
+            var dxhalf = new T[dimN];
+            for (int i = 0; i < dimN; i++)
+            {
+                dx[i] = (maxX[i] - minX[i]) / T.CreateChecked((Ns[i] - 1));
+                dxhalf[i] = dx[i] / T.CreateChecked(2);
+            }
+            dX = ImmutableArray.Create(dx);
+            dXHalf = ImmutableArray.Create(dxhalf);
+
+            /*var samplejtot = new List<T>();
+            GetSampleRecur(0, ref samplejtot);
+
+            sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
+            spanJ = sampleJtot.Max() - sampleJtot.Min();
+            spanX = CalSpanX();*/
+            InitSample();
+
+            IntvX = new double[2][]; // minX, maxX
+
+            DisplayMsgQueue = new(); // new ConcurrentQueue<string>();
+
+            ClrSysFlag(StaMaskEnum.Done);
+            ClrSysFlag(StaMaskEnum.MThread);
+            SetSysFlag(StaMaskEnum.SampleReuse);
+            SetSysFlag(StaMaskEnum.ReSampling);
+            ClrSysFlag(StaMaskEnum.AxisChanging);         
+        }
+
+        public void InitSample()
+        {
             var dx = new T[dimN];
             var dxhalf = new T[dimN];
             for (int i = 0; i < dimN; i++)
@@ -221,20 +271,10 @@ namespace OptNet
             sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
             spanJ = sampleJtot.Max() - sampleJtot.Min();
             spanX = CalSpanX();
-
-            IntvX = new double[2][]; // minX, maxX
-
-            DisplayMsgQueue = new(); // new ConcurrentQueue<string>();
-
-            ClrSysFlag(StaMaskEnum.Done);
-            ClrSysFlag(StaMaskEnum.MThread);
-            SetSysFlag(StaMaskEnum.SampleReuse);
-            SetSysFlag(StaMaskEnum.ReSampling);
-            ClrSysFlag(StaMaskEnum.AxisChanging);
         }
         
         private StateSnapshot<T> oldDataBeforeShrink = new StateSnapshot<T>();
-        public void ShrinkBy(T factorSelected, int optSelected) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
+        public void ShrinkBy(T factorSelected, int optSelectedIdx) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
             var minx = new T[dimN];
             var maxx = new T[dimN];
@@ -257,36 +297,49 @@ namespace OptNet
 
             for (int idxDim = 0; idxDim < dimN; idxDim++)
             {
-                var optCenter = 0;
+                var optCentroidIdx = 0;
+                T lengthLimit = T.Zero;
+                T centroidXValue = T.Zero;
                 T ratio = T.One;
 
-                if ( isAutoShrink && (optResultReal.Length > 1))
+                if ( isAutoShrink && (optResultReal.Length > 1))  // more than two candidate exist
                 {
-                    optCenter = optResultReal.Length - 1;   // if AutoShrink is enabled, use the last optimal result as the center for shrinking
-                                                            // , which is the weighted centroid of the previous optimization results,
-                                                            // and is expected to be closer to the true optimal solution.
-                    var centerValue = optResultReal[optCenter].X[idxDim][0];
+                    optCentroidIdx = optResultReal.Length - 1;  // if AutoShrink is enabled, use the last optimal result as the center for shrinking
+                                                              // , which is the weighted centroid of the previous optimization results,
+                                                              // and is expected to be closer to the true optimal solution.
+                    centroidXValue = optResultReal[optCentroidIdx].X[idxDim][0]; // the centroid is always point not interval.
 
-                    T lengthLimit = (T.One + T.One) * optResultReal
-                                .Select(e => (dynamic)Math.Abs((dynamic)e.X[idxDim][0] - (dynamic)centerValue))
-                                .Max();
-                    //lengthLimit += T.CreateChecked(0.1) * (maxX[idxDim] - minX[idxDim]); // add a margin based on the user-selected shrink ratio to avoid excessive shrinking
-                    ratio = lengthLimit / (maxX[idxDim] - minX[idxDim]);
-                    ratio = T.Max(ratio, factorSelected);                   
+                    lengthLimit = (T.One + T.One) * optResultReal
+                                //.Select(e => (dynamic)Math.Abs((dynamic)e.X[idxDim][0] - (dynamic)centerValue))
+                                .Select(e =>
+                                {
+                                    var v0 = T.Abs(e.X[idxDim][0] - centroidXValue);
+
+                                    return (e.X[idxDim][0] == e.X[idxDim][1])
+                                           ? v0
+                                           : T.Max(
+                                                    v0, T.Abs(e.X[idxDim][1] - centroidXValue)
+                                               ); // lengthLimit should all the intervals of OptResultReal
+                                })
+                                .Max();         
                 }
-                else
+                else  // Only one candidate.
                 {
-                    optCenter = optSelected; // if AutoShrink is disabled, use the user-selected optimal result as the center for shrinking
-                    ratio = factorSelected; // if AutoShrink is disabled, use the user-selected shrink ratio
+                    centroidXValue = (optResultReal[optSelectedIdx].X[idxDim][1] + optResultReal[optSelectedIdx].X[idxDim][0]) / (T.One + T.One);
+                    lengthLimit = optResultReal[optSelectedIdx].X[idxDim][1] - optResultReal[optSelectedIdx].X[idxDim][0];
                 }
+                //lengthLimit += dX[idxDim]; // add margin.
+                ratio = lengthLimit / (maxX[idxDim] - minX[idxDim]);
+                ratio = T.Max(ratio, factorSelected);
 
                 T rangeIdx = T.CreateChecked(Ns[idxDim] - 1); // range of the current dimension in terms of index
-                T rangeIdxHalf = rangeIdx / T.CreateChecked(2);
+                T rangeIdxHalf = rangeIdx / (T.One + T.One); // T.CreateChecked(2);
                 T rdxIdx = ratio * rangeIdx; // shrinked range of the current dimension in terms of index
                 if (rdxIdx <= T.Zero)
                     throw new InvalidOperationException("Shrinking Ratio is too small, should be larger than 0.5 for now.");
 
-                T optidx = (optResultReal[optCenter].X[idxDim][0] - minX[idxDim]) / dX[idxDim];
+                //T optidx = (optResultReal[optCentroidIdx].X[idxDim][0] - minX[idxDim]) / dX[idxDim]; // the centroid is always point not interval.
+                T optidx = (centroidXValue - minX[idxDim]) / dX[idxDim]; // the centroid is always point not interval.
                 T minIdx = optidx - rdxIdx / (T.One + T.One);
                 T maxIdx = minIdx + rdxIdx;
                 if (IsSetSysFlag(StaMaskEnum.StrictLimit))
@@ -649,9 +702,9 @@ namespace OptNet
             int dimension = newResult[0].X.Length;
             T[] weightedSum = new T[dimension];
 
-            T offset = T.Zero;
-            if (mode == StaMaskEnum.Min)
-                offset = calculateOffsetWeightForCentroid(newResult,maxIdx,optj);
+            //T offset = T.Zero;
+            //if (mode == StaMaskEnum.Min)
+            //    offset = calculateOffsetWeightForCentroid(newResult,maxIdx,optj);
 
             for (int idx = 0; idx <= maxIdx && idx < newResult.Length; idx++)
             {
@@ -661,6 +714,7 @@ namespace OptNet
 
                 if (mode == StaMaskEnum.Min)
                 {
+                    T offset = calculateOffsetWeightForCentroid(newResult, maxIdx, optj);
                     weight = offset - weight;
                 }
 
@@ -668,7 +722,9 @@ namespace OptNet
 
                 for (int i = 0; i < dimension; i++)
                 {
-                    weightedSum[i] += X[i][0] * weight;
+                    T avgX = (X[i][0] + X[i][1]) / (T.One + T.One); // If X[i] is interval, the center value is utilized for calculation
+                    //weightedSum[i] += X[i][0] * weight;
+                    weightedSum[i] += avgX * weight;
                 }
             }
 
@@ -717,6 +773,7 @@ namespace OptNet
                 );
                 for (int i = 0; i < dimension; i++)
                 {
+                    // the centroid is always point not interval.
                     centroid[i][0] = weightedSum[i] / totalWeight;
                     centroid[i][1] = weightedSum[i] / totalWeight;
                 }
@@ -794,34 +851,60 @@ namespace OptNet
             // Recursively optimize the next axis if not at the last dimension
             foreach (var opt1Axis in optlist1Axis)
             {
-                Opt.X[axisIdx] = opt1Axis.X;
-                Opt.J = opt1Axis.J;
+                // Deep Copy of Opt
+                T[][] OptXCopy = new T[Opt.X.Length][];
+                for (int i = 0; i < Opt.X.Length; i++)
+                {
+                    if (Opt.X[i] != null)
+                    {
+                        OptXCopy[i] = (T[])Opt.X[i].Clone(); // 내부 1차원 배열 복사
+                    }
+                }
+                var optNew = (X: OptXCopy, J: Opt.J);
+
+                optNew.X[axisIdx] = opt1Axis.X;
+                optNew.J = opt1Axis.J;
 
                 // If at the last dimension, clone the current solution and add it to the result list
                 if (axisIdx == dimN - 1)
                 {
-                    var opt = ((T[][])Opt.X.Clone(), Opt.J);  // Optlist.Add only clones the reference, not the value.
+                    //var opt = ((T[][])Opt.X.Clone(), Opt.J);  // Optlist.Add only clones the reference, not the value.
 
-                    Optlist.Add(opt);
+                    Optlist.Add(optNew);
                 }
                 // If not at the last dimension, resample and continue optimizing recursively
                 else
                 {
-                    List<T> newSample = []; // new List<T>()
-                    var inputIdx = new uint[dimN];
-
-                    List<(T[][] X, T J)> OptlistNew;
-                    if (IsSetSysFlag(StaMaskEnum.ReSampling))
+                    if ( T.Abs(opt1Axis.X[0] - opt1Axis.X[1]) < T.CreateChecked(0.0000001) )  // Not interval, point
                     {
-                        ReSampleRecur(opt1Axis.X[0], axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
-                    }
-                    else // IsSetSysFlag(StaMaskEnum.AxisChanging)
-                    {
-                        AxisChangeSampleRecur(axisIdx + 1, 0, ref inputIdx, ref samplejtot, ref newSample);
-                    }
+                        List<T> newSample = []; // new List<T>()
+                        var inputIdx = new uint[dimN];
 
-                    OptlistNew = OptimaizeMdRecur(axisIdx + 1, [.. newSample], Opt); // newSample.ToImmutableList();
-                    Optlist.AddRange(OptlistNew);
+                        List<(T[][] X, T J)> OptlistNew;
+                        if (IsSetSysFlag(StaMaskEnum.ReSampling))
+                        {
+                            ReSampleRecur(opt1Axis.X[0], axisIdx + 1, axisIdx + 1, ref inputIdx, ref samplejtot, ref newSample);
+                        }
+                        else // IsSetSysFlag(StaMaskEnum.AxisChanging)
+                        {
+                            AxisChangeSampleRecur(axisIdx + 1, 0, ref inputIdx, ref samplejtot, ref newSample);
+                        }
+
+                        OptlistNew = OptimaizeMdRecur(axisIdx + 1, [.. newSample], optNew); // newSample.ToImmutableList();
+                        Optlist.AddRange(OptlistNew);
+                    }
+                    else // In case of the interval, no further recurrence, but just return the same value of optimal intervals
+                         // which were calculated when optimizing the axis 0.
+                    { 
+                        for( int i = axisIdx+1; i<dimN; i++)
+                        {
+                            optNew.X[i] = new T[2];
+                            optNew.X[i][0] = T.CreateChecked(IntvX[0][i]);
+                            optNew.X[i][1] = T.CreateChecked(IntvX[1][i]);
+                        }
+
+                        Optlist.Add(optNew);
+                    }
                 }
             }
             return Optlist;
@@ -870,7 +953,7 @@ namespace OptNet
         /// the solution vector.</description></item> </list></returns>
         private async Task<List<(T[][] X, T J)>> OptimaizeMdRecurAsync(int axisIdx, ImmutableList<T> samplejtot, (T[][] X, T J) Opt)
         {
-            AddDispMsg(string.Format("MdReur({0,0:G3})" + Environment.NewLine, axisIdx), LogLevel.Info1);
+            AddDispMsg(string.Format("MdRecur({0,0:G3})" + Environment.NewLine, axisIdx), LogLevel.Info1);
 
             var Optlist = new List<(T[][] X, T J)>();
 
@@ -953,7 +1036,7 @@ namespace OptNet
                 {
                     sampleJs[n] = samplejtot[(int)GetIdTot(inputIndex)];
                     // optmal value is definitive.
-                    if (axisIdx == 0)
+                    if (axisIdx == 0) // No effect for idxDim == dimN - 1, since the minXs and maxXs are not used in that case.
                     {
                         minXs[n] = new double[dimN];
                         maxXs[n] = new double[dimN];
@@ -1004,12 +1087,14 @@ namespace OptNet
             if ((axisIdx != 0) && (idxDim == axisIdx))
             {
                 var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
-                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, optIntV1D);
+                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mState, optIntV1D);
+                //opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)(mode | StaMaskEnum.PartialConstJ), optIntV1D);
                 //opt1D = new Opt1D<T>(sampleJs, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mode, null);
             }
             else
             {
-                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, null);
+                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mState, null);
+                //opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)(mode | StaMaskEnum.PartialConstJ), null);
                 if (axisIdx == 0)
                 {
                     for (int i = idxDim + 1; i < dimN; i++)
@@ -1067,7 +1152,7 @@ namespace OptNet
 
                     // Adjust the intervals for the current dimension based on the optimized values and a margin
                     optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X[0])) - marginDx;
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X[0])) + marginDx;
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X[1])) + marginDx;
 
                     if (optIntv[0][idxDim] < 0.0)
                     {
@@ -1190,12 +1275,14 @@ namespace OptNet
             {
                 var optIntV1D = new[] { IntvX[0][idxDim], IntvX[1][idxDim] };
                 //opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, optIntV1D);
-                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, null);
+                //opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)(mode | StaMaskEnum.PartialConstJ), null);
+                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mState, null);
             }
             // If not at the specified axis, create an instance of the Opt1D class without specifying intervals
             else
             {
-                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)mode, null);
+                //opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, (Opt1D<T>.StaMaskEnum)(mode | StaMaskEnum.PartialConstJ), null);
+                opt1D = new Opt1D<T>(sampleJs, TolJReal, Ns[idxDim], minX[idxDim], maxX[idxDim], constVar, mState, null);
                 // If at the first axis, calculate the minimum and maximum intervals for the remaining dimensions based on the optimized values
                 if (axisIdx == 0)
                 {
@@ -1206,8 +1293,21 @@ namespace OptNet
 
                         foreach (var opt in opt1D.Optlist)
                         {
-                            var optidx = (int)(double.CreateChecked(opt.X[0]) / dx);
-                            // If the optimized index is at the last position, use the last intervals for the current dimension
+                            var optidxStart = (int)(double.CreateChecked(opt.X[0]) / dx);
+                            if (T.Abs(opt.X[0] - opt.X[1]) < T.CreateChecked(0.0000001)) // just point, not interval
+                                CalculateIntvMinMax(i, idxDim, optidxStart, minXs, maxXs, ref intvMin, ref intvMax, false); // opt.X is not at sample point for lower axes
+                            else // Interval, not just point
+                            {
+                                var optidxEnd = (int)(double.CreateChecked(opt.X[1]) / dx);
+                                //if (optidxEnd >= minXs.Length)
+                                //    optidxEnd = minXs.Length - 1; // for the case that the margin is added in Opt1D.GetSegOfConst()
+                                for (int j = optidxStart; j <= optidxEnd; j++)
+                                {
+                                    CalculateIntvMinMax(i, idxDim, j, minXs, maxXs, ref intvMin, ref intvMax, true); // opt.X is at the exact sampling point for lower axes
+                                }
+                            }
+                            /*// If the optimized index is at the last position, use the last intervals for the current dimension
+                            // , because there is no (optidx + 1) at the last interval
                             if (optidx >= (Ns[idxDim] - 1))
                             {
                                 var idxlast = Ns[idxDim] - 1;
@@ -1231,14 +1331,14 @@ namespace OptNet
                                         maxXs[optidx + 1][i]
                                     )
                                 );
-                            }
+                            }*/
 
                         }
                         optIntv[0][i] = intvMin;
                         optIntv[1][i] = intvMax;
                     }
 
-                    var marginDx = 0.1 * dx;
+                    var marginDx = 0.0 * dx;
 
                     //optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X)) - marginDx;
                     //if (optIntv[0][idxDim] < 0.0)
@@ -1256,7 +1356,8 @@ namespace OptNet
 
                     // Adjust the intervals for the current dimension based on the optimized values and a margin
                     optIntv[0][idxDim] = double.CreateChecked(opt1D.Optlist.Min(item => item.X[0])) - marginDx;
-                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X[0])) + marginDx;
+                    //optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X[0])) + marginDx;
+                    optIntv[1][idxDim] = double.CreateChecked(opt1D.Optlist.Max(item => item.X[1])) + marginDx;
 
                     if (optIntv[0][idxDim] < 0.0)
                     {
@@ -1271,6 +1372,45 @@ namespace OptNet
             return (opt1D.Optlist, optIntv);
 
         }
+        private void CalculateIntvMinMax(int iDim, int idxDim, int optidx, double[][] minXs, double[][] maxXs, ref double intvMin, ref double intvMax, bool isExactSample)
+        {
+            // If the optimized index is at the last position, use the last intervals for the current dimension
+            // , because there is no (optidx + 1) at the last interval
+            if (optidx >= (Ns[idxDim] - 1) && !isExactSample)
+            {
+                var idxlast = Ns[idxDim] - 1;
+                /*intvMin = minXs[idxlast][iDim];
+                intvMax = maxXs[idxlast][iDim];*/
+                intvMin = Math.Min(intvMin, minXs[idxlast][iDim]);
+                intvMax = Math.Max(intvMax, maxXs[idxlast][iDim]);
+            }
+            // Calculate the minimum and maximum intervals which are adjacent to the current optimized value
+            else
+            {
+                if (!isExactSample)
+                {
+                    intvMin = Math.Min(
+                        intvMin,
+                        Math.Min(
+                            minXs[optidx][iDim],
+                            minXs[optidx + 1][iDim]
+                        )
+                    );
+                    intvMax = Math.Max(
+                        intvMax,
+                        Math.Max(
+                            maxXs[optidx][iDim],
+                            maxXs[optidx + 1][iDim]
+                        )
+                    );
+                }
+                else
+                {
+                    intvMin = Math.Min(intvMin, minXs[optidx][iDim]);
+                    intvMax = Math.Max(intvMax, maxXs[optidx][iDim]);
+                }
+            }
+        }
         /// <summary>
         /// Recursively generates a sample of values based on the specified dimension index and adds them to the
         /// provided list.
@@ -1280,7 +1420,7 @@ namespace OptNet
         /// list. Otherwise, the method recurses into the next dimension.</remarks>
         /// <param name="idxDim">The current dimension index being processed. Must be within the valid range of dimensions.</param>
         /// <param name="samplejtot">A reference to the list where the generated sample values will be added. Cannot be null.</param>
-        private void GetSampleRecur(int idxDim, ref List<T> samplejtot)
+        public void GetSampleRecur(int idxDim, ref List<T> samplejtot)
         {
             for (uint n = 0; n < Ns[idxDim]; n++)
             {
@@ -1371,7 +1511,7 @@ namespace OptNet
 
                     T sum = T.Zero;
                     for (uint i = 0; i < w.Length; i++)
-                        sum += w[i] * T.CreateChecked(Math.Cos(i * Math.PI * double.CreateChecked(x)));
+                        sum += w[i] * T.Cos( T.CreateChecked(i) * T.Pi * x);
                     oSample.Add(sum);
                 }
                 else
@@ -1709,7 +1849,15 @@ namespace OptNet
 
                 for (int i = 0; i < dimN; i++)
                 {
-                    msgOptX1 += string.Format("{0,8:G5} ", opt.X[i][0]);
+                    //if (!IsSetSysFlag(StaMaskEnum.PartialConstJ))
+                    if (opt.X[i][0] == opt.X[i][1])
+                    {
+                        msgOptX1 += string.Format("{0,8:G5} ", opt.X[i][0]);
+                    }
+                    else
+                    {                        
+                        msgOptX1 += string.Format("({0,8:G5} {1,8:G5}) ", opt.X[i][0], opt.X[i][1]);
+                    }
                 }
                 msgOptX += msgOptX1 + Environment.NewLine;
             }

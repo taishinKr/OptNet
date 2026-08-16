@@ -48,20 +48,35 @@ namespace OptNet
             InitializeComponent();
 
             mTestFcn = new TestFcn<double>();
-            mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.01, 11, 0, 1, new OfflineGet<double>(11), Opt1D<double>.StaMaskEnum.Max, null);  // "Min", "Max", or "Both"
-            /*mParamDefault = new OptParam<double>
+            //mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.01, 11, 0, 1, new OfflineGet<double>(11), Opt1D<double>.StaMaskEnum.Max, null);  // "Min", "Max", or "Both"
+            var mstate = (UInt32)Opt1D<double>.StaMaskEnum.Max;
+            mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.01, 11, 0, 1, new OfflineGet<double>(11), mstate, null);  // "Min", "Max", or "Both"
+
+            InitializeParamTestFcn();
+
+            //mOptMD = new OptMD<double>(mParamAckleyN1); // Default to AckleyN1 function
+            //mOptMD = new OptMD<double>(mParamBeale); // Default to Beale function
+            mOptMD = new OptMD<double>(mParamDefault);
+
+            SetModeOfNewOptMD();
+        }
+
+        private void InitializeParamTestFcn()
+        {
+            mParamDefault = new OptParam<double>
             {
-                J = mTestFcn.ExpandedSchafferF6,
-                TolJ = 0.001,
-                TolX = 0.1,
-                DimN = 3,
-                Ns = [11, 11, 11],
-                MinX = [-2.5, -2.5, -2.5],
-                MaxX = [5, 5, 5],
-                Mode = OptMD<double>.StaMaskEnum.Min,
-                IsScalable = true,
-                Optima = [([0, 0, 0], 0.0)]
-                *//*J = mTestFcn.Rosenbrock,   // TolJ 조정필요
+                //J = mTestFcn.ExpandedSchafferF6,
+                //TolJ = 0.001,
+                //TolX = 0.1,
+                //DimN = 2,
+                //Ns = [11, 11],
+                //MinX = [-2.5, -2.5],//[-2.5,-2.5],//[-50, -50, -50],
+                //MaxX = [5, 5],//[5,5],//[100, 100, 100],
+                //Mode = OptMD<double>.StaMaskEnum.Min,
+                //IsScalable = true,
+                //Optima = [([0, 0], 0.0)]
+
+                J = mTestFcn.Rosenbrock,   // TolJ 조정필요
                 TolJ = 0.001,
                 TolX = 0.1,
                 DimN = 2,
@@ -71,9 +86,9 @@ namespace OptNet
                 MaxX = [10, 10],//[10, 10],
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
-                Optima = [([1, 1], 0.0)]*//*
-            };
+                Optima = [([1, 1], 0.0)]
 
+            };
             mParamTst1D = new OptParam<double>
             {
                 J = mTestFcn.JTest1D,
@@ -146,8 +161,8 @@ namespace OptNet
                 TolX = 0.1,
                 DimN = 3,
                 Ns = [11, 11, 11],
-                MinX = [-3, -3, -3],//[-300, -300, -300],
-                MaxX = [6, 6, 6],//[600, 600, 600],
+                MinX = [-300, -300, -300],//[-3, -3, -3],//[-300, -300, -300],
+                MaxX = [600, 600, 600],//[6, 6, 6],//[600, 600, 600],
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
                 Optima = [([0, 0, 0], 0.0)]
@@ -198,8 +213,8 @@ namespace OptNet
                 TolX = 0.1,
                 DimN = 3,
                 Ns = [11, 11, 11],
-                MinX = [-50, -50, -50],
-                MaxX = [100, 100, 100],
+                MinX = [-2.5, -2.5, -2.5],//[-50, -50, -50],
+                MaxX = [5, 5, 5],//[100, 100, 100],
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
                 Optima = [([0, 0, 0], 0.0)]
@@ -468,8 +483,8 @@ namespace OptNet
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = false,
                 Optima = [([0, 0], 0.0)]
-            };*/
-            mParamDefault = new OptParam<double>
+            };
+            /*mParamDefault = new OptParam<double>
             {
                 J = mTestFcn.Rosenbrock,   // TolJ 조정필요
                 TolJ = 0.001,
@@ -878,12 +893,7 @@ namespace OptNet
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = false,
                 Optima = [([0, 0], 0.0)]
-            };
-            //mOptMD = new OptMD<double>(mParamAckleyN1); // Default to AckleyN1 function
-            //mOptMD = new OptMD<double>(mParamBeale); // Default to Beale function
-            mOptMD = new OptMD<double>(mParamDefault);
-
-            SetModeOfNewOptMD();
+            };*/
         }
 
         private void SetModeOfNewOptMD()
@@ -904,6 +914,15 @@ namespace OptNet
             else
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.MThread);
+            }
+
+            if (checkBoxPartialConstJ.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
             }
 
             if (checkBoxSampledOpt.Checked)
@@ -1225,7 +1244,9 @@ namespace OptNet
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "1DOnly":
-                    mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.001, 11, 0, 1, new OfflineGet<double>(11), Opt1D<double>.StaMaskEnum.Max, null);  // "Min", "Max"
+                    //mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.001, 11, 0, 1, new OfflineGet<double>(11), Opt1D<double>.StaMaskEnum.Max, null);  // "Min", "Max"
+                    var mstate = (UInt32)Opt1D<double>.StaMaskEnum.Max;
+                    mOpt1D = new Opt1D<double>(mTestFcn.JTest1D, 0.001, 11, 0, 1, new OfflineGet<double>(11), mstate, null);  // "Min", "Max"
                     DisplayMessage(mOpt1D.ResultMsg());
                     buttonOptimzeMD.Enabled = false;
                     //buttonShrink.Enabled = false;
@@ -1257,7 +1278,7 @@ namespace OptNet
 
         private void ResetUICtr()
         {
-            numericUpDownShrink.Value = 0.25M; // Default value for numericUpDown                        
+            //numericUpDownShrink.Value = 0.25M; // Default value for numericUpDown                        
             numericUpDownTolX.Value = (decimal)mOptMD.TolX * 100; // Reset the tolerance value
 
             comboBoxMinX.Items.Clear();
@@ -1281,6 +1302,7 @@ namespace OptNet
 
             _isChangedFromUI = false; // Prevent triggering ValueChanged event during initialization
             numericUpDownDimension.Value = mOptMD.DimN; // Reset the dimension value
+            numericUpDownNs.Value = mOptMD.Nsample[0]; // Reset using the first axis
             _isChangedFromUI = true; // Re-enable ValueChanged event after initialization
 
             numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100);
@@ -1355,6 +1377,32 @@ namespace OptNet
 
                 numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
 
+                ResetUICtr();
+                SetModeOfNewOptMD();
+                MsgForNewFunction();
+            }
+        }
+        private void numericUpDownNs_ValueChanged(object sender, EventArgs e)
+        {
+            if (_isChangedFromUI)
+            {
+                /*buttonOptimzeMD.Enabled = false;
+                uint[]? ns = new uint[mOptMD.DimN];
+                for (int index = 0; index < ns.Length; index++)
+                {
+                    ns[index] = (uint)numericUpDownNs.Value;
+                }
+                OptParam<double> optParam = new(mOptMD.OptParam, 0, ns);
+
+                resetForChangeOfDimOrNs(optParam);*/
+
+                DisplayMessage("The Sampling Rate is Changed, ReSampling...");
+                var ns = mOptMD.Nsample
+                    .Select(ns => (uint)numericUpDownNs.Value)
+                    .ToArray();
+                mOptMD.Nsample = ns;
+                mOptMD.InitSample();
+                DisplayMessage("Done." + Environment.NewLine);
                 ResetUICtr();
                 SetModeOfNewOptMD();
                 MsgForNewFunction();
@@ -1520,7 +1568,15 @@ namespace OptNet
 
                 for (int i = 0; i < centroid.X.Length; i++)
                 {
-                    msg += string.Format("{0,8:G5} ", centroid.X[i][0]);
+                    //if (!mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ))
+                    if (centroid.X[i][0] == centroid.X[i][1])
+                    {
+                        msg += string.Format("{0,8:G5} ", centroid.X[i][0]);
+                    }
+                    else
+                    {
+                        msg += string.Format("({0,8:G5} {1,8:G5}) ", centroid.X[i][0], centroid.X[i][1]);
+                    }
                 }
                 DisplayMessage(msg + Environment.NewLine);
             }
@@ -1550,6 +1606,47 @@ namespace OptNet
                 mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AxisChanging);
             else
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AxisChanging);
+        }
+
+        private void checkBoxPartialConstJ_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if (checkBoxPartialConstJ.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
+            }
+        }
+
+        private void comboBoxNs_TextChanged(object sender, EventArgs e)
+        {
+/*
+
+            if (_isChangedFromUI)
+            {
+                ComboBox combo = sender as ComboBox;
+
+                // 현재 입력된 텍스트
+                string currentText = combo.Text;
+
+                // 현재 텍스트가 Items 목록에 존재한다면 인덱스 확인 가능
+                int index = combo.Items.IndexOf(currentText);
+
+                DisplayMessage("The Sampling Rate is Changed, ReSampling...");
+                var nns = mOptMD.Nsample.ToArray();
+                nns[index] = uint.Parse(currentText);
+
+                mOptMD.Nsample = nns;
+                mOptMD.InitSample();
+                DisplayMessage("Done." + Environment.NewLine);
+                //ResetUICtr();
+                SetModeOfNewOptMD();
+                MsgForNewFunction();
+            }*/
         }
     }
 }

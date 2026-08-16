@@ -222,7 +222,12 @@ namespace OptNet
                         T dist = T.Zero;
                         for (int d = 0; d < X.Length; d++)
                         {
-                            T dx = X[d][0] - optResult[j].X[d][0];
+                            // if X[d], optResult[j].X[d] are interval, the center point is considered for calculation
+                            T avgX = (X[d][0] + X[d][1]) / (T.One + T.One);
+                            T avgOptResut = (optResult[j].X[d][0] + optResult[j].X[d][1]) / (T.One + T.One);
+
+                            //T dx = X[d][0] - optResult[j].X[d][0];
+                            T dx = avgX - avgOptResut;
                             dist += dx * dx;
                         }
 
