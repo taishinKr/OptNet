@@ -21,6 +21,9 @@ namespace OptNet
         private readonly uint Ns;
         private readonly T[] sampleJs;
 
+        private readonly T dxProj;
+        private readonly T dxhalfProj;
+
         private readonly OfflineGet<T> constVars;
         private readonly int minDpK;
         private readonly int maxDpK;
@@ -85,6 +88,8 @@ namespace OptNet
             this.maxX = maxX;
             dX = (maxX - minX) / T.CreateChecked((Ns - 1));
             dXHalf = dX / T.CreateChecked(2);
+            dxProj = T.One / T.CreateChecked(Ns);
+            dxhalfProj = dxProj / (T.One + T.One);
 
             this.optIntv = optIntv;
 
@@ -217,7 +222,7 @@ namespace OptNet
         /// It expands from the pivot index both left and right, forming the largest
         /// contiguous segment where the difference between the smallest and largest
         /// values does not exceed TolJ.
-        /// If the resulting segment contains only one element, the function returns null.
+        /// If the resulting segment contains less than three elements, the function returns null.
         /// </summary>
         /// <param name="J"></param>
         /// <param name="TolJ"></param>
@@ -284,8 +289,8 @@ namespace OptNet
             // 3. the number of element is less than 3, return null
             if (end - start < 2) return null;
 
-            var dx = T.One / T.CreateChecked(Ns);
-            var dxhalf = dx / (T.One + T.One);
+            /*var dx = T.One / T.CreateChecked(Ns);
+            var dxhalf = dx / (T.One + T.One);*/
             var margin = 0.8;
 
             if (start - margin < 0.0)
@@ -293,13 +298,13 @@ namespace OptNet
             if (end + margin > (int)Ns -1)
                 end = (int)Ns - (int)margin -1;
 
-            T startReal = dxhalf + T.CreateChecked(start - margin) * dx;
-            T endReal = dxhalf + T.CreateChecked(end + margin) * dx;
+            T startReal = dxhalfProj + T.CreateChecked(start - margin) * dxProj;
+            T endReal = dxhalfProj + T.CreateChecked(end + margin) * dxProj;
 
-            if(startReal < dxhalf)
-                startReal = dxhalf;
-            if(endReal > T.One - dxhalf)
-                endReal = T.One - dxhalf;
+            if(startReal < dxhalfProj)
+                startReal = dxhalfProj;
+            if(endReal > T.One - dxhalfProj)
+                endReal = T.One - dxhalfProj;
 
             return (
                 startReal,
@@ -318,70 +323,95 @@ namespace OptNet
                 segConst = GetSegOfConst(Js,tolJ);
 
             var lo = new List<(T[] X, T J)>();
-            for (int k = 0; k < A.Length; k++)
-            {
-                if((k<minDpK) || (k>maxDpK))
-                    continue;
-                T tmpD2 = B[k] * B[k] - A[k] * C[k] * (T.One + T.One + T.One + T.One);
 
-                T x;
-
-                //uint modK = k + minDpK;
-                if (A[k] == T.Zero)
-                {
-                    if (B[k] == T.Zero) // Constant equation
-                    {
-                        if (C[k] == T.Zero) // All x are solution
-                        {
-                            x = constVars.Dp[k];
-                            if (IsSetSysFlag(StaMaskEnum.PartialConstJ))
-                                lo.Add((new T[] { constVars.Dp[k], constVars.Dp[k+1] }, Jw(x)));
-                            else
-                                lo.Add((new T[] { constVars.Dp[k], constVars.Dp[k] }, Jw(x)));
-                        }
-                    }
-                    else // Linear equation
-                    {
-                        x = -C[k] / B[k];
-                        if (IsInCi(x, k, segConst))
-                            //lo.Add((x, Jw(x)));
-                            lo.Add(( new T[] { x, x }, Jw(x)));
-                        else
-                            continue;
-                    }
-                }
-                else  // Quadratic equation
-                {
-                    if (tmpD2 < T.Zero)
-                        continue;
-                    T sqrtTmpD2 = T.CreateChecked(Math.Sqrt(double.CreateChecked(tmpD2)));
-
-                    if (sqrtTmpD2 == T.Zero)
-                    {
-                        x = -B[k] / A[k] / (T.One + T.One);
-                        if (IsInCi(x, k, segConst))
-                            lo.Add(( new T[] { x, x }, Jw(x)));
-                        else
-                            continue;
-                    }
-                    else
-                    {
-                        x = (-B[k] - sqrtTmpD2) / A[k] / (T.One + T.One);
-                        if (IsInCi(x, k, segConst))
-                            //lo.Add(x, objectJ.J(x));
-                            lo.Add(( new T[] { x, x }, Jw(x)));
-                        x = (-B[k] + sqrtTmpD2) / A[k] / (T.One + T.One);
-                        if (IsInCi(x, k, segConst))
-                            //lo.Add(x, objectJ.J(x));
-                            lo.Add((new T[] { x, x }, Jw(x)));
-                    }
-                }
-                
-            }
             if (segConst != null)
             {
                 lo.Add((new T[] { segConst.Value.startSeg, segConst.Value.endSeg }, segConst.Value.valJ));
+
+                /*for (int i = 0; i < Ns; i++)
+                {
+                    var xProj = dxhalfProj + T.CreateChecked(i) * dxProj;
+                    bool isOutOfSegment = xProj < segConst.Value.startSeg || xProj > segConst.Value.endSeg;
+
+                    if (isOutOfSegment)
+                    {
+                        T diff = Js[i] - segConst.Value.valJ;
+
+                        bool isMinMatch = IsSetSysFlag(StaMaskEnum.Min) && diff <= tolJ;
+                        bool isMaxMatch = IsSetSysFlag(StaMaskEnum.Max) && -diff <= tolJ;
+
+                        if (isMinMatch || isMaxMatch)
+                        {
+                            lo.Add((new T[] { xProj, xProj }, Js[i]));
+                        }
+                    }
+                }*/
             }
+            //else
+            //{
+
+                for (int k = 0; k < A.Length; k++)
+                {
+                    if ((k < minDpK) || (k > maxDpK))
+                        continue;
+                    T tmpD2 = B[k] * B[k] - A[k] * C[k] * (T.One + T.One + T.One + T.One);
+
+                    T x;
+
+                    //uint modK = k + minDpK;
+                    if (A[k] == T.Zero)
+                    {
+                        if (B[k] == T.Zero) // Constant equation
+                        {
+                            if (C[k] == T.Zero) // All x are solution
+                            {
+                                x = constVars.Dp[k];
+                                if (IsSetSysFlag(StaMaskEnum.PartialConstJ))
+                                    lo.Add((new T[] { constVars.Dp[k], constVars.Dp[k + 1] }, Jw(x)));
+                                else
+                                    lo.Add((new T[] { constVars.Dp[k], constVars.Dp[k] }, Jw(x)));
+                            }
+                        }
+                        else // Linear equation
+                        {
+                            x = -C[k] / B[k];
+                            if (IsInCi(x, k, segConst))
+                                //lo.Add((x, Jw(x)));
+                                lo.Add((new T[] { x, x }, Jw(x)));
+                            else
+                                continue;
+                        }
+                    }
+                    else  // Quadratic equation
+                    {
+                        if (tmpD2 < T.Zero)
+                            continue;
+                        T sqrtTmpD2 = T.CreateChecked(Math.Sqrt(double.CreateChecked(tmpD2)));
+
+                        if (sqrtTmpD2 == T.Zero)
+                        {
+                            x = -B[k] / A[k] / (T.One + T.One);
+                            if (IsInCi(x, k, segConst))
+                                lo.Add((new T[] { x, x }, Jw(x)));
+                            else
+                                continue;
+                        }
+                        else
+                        {
+                            x = (-B[k] - sqrtTmpD2) / A[k] / (T.One + T.One);
+                            if (IsInCi(x, k, segConst))
+                                //lo.Add(x, objectJ.J(x));
+                                lo.Add((new T[] { x, x }, Jw(x)));
+                            x = (-B[k] + sqrtTmpD2) / A[k] / (T.One + T.One);
+                            if (IsInCi(x, k, segConst))
+                                //lo.Add(x, objectJ.J(x));
+                                lo.Add((new T[] { x, x }, Jw(x)));
+                        }
+                    }
+
+                }
+            //}
+            
             return lo;
         }
         /// <summary>

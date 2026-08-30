@@ -115,6 +115,7 @@ namespace OptNet
         public T[]? MaxX { get; set; }
         public T[]? DX { get; set; }
         public T[]? DXHalf { get; set; }
+        public uint Nfe { get; set; }
         public List<T>? SampleJtot { get; set; }
         //public T? TolX { get; set; }
         public (T[][] X, T J)[] OptResultReal { get; set; } 
@@ -166,6 +167,7 @@ namespace OptNet
             get => Ns.ToArray(); // ImmutableArray → 배열 변환
             set => Ns = ImmutableArray.Create(value); // 배열 → ImmutableArray 변환
         }
+        public uint Nfe { get; set; } = 0;
         public StaMaskEnum Mode { get => mode; set => mode = value; }
 
         public double[][] IntvX { get; set; } // minX, maxX
@@ -197,7 +199,11 @@ namespace OptNet
         public OptMD(OptParam<T> optParam)
         {
             this.OptParam = optParam;
-            J = x => optParam.J(x,optParam.DimN);
+            //J = x => optParam.J(x,optParam.DimN);
+            J = x => {
+                Nfe++;
+                return optParam.J(x, optParam.DimN);
+            }            ;
             var tmpTolX = optParam.TolX < 0.0 ? 0.00001 : optParam.TolX; // default value if tolX is negative
             this.TolX = T.CreateChecked(tmpTolX);
             var tmpTolJ = optParam.TolJ < 0.0 ? 0.00001 : optParam.TolJ; // default value if tolJ is negative
@@ -240,6 +246,8 @@ namespace OptNet
             sampleJtot = [.. samplejtot]; //samplejtot.ToImmutableList();
             spanJ = sampleJtot.Max() - sampleJtot.Min();
             spanX = CalSpanX();*/
+            
+            
             InitSample();
 
             IntvX = new double[2][]; // minX, maxX
@@ -255,6 +263,7 @@ namespace OptNet
 
         public void InitSample()
         {
+            Nfe = 0;
             var dx = new T[dimN];
             var dxhalf = new T[dimN];
             for (int i = 0; i < dimN; i++)
@@ -315,11 +324,11 @@ namespace OptNet
                                 {
                                     var v0 = T.Abs(e.X[idxDim][0] - centroidXValue);
 
-                                    return (e.X[idxDim][0] == e.X[idxDim][1])
-                                           ? v0
-                                           : T.Max(
-                                                    v0, T.Abs(e.X[idxDim][1] - centroidXValue)
-                                               ); // lengthLimit should all the intervals of OptResultReal
+                                    return (
+                                                e.X[idxDim][0] == e.X[idxDim][1])
+                                                ? T.Zero//v0
+                                                : T.Max(v0, T.Abs(e.X[idxDim][1] - centroidXValue)
+                                            ); // lengthLimit should all the intervals of OptResultReal
                                 })
                                 .Max();         
                 }
@@ -484,7 +493,8 @@ namespace OptNet
                 DXHalf = [.. dXHalf.ToArray()],
                 SampleJtot = [.. sampleJtot.ToList()],
                 //TolX = TolX,
-                OptResultReal = [.. optResultReal.ToArray()]
+                OptResultReal = [.. optResultReal.ToArray()],
+                Nfe = Nfe
             };
         }
         public void RestoreState()
@@ -509,6 +519,7 @@ namespace OptNet
                 optResultReal = [.. oldDataBeforeShrink.OptResultReal];
                 spanJ = sampleJtot.Max() - sampleJtot.Min();
                 spanX = CalSpanX();
+                Nfe = oldDataBeforeShrink.Nfe;
             }
         }
 
@@ -1839,12 +1850,19 @@ namespace OptNet
 
                 if (!IsSetSysFlag(StaMaskEnum.SampledOptimal))
                 {
-                    msgOptX1 += string.Format("{0,8:G5}    at ", opt.J);
+                    msgOptX1 += string.Format("J:{0,8:G6} Err:{1,8:E2}   at ",
+                                                    opt.J, CalcErr( OptParam.Optima[0].J, opt.J)
+                                                );
                 }
                 else
                 {
                     T[] tmpx = [.. opt.X.Select(row => row[0])];
-                    msgOptX1 += string.Format("{0,8:G5} ({1,8:G5})    at ", opt.J, J(tmpx));
+                    var trueJ = J(tmpx); Nfe--;
+                    msgOptX1 += string.Format("J:{0,8:G6} Err:{1,8:E2} (realJ: {2,8:G6} realErr:{3,8:E2})    at ",
+                                                    opt.J, CalcErr(OptParam.Optima[0].J, opt.J),
+                                                    trueJ, CalcErr(OptParam.Optima[0].J, trueJ)
+                                                );
+                    
                 }
 
                 for (int i = 0; i < dimN; i++)
@@ -1852,11 +1870,11 @@ namespace OptNet
                     //if (!IsSetSysFlag(StaMaskEnum.PartialConstJ))
                     if (opt.X[i][0] == opt.X[i][1])
                     {
-                        msgOptX1 += string.Format("{0,8:G5} ", opt.X[i][0]);
+                        msgOptX1 += string.Format("{0,8:G6} ", opt.X[i][0]);
                     }
                     else
                     {                        
-                        msgOptX1 += string.Format("({0,8:G5} {1,8:G5}) ", opt.X[i][0], opt.X[i][1]);
+                        msgOptX1 += string.Format("({0,8:G6} {1,8:G6}) ", opt.X[i][0], opt.X[i][1]);
                     }
                 }
                 msgOptX += msgOptX1 + Environment.NewLine;
@@ -1864,6 +1882,11 @@ namespace OptNet
 
             //DisplayMsgFunc(msgOptX);
             return msgOptX;
+        }
+
+        private T CalcErr(T TargetJ, T J)
+        {
+            return (T.Abs(TargetJ - J));
         }
     }
 }

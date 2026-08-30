@@ -990,6 +990,7 @@ namespace OptNet
             labelTolXReal.Text = $"TolXReal: {mOptMD.TolXReal:F4}";
             labelSpanJ.Text = $"SpanJ:    {mOptMD.SpanJ:F4}";
             labelSpanX.Text = $"SpanX:    {mOptMD.SpanX:F4}";
+            labelNFE.Text = $"NFE:  {mOptMD.Nfe:N0}";
         }
 
         public void DisplayMessage(string message)
@@ -1058,6 +1059,7 @@ namespace OptNet
             labelTolXReal.Text = $"TolXReal: {mOptMD.TolXReal:F4}";
             labelSpanJ.Text = $"SpanJ:    {mOptMD.SpanJ:F4}";
             labelSpanX.Text = $"SpanX:    {mOptMD.SpanX:F4}";
+            labelNFE.Text = $"NFE:  {mOptMD.Nfe:N0}";
 
             if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Done))
             {
@@ -1325,6 +1327,10 @@ namespace OptNet
         private void NumericUpDownTolX_ValueChanged(object sender, EventArgs e)
         {
             mOptMD.TolX = (double)(numericUpDownTolX.Value / 100); // Convert percentage to decimal
+            labelTolJReal.Text = $"TolJReal: {mOptMD.TolJReal:F4}";
+            labelTolXReal.Text = $"TolXReal: {mOptMD.TolXReal:F4}";
+            labelSpanJ.Text = $"SpanJ:    {mOptMD.SpanJ:F4}";
+            labelSpanX.Text = $"SpanX:    {mOptMD.SpanX:F4}";
         }
 
         private void checkBoxThread_CheckedChanged(object sender, EventArgs e)
@@ -1403,6 +1409,7 @@ namespace OptNet
                 mOptMD.Nsample = ns;
                 mOptMD.InitSample();
                 DisplayMessage("Done." + Environment.NewLine);
+
                 ResetUICtr();
                 SetModeOfNewOptMD();
                 MsgForNewFunction();
@@ -1549,7 +1556,8 @@ namespace OptNet
 
                 DisplayMessage(
                         Environment.NewLine +
-                        $"AutoShrink is enabled. Selected index: {comboBoxIdxXlist.SelectedIndex}" +
+                        //$"AutoShrink is enabled. Selected index: {comboBoxIdxXlist.SelectedIndex}" +
+                        $"AutoShrink is enabled. Centroid is Selected" +
                         Environment.NewLine
                 );
 
@@ -1564,6 +1572,7 @@ namespace OptNet
                 {
                     double[] tmpx = [.. centroid.X.Select(row => row[0])];
                     msg += string.Format("{0,8:G5} ({1,8:G5})    at ", centroid.J, mOptMD.J(tmpx));
+                    mOptMD.Nfe--;
                 }
 
                 for (int i = 0; i < centroid.X.Length; i++)

@@ -79,6 +79,7 @@
             checkBoxPartialConstJ = new CheckBox();
             label2 = new Label();
             numericUpDownNs = new NumericUpDown();
+            labelNFE = new Label();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -622,11 +623,21 @@
             numericUpDownNs.Value = new decimal(new int[] { 2, 0, 0, 0 });
             numericUpDownNs.ValueChanged += numericUpDownNs_ValueChanged;
             // 
+            // labelNFE
+            // 
+            labelNFE.AutoSize = true;
+            labelNFE.Location = new Point(17, 78);
+            labelNFE.Name = "labelNFE";
+            labelNFE.Size = new Size(28, 15);
+            labelNFE.TabIndex = 54;
+            labelNFE.Text = "NFE";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(908, 723);
+            Controls.Add(labelNFE);
             Controls.Add(label2);
             Controls.Add(numericUpDownNs);
             Controls.Add(checkBoxPartialConstJ);
@@ -740,5 +751,6 @@
         private CheckBox checkBoxPartialConstJ;
         private Label label2;
         private NumericUpDown numericUpDownNs;
+        private Label labelNFE;
     }
 }
