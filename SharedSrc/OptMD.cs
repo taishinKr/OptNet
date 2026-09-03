@@ -179,7 +179,8 @@ namespace OptNet
             MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6,
             AutoShrink = 1 << 7, SampledOptimal = 1 << 8,
             ReSampling = 1 << 9, AxisChanging = 1 << 10,
-            PartialConstJ = 1 << 11,
+            ReSamplingOnly = 1 << 11, AxisChangingOnly = 1 << 12, ReSampleAxisChangeBoth = 1 << 13,
+            PartialConstJ = 1 << 14,
         }
         private UInt32 mState = 0;
 
@@ -257,8 +258,10 @@ namespace OptNet
             ClrSysFlag(StaMaskEnum.Done);
             ClrSysFlag(StaMaskEnum.MThread);
             SetSysFlag(StaMaskEnum.SampleReuse);
-            SetSysFlag(StaMaskEnum.ReSampling);
-            ClrSysFlag(StaMaskEnum.AxisChanging);         
+
+            SetSysFlag(StaMaskEnum.ReSamplingOnly);
+            ClrSysFlag(StaMaskEnum.AxisChangingOnly);
+            ClrSysFlag(StaMaskEnum.ReSampleAxisChangeBoth);         
         }
 
         public void InitSample()
@@ -550,8 +553,29 @@ namespace OptNet
             else
             {
                 // for Serial running ***************************************
-                var Optlist = OptimaizeMdRecur(0, sampleJtot, Opt);
-                optResult = Optlist.ToArray();
+                List<(T[][] X, T J)>? Optlist1=null, Optlist2=null;
+                if (IsSetSysFlag(StaMaskEnum.ReSamplingOnly) || IsSetSysFlag(StaMaskEnum.ReSampleAxisChangeBoth))
+                {
+                    SetSysFlag(StaMaskEnum.ReSampling);
+                    ClrSysFlag(StaMaskEnum.AxisChanging);
+                    Optlist1 = OptimaizeMdRecur(0, sampleJtot, Opt);
+                }
+                if (IsSetSysFlag(StaMaskEnum.AxisChangingOnly) || IsSetSysFlag(StaMaskEnum.ReSampleAxisChangeBoth))
+                {
+                    SetSysFlag(StaMaskEnum.AxisChanging);
+                    ClrSysFlag(StaMaskEnum.ReSampling);
+                    Optlist2 = OptimaizeMdRecur(0, sampleJtot, Opt);
+                }
+
+                // 1. 각 리스트의 개수 계산
+                int count1 = Optlist1?.Count ?? 0;
+                int count2 = Optlist2?.Count ?? 0;
+
+                // 2. 최종 배열 바로 생성 및 CopyTo로 단순 복사
+                optResult = new (T[][] X, T J)[count1 + count2];
+
+                Optlist1?.CopyTo(optResult, 0);       // null이 아니면 0번 인덱스부터 복사
+                Optlist2?.CopyTo(optResult, count1);  // null이 아니면 count1번 인덱스부터 연속 복사
             }
             
             AdjustResult(); // optResultReal = adjustResult().ToArray();            
@@ -710,6 +734,7 @@ namespace OptNet
                 return newResult[0];
             // 전체 가중치 합
             T totalWeight = T.Zero;
+            T totalDiff = T.Zero;
             int dimension = newResult[0].X.Length;
             T[] weightedSum = new T[dimension];
 
@@ -722,14 +747,19 @@ namespace OptNet
                 var (X, J) = newResult[idx];
 
                 T weight = J + T.Abs(optj); // J + |optj| is always non-negative, and the larger J is, the larger the weight will be.
+                T diff = T.Abs(optj - J);
 
                 if (mode == StaMaskEnum.Min)
                 {
-                    T offset = calculateOffsetWeightForCentroid(newResult, maxIdx, optj);
+                    T offset = calculateOffsetWeightForCentroid(newResult, maxIdx, optj); // maxJ - (J + |optj|) is always non-negative, but minimum is always 0
+                                                                                          // so we need to add some more offset(=avg/2) to make it larger than 0.
+                                                                                          // If offset is too small, the weight will be too small, and
+                                                                                          // the centroid will be biased towards the first item.
                     weight = offset - weight;
                 }
 
                 totalWeight += weight;
+                totalDiff += diff;  
 
                 for (int i = 0; i < dimension; i++)
                 {
@@ -761,7 +791,7 @@ namespace OptNet
 
             (T[][], T) newItem = new ();            
 
-            if ( T.Abs(totalWeight) < T.CreateChecked(0.000001) )
+            if ( T.Abs(totalDiff) < T.CreateChecked(0.000001) )
             {
                 AddDispMsg("Warning: All weights are identical, Possible multi Optima" + Environment.NewLine, LogLevel.Warning);
                 AddDispMsg("Warning: AutoShrink is disabled, and First solution is selected for shrinkage.", LogLevel.Warning);

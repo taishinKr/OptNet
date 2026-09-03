@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 
 namespace OptNet
 {
@@ -902,8 +903,9 @@ namespace OptNet
             //checkBoxThread.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.MThread);
             radioButtonMin.Checked = (mOptMD.Mode == OptMD<double>.StaMaskEnum.Min);
             radioButtonMax.Checked = (mOptMD.Mode == OptMD<double>.StaMaskEnum.Max);
-            radioButtonAxisChange.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.AxisChanging);
-            radioButtonReSample.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.ReSampling);
+            radioButtonAxisChange.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.AxisChangingOnly);
+            radioButtonReSample.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.ReSamplingOnly);
+            radioButtonBoth.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.ReSampleAxisChangeBoth);
             //checkBoxVerbose.Checked = mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Verbose);
             _initializing = false;
 
@@ -1519,19 +1521,6 @@ namespace OptNet
             }
         }
 
-        private void checkBoxAutoShrink_CheckedChanged_1(object sender, EventArgs e)
-        {
-            if (_initializing) return;
-            if (checkBoxAutoShrink.Checked)
-            {
-                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
-            }
-            else
-            {
-                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
-            }
-        }
-
         private void checkBoxSampledOpt_CheckedChanged(object sender, EventArgs e)
         {
 
@@ -1603,18 +1592,29 @@ namespace OptNet
             if (_initializing) return;
 
             if (radioButtonReSample.Checked)
-                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.ReSampling);
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.ReSamplingOnly);
             else
-                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.ReSampling);
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.ReSamplingOnly);
         }
 
         private void radioButtonAxisChange_CheckedChanged(object sender, EventArgs e)
         {
             if (_initializing) return;
+
             if (radioButtonAxisChange.Checked)
-                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AxisChanging);
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AxisChangingOnly);
             else
-                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AxisChanging);
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AxisChangingOnly);
+        }
+
+        private void radioButtonBoth_CheckedChanged(object sender, EventArgs e)
+        {
+            if (_initializing) return;
+
+            if (radioButtonBoth.Checked)
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.ReSampleAxisChangeBoth);
+            else
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.ReSampleAxisChangeBoth);
         }
 
         private void checkBoxPartialConstJ_CheckedChanged(object sender, EventArgs e)
@@ -1633,29 +1633,29 @@ namespace OptNet
 
         private void comboBoxNs_TextChanged(object sender, EventArgs e)
         {
-/*
+            /*
 
-            if (_isChangedFromUI)
-            {
-                ComboBox combo = sender as ComboBox;
+                        if (_isChangedFromUI)
+                        {
+                            ComboBox combo = sender as ComboBox;
 
-                // 현재 입력된 텍스트
-                string currentText = combo.Text;
+                            // 현재 입력된 텍스트
+                            string currentText = combo.Text;
 
-                // 현재 텍스트가 Items 목록에 존재한다면 인덱스 확인 가능
-                int index = combo.Items.IndexOf(currentText);
+                            // 현재 텍스트가 Items 목록에 존재한다면 인덱스 확인 가능
+                            int index = combo.Items.IndexOf(currentText);
 
-                DisplayMessage("The Sampling Rate is Changed, ReSampling...");
-                var nns = mOptMD.Nsample.ToArray();
-                nns[index] = uint.Parse(currentText);
+                            DisplayMessage("The Sampling Rate is Changed, ReSampling...");
+                            var nns = mOptMD.Nsample.ToArray();
+                            nns[index] = uint.Parse(currentText);
 
-                mOptMD.Nsample = nns;
-                mOptMD.InitSample();
-                DisplayMessage("Done." + Environment.NewLine);
-                //ResetUICtr();
-                SetModeOfNewOptMD();
-                MsgForNewFunction();
-            }*/
+                            mOptMD.Nsample = nns;
+                            mOptMD.InitSample();
+                            DisplayMessage("Done." + Environment.NewLine);
+                            //ResetUICtr();
+                            SetModeOfNewOptMD();
+                            MsgForNewFunction();
+                        }*/
         }
     }
 }

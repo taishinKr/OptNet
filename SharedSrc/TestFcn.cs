@@ -165,7 +165,7 @@ namespace OptNet
                 return T.Zero;
 
             T sum = T.Zero;
-            T c418 = T.CreateChecked(418.9829);
+            T c418 = T.CreateChecked(418.9828872724338);
 
             for (int i = 0; i < dim; i++)
             {

@@ -31,13 +31,22 @@ namespace OptNet
         private readonly double[]? optIntv;
 
         [Flags]
-        public enum StaMaskEnum : UInt32
+        /*public enum StaMaskEnum : UInt32
         {
             Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3,
             MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6,
             AutoShrink = 1 << 7, SampledOptimal = 1 << 8,
             ReSampling = 1 << 9, AxisChanging = 1 << 10,
             PartialConstJ = 1 << 11,
+        }*/
+        public enum StaMaskEnum : UInt32
+        {
+            Done = 1, Min = 1 << 1, Max = 1 << 2, Bottom = 1 << 3,
+            MThread = 1 << 4, SampleReuse = 1 << 5, StrictLimit = 1 << 6,
+            AutoShrink = 1 << 7, SampledOptimal = 1 << 8,
+            ReSampling = 1 << 9, AxisChanging = 1 << 10,
+            ReSamplingOnly = 1 << 11, AxisChangingOnly = 1 << 12, ReSampleAxisChangeBoth = 1 << 13,
+            PartialConstJ = 1 << 14,
         }
         private UInt32 mState = 0;
 
