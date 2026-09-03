@@ -55,7 +55,7 @@ namespace OptNet
                             newX[i] = o.X[0];
                     }
                     if (optparm.Name == "Styblinski­Tang")
-                        return (newX, T.CreateChecked(-39.16599 * dimN));
+                        return (newX, T.CreateChecked(-39.16616570 * dimN));
                     else
                         return (newX, o.J);
                 }).ToArray();
@@ -1880,7 +1880,7 @@ namespace OptNet
 
                 if (!IsSetSysFlag(StaMaskEnum.SampledOptimal))
                 {
-                    msgOptX1 += string.Format("J:{0,8:G6} Err:{1,8:E2}   at ",
+                    msgOptX1 += string.Format("J:{0,8:G7} Err:{1,8:E2}   at ",
                                                     opt.J, CalcErr( OptParam.Optima[0].J, opt.J)
                                                 );
                 }
@@ -1888,7 +1888,7 @@ namespace OptNet
                 {
                     T[] tmpx = [.. opt.X.Select(row => row[0])];
                     var trueJ = J(tmpx); Nfe--;
-                    msgOptX1 += string.Format("J:{0,8:G6} Err:{1,8:E2} (realJ: {2,8:G6} realErr:{3,8:E2})    at ",
+                    msgOptX1 += string.Format("J:{0,8:G7} Err:{1,8:E2} (realJ: {2,8:G7} realErr:{3,8:E2})    at ",
                                                     opt.J, CalcErr(OptParam.Optima[0].J, opt.J),
                                                     trueJ, CalcErr(OptParam.Optima[0].J, trueJ)
                                                 );
@@ -1900,11 +1900,11 @@ namespace OptNet
                     //if (!IsSetSysFlag(StaMaskEnum.PartialConstJ))
                     if (opt.X[i][0] == opt.X[i][1])
                     {
-                        msgOptX1 += string.Format("{0,8:G6} ", opt.X[i][0]);
+                        msgOptX1 += string.Format("{0,8:G7} ", opt.X[i][0]);
                     }
                     else
                     {                        
-                        msgOptX1 += string.Format("({0,8:G6} {1,8:G6}) ", opt.X[i][0], opt.X[i][1]);
+                        msgOptX1 += string.Format("({0,8:G7} {1,8:G7}) ", opt.X[i][0], opt.X[i][1]);
                     }
                 }
                 msgOptX += msgOptX1 + Environment.NewLine;

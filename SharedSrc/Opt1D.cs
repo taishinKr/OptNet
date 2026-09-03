@@ -298,9 +298,11 @@ namespace OptNet
             // 3. the number of element is less than 3, return null
             if (end - start < 2) return null;
 
+            (start, end) = RefineIntv(J, start, end);
+
             /*var dx = T.One / T.CreateChecked(Ns);
             var dxhalf = dx / (T.One + T.One);*/
-            var margin = 0.8;
+            var margin = 0.0;
 
             if (start - margin < 0.0)
                 start = (int)margin;
@@ -320,6 +322,57 @@ namespace OptNet
                 endReal,
                 J[pivotIndex]
             );
+        }
+        public (int newStart, int newEnd) RefineIntv(T[] J, int start, int end)
+        {
+            // 0.3을 T 타입으로 변환 (INumber<T> 지원)
+            T factor = T.CreateChecked(0.1);
+
+            while (true)
+            {
+                // 구간의 크기(end - start)가 3보다 작으면 원소가 2개 이하이므로 
+                // 양 끝을 제외한 나머지가 없어 더 이상 진행할 수 없습니다.
+                if (end - start < 3)
+                {
+                    break;
+                }
+
+                // 1. 양 끝 원소를 제외한 내부 구간(start + 1 ~ end - 1)의 표준편차 계산 (별도 함수 호출)
+                //T stdDev = GeneralMath<T>.CalculateStdDev(J, start + 1, end - 1);
+                (T meanJ, T maxDev) = GeneralMath<T>.CalculateMaxDev(J, start + 1, end - 1);
+
+                // 2. 비교 기준값 계산 (T 타입으로 직접 계산)
+                T startThreshold = T.Abs(J[start] - meanJ) * factor;
+                T endThreshold = T.Abs(J[end] - meanJ) * factor;
+
+                bool isMinSet = IsSetSysFlag(StaMaskEnum.Min);
+                bool isMaxSet = IsSetSysFlag(StaMaskEnum.Max);
+
+                bool startIncremented = false;
+                bool endDecremented = false;
+
+                // 3. start 조정 조건 검사
+                if ((isMinSet && maxDev <= startThreshold) || (isMaxSet && maxDev >= startThreshold))
+                {
+                    start++;
+                    startIncremented = true;
+                }
+
+                // 4. end 조정 조건 검사
+                if ((isMinSet && maxDev <= endThreshold) || (isMaxSet && maxDev >= endThreshold))
+                {
+                    end--;
+                    endDecremented = true;
+                }
+
+                // 5. 더 이상 구간 조정이 이루어지지 않았으면 반복 종료
+                if (!startIncremented && !endDecremented)
+                {
+                    break;
+                }
+            }
+
+            return (start, end);
         }
         /// <summary>
         /// Calculates the list of local optima (Lo) by solving quadratic equations derived from the coefficients A, B, and C for each interval defined by the constant variables. The method checks if the solutions are within the valid range and adds them to the list along with their corresponding J values.

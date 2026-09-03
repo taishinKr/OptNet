@@ -493,7 +493,7 @@ namespace OptNet
                 T x4 = x2 * x2;
                 sum += x4 - (c16 * x2) + (c5 * x);
             }
-            return sum / T.CreateChecked(2.0);
+            return sum / (T.One + T.One);
         }
 
         /// <summary>

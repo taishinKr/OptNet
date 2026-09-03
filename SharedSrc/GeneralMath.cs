@@ -248,6 +248,83 @@ namespace OptNet
             }
             return clusters;
         }
+        /// <summary>
+        /// Calculates the standard deviation of a subset of an array of type T
+        /// , where T is a numeric type that implements INumber and IRootFunctions.
+        /// </summary>
+        /// <param name="array"></param>
+        /// <param name="subStart"></param>
+        /// <param name="subEnd"></param>
+        /// <returns></returns>
+        public static T CalculateStdDev<T> (T[] array, int subStart, int subEnd) where T : INumber<T>, IRootFunctions<T>
+        {
+            int count = subEnd - subStart + 1;
+            if (count <= 0) return T.Zero;
+
+            // 1. 평균 계산
+            T sum = T.Zero;
+            for (int i = subStart; i <= subEnd; i++)
+            {
+                sum += array[i];
+            }
+            T mean = sum / T.CreateChecked(count);
+
+            // 2. 편차 제곱합 계산
+            T sumOfSquares = T.Zero;
+            for (int i = subStart; i <= subEnd; i++)
+            {
+                T diff = array[i] - mean;
+                sumOfSquares += diff * diff;
+            }
+
+            // 3. 분산 및 표준편차 계산 (제곱근 연산을 위해 T.Root / Math.Sqrt 처리)
+            T variance = sumOfSquares / T.CreateChecked(count);
+
+            // INumber<T> / IRootFunctions<T>를 지원하는 경우 T.Sqrt 사용, 
+            // 그렇지 않은 경우 double 변환 후 제곱근 계산을 T로 다시 캐스팅
+            if (typeof(IRootFunctions<T>).IsAssignableFrom(typeof(T)))
+            {
+                return T.Sqrt(variance);
+            }
+            else
+            {
+                double doubleVariance = Convert.ToDouble(variance);
+                return T.CreateChecked(Math.Sqrt(doubleVariance));
+            }
+        }
+        public static (T mean, T maxDev) CalculateMaxDev(T[] J, int start, int end)
+        {
+            int count = end - start + 1;
+
+            // 구간이 유효하지 않은 경우 T의 기본값(0) 반환
+            if (count <= 0 || start < 0 || end >= J.Length)
+            {
+                return (T.Zero, T.Zero);
+            }
+
+            // 1. 구간 평균(Mean) 계산
+            T sum = T.Zero;
+            for (int i = start; i <= end; i++)
+            {
+                sum += J[i];
+            }
+            T mean = sum / T.CreateChecked(count);
+
+            // 2. 평균과의 차이값(절대 편차) 중 최댓값 구하기
+            T maxDev = T.Zero;
+            for (int i = start; i <= end; i++)
+            {
+                // T.Abs를 사용하여 절대 편차 계산 (|J[i] - mean|)
+                T dev = T.Abs(J[i] - mean);
+
+                if (dev > maxDev)
+                {
+                    maxDev = dev;
+                }
+            }
+
+            return (mean, maxDev);
+        }
 
         /*public static BigInteger Sqrt(BigInteger value)
         {

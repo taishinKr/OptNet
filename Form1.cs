@@ -470,7 +470,7 @@ namespace OptNet
                 MaxX = [5, 5, 5],
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
-                Optima = [([-2.903534, -2.903534, -2.903534], -39.16599)]
+                Optima = [([-2.903534028, -2.903534028, -2.903534028], -39.16616570)]
             };
             mParamSchafferF6 = new OptParam<double>
             {
@@ -1239,7 +1239,7 @@ namespace OptNet
                     buttonOptimzeMD.Enabled = true;
                     break;
                 case "StyblinskiTang":
-                    mParamStyblinskiTang.Optima = [([-2.903534, -2.903534, -2.903534], -39.16599 * mParamStyblinskiTang.DimN)];
+                    mParamStyblinskiTang.Optima = [([-2.903534028, -2.903534028, -2.903534028], -39.16616570 * mParamStyblinskiTang.DimN)];
                     mOptMD = new OptMD<double>(mParamStyblinskiTang);
                     buttonOptimzeMD.Enabled = true;
                     break;
