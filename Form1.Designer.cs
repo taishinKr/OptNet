@@ -92,6 +92,7 @@
             // 
             // textBoxMsg
             // 
+            textBoxMsg.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
             textBoxMsg.BackColor = SystemColors.Desktop;
             textBoxMsg.ForeColor = Color.Khaki;
             textBoxMsg.Location = new Point(12, 210);

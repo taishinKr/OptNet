@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using static System.Runtime.InteropServices.JavaScript.JSType;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Button;
 
 namespace OptNet
@@ -997,6 +998,11 @@ namespace OptNet
 
         public void DisplayMessage(string message)
         {
+            // TextBox 라인 수 제한 예시 (최대 1,000줄 유지)
+            if (textBoxMsg.Lines.Length > 1000)
+            {
+                textBoxMsg.Lines = textBoxMsg.Lines.Skip(100).ToArray(); // 상위 100줄 삭제
+            }
             if (textBoxMsg.Text.Length + message.Length > textBoxMsg.MaxLength)
             {
                 textBoxMsg.ResetText();
