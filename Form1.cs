@@ -1003,7 +1003,7 @@ namespace OptNet
             }
             textBoxMsg.AppendText(message);
         }
-        private void ButtonOptimzeMD_Click(object sender, EventArgs e)
+        private async void ButtonOptimzeMD_Click(object sender, EventArgs e)
         {
             buttonOptimzeMD.Enabled = false;
 
@@ -1012,7 +1012,7 @@ namespace OptNet
             numericUpDownShrink.Enabled = false;
             comboBoxIdxXlist.Enabled = false;
 
-            mOptMD.OptimizeMD();
+            await mOptMD.OptimizeMD();
 
             var lastIdx = mOptMD.optResultReal.Length - 1;
 
