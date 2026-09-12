@@ -440,7 +440,7 @@ namespace OptNet
                 TolX = 0.1,
                 DimN = 3,
                 Ns = [11, 11, 11],
-                MinX = [-5, -5, -5],
+                MinX = [-10, -10, -10],
                 MaxX = [10, 10, 10],
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,

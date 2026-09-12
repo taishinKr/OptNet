@@ -805,13 +805,16 @@ namespace OptNet
             //if (mode == StaMaskEnum.Min)
             //    offset = calculateOffsetWeightForCentroid(newResult,maxIdx,optj);
 
+            T Jmax = newResult.Max(x => x.J);
+            T Jmin = newResult.Min(x => x.J);
+            T Beta = T.CreateChecked(1.0);
             for (int idx = 0; idx <= maxIdx && idx < newResult.Length; idx++)
             {
                 var (X, J) = newResult[idx];
 
-                T weight = J + T.Abs(optj); // J + |optj| is always non-negative, and the larger J is, the larger the weight will be.
                 T diff = T.Abs(optj - J);
-
+                T weight = T.Zero;
+                /*T weight = J + T.Abs(optj); // J + |optj| is always non-negative, and the larger J is, the larger the weight will be.
                 if (mode == StaMaskEnum.Min)
                 {
                     T offset = calculateOffsetWeightForCentroid(newResult, maxIdx, optj); // maxJ - (J + |optj|) is always non-negative, but minimum is always 0
@@ -819,7 +822,18 @@ namespace OptNet
                                                                                           // If offset is too small, the weight will be too small, and
                                                                                           // the centroid will be biased towards the first item.
                     weight = offset - weight;
+                }*/
+
+                if (mode == StaMaskEnum.Min)
+                {
+                    weight = T.Exp(-Beta * (J - Jmin) / (Jmax - Jmin));
+                    //weight = T.Exp(-Beta * (J - Jmin));
                 }
+                if (mode == StaMaskEnum.Max)
+                {
+                    weight = T.Exp(-Beta * (Jmax - J) / (Jmax - Jmin));
+                }
+
 
                 totalWeight += weight;
                 totalDiff += diff;  
