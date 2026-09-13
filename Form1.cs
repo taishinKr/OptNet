@@ -162,9 +162,9 @@ namespace OptNet
                 TolJ = 0.001,
                 TolX = 0.1,
                 DimN = 3,
-                Ns = [11, 11, 11],
-                MinX = [-300, -300, -300],//[-3, -3, -3],//[-300, -300, -300],
-                MaxX = [600, 600, 600],//[6, 6, 6],//[600, 600, 600],
+                Ns = [21, 21, 21],
+                MinX = [-300, -300, -300],//[-600, -600, -600],
+                MaxX = [600, 600, 600],//[600, 600, 600],
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = true,
                 Optima = [([0, 0, 0], 0.0)]
@@ -211,10 +211,10 @@ namespace OptNet
             mParamExpandedSchafferF6 = new OptParam<double>
             {
                 J = mTestFcn.ExpandedSchafferF6,
-                TolJ = 0.001,
+                TolJ = 0.01,
                 TolX = 0.1,
                 DimN = 3,
-                Ns = [11, 11, 11],
+                Ns = [31, 31, 31],
                 MinX = [-2.5, -2.5, -2.5],//[-50, -50, -50],
                 MaxX = [5, 5, 5],//[100, 100, 100],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -227,7 +227,7 @@ namespace OptNet
                 TolJ = 0.001,
                 TolX = 0.1,
                 DimN = 3,
-                Ns = [11, 11, 11],
+                Ns = [21, 21, 21],
                 MinX = [-50, -50, -50],
                 MaxX = [100, 100, 100],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -240,7 +240,7 @@ namespace OptNet
                 TolJ = 0.001, //0.00001,
                 TolX = 0.1,
                 DimN = 2,
-                Ns = [11, 11], // [41, 41]
+                Ns = [21, 21], // [41, 41]
                 MinX = [-4.5, -4.5],// when [-2.5, -2.5], AutoShrink should be off
                 MaxX = [4.5, 4.5], //                [3.0+0.5, 0.5+2.5],//[4.5, 4.5],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -284,7 +284,7 @@ namespace OptNet
                 TolJ = 0.001,
                 TolX = 0.1,
                 DimN = 2,
-                Ns = [11, 11],
+                Ns = [21, 21],
                 MinX = [-2.5, -2.5],
                 MaxX = [5.12, 5.12],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -384,10 +384,10 @@ namespace OptNet
             mParamSchafferN2 = new OptParam<double>
             {
                 J = mTestFcn.SchafferN2,
-                TolJ = 0.001,
+                TolJ = 0.1,
                 TolX = 0.1,
                 DimN = 2,
-                Ns = [11, 11],
+                Ns = [31, 31],
                 MinX = [-50, -50],
                 MaxX = [100, 100],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -436,10 +436,10 @@ namespace OptNet
             mParamRosenbrock = new OptParam<double>
             {
                 J = mTestFcn.Rosenbrock,   // Converge if TolJ = 0.01(=1%), Factor = 0.5
-                TolJ = 0.001,
+                TolJ = 0.00001,
                 TolX = 0.1,
                 DimN = 3,
-                Ns = [11, 11, 11],
+                Ns = [41, 41, 41],
                 MinX = [-10, -10, -10],
                 MaxX = [10, 10, 10],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -476,10 +476,10 @@ namespace OptNet
             mParamSchafferF6 = new OptParam<double>
             {
                 J = mTestFcn.SchafferF6,
-                TolJ = 0.001,
+                TolJ = 0.1,
                 TolX = 0.1,
                 DimN = 2,
-                Ns = [11, 11],
+                Ns = [21, 21],
                 MinX = [-50, -50],
                 MaxX = [100, 100],
                 Mode = OptMD<double>.StaMaskEnum.Min,
