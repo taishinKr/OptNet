@@ -81,6 +81,7 @@
             label2 = new Label();
             numericUpDownNs = new NumericUpDown();
             labelNFE = new Label();
+            labelShrinkCnt = new Label();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -104,7 +105,7 @@
             // 
             // buttonOptimzeMD
             // 
-            buttonOptimzeMD.Location = new Point(139, 123);
+            buttonOptimzeMD.Location = new Point(139, 115);
             buttonOptimzeMD.Name = "buttonOptimzeMD";
             buttonOptimzeMD.Size = new Size(92, 28);
             buttonOptimzeMD.TabIndex = 0;
@@ -125,7 +126,7 @@
             // 
             // buttonResetAll
             // 
-            buttonResetAll.Location = new Point(237, 123);
+            buttonResetAll.Location = new Point(237, 115);
             buttonResetAll.Name = "buttonResetAll";
             buttonResetAll.Size = new Size(92, 28);
             buttonResetAll.TabIndex = 4;
@@ -169,7 +170,7 @@
             comboBoxBenchFcn.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBoxBenchFcn.Font = new Font("Malgun Gothic", 9F);
             comboBoxBenchFcn.FormattingEnabled = true;
-            comboBoxBenchFcn.Location = new Point(17, 126);
+            comboBoxBenchFcn.Location = new Point(17, 118);
             comboBoxBenchFcn.Name = "comboBoxBenchFcn";
             comboBoxBenchFcn.Size = new Size(114, 23);
             comboBoxBenchFcn.TabIndex = 11;
@@ -191,7 +192,7 @@
             // 
             numericUpDownTolX.DecimalPlaces = 3;
             numericUpDownTolX.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            numericUpDownTolX.Location = new Point(516, 126);
+            numericUpDownTolX.Location = new Point(516, 118);
             numericUpDownTolX.Name = "numericUpDownTolX";
             numericUpDownTolX.Size = new Size(65, 23);
             numericUpDownTolX.TabIndex = 13;
@@ -203,7 +204,7 @@
             // 
             numericUpDownTolJ.DecimalPlaces = 3;
             numericUpDownTolJ.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
-            numericUpDownTolJ.Location = new Point(700, 126);
+            numericUpDownTolJ.Location = new Point(700, 118);
             numericUpDownTolJ.Name = "numericUpDownTolJ";
             numericUpDownTolJ.Size = new Size(65, 23);
             numericUpDownTolJ.TabIndex = 14;
@@ -232,7 +233,7 @@
             // labelTolJ
             // 
             labelTolJ.AutoSize = true;
-            labelTolJ.Location = new Point(700, 108);
+            labelTolJ.Location = new Point(700, 100);
             labelTolJ.Name = "labelTolJ";
             labelTolJ.Size = new Size(45, 15);
             labelTolJ.TabIndex = 17;
@@ -241,7 +242,7 @@
             // labelTolX
             // 
             labelTolX.AutoSize = true;
-            labelTolX.Location = new Point(516, 108);
+            labelTolX.Location = new Point(516, 100);
             labelTolX.Name = "labelTolX";
             labelTolX.Size = new Size(48, 15);
             labelTolX.TabIndex = 18;
@@ -294,7 +295,7 @@
             // labelFcn
             // 
             labelFcn.AutoSize = true;
-            labelFcn.Location = new Point(17, 108);
+            labelFcn.Location = new Point(17, 100);
             labelFcn.Name = "labelFcn";
             labelFcn.Size = new Size(59, 15);
             labelFcn.TabIndex = 23;
@@ -382,7 +383,7 @@
             // labelTolJReal
             // 
             labelTolJReal.AutoSize = true;
-            labelTolJReal.Location = new Point(774, 123);
+            labelTolJReal.Location = new Point(774, 115);
             labelTolJReal.Name = "labelTolJReal";
             labelTolJReal.Size = new Size(49, 15);
             labelTolJReal.TabIndex = 33;
@@ -391,7 +392,7 @@
             // labelDimension
             // 
             labelDimension.AutoSize = true;
-            labelDimension.Location = new Point(337, 109);
+            labelDimension.Location = new Point(337, 101);
             labelDimension.Name = "labelDimension";
             labelDimension.Size = new Size(65, 15);
             labelDimension.TabIndex = 35;
@@ -399,7 +400,7 @@
             // 
             // numericUpDownDimension
             // 
-            numericUpDownDimension.Location = new Point(337, 126);
+            numericUpDownDimension.Location = new Point(337, 118);
             numericUpDownDimension.Maximum = new decimal(new int[] { 100000, 0, 0, 0 });
             numericUpDownDimension.Minimum = new decimal(new int[] { 1, 0, 0, 0 });
             numericUpDownDimension.Name = "numericUpDownDimension";
@@ -506,7 +507,7 @@
             // labelTolXReal
             // 
             labelTolXReal.AutoSize = true;
-            labelTolXReal.Location = new Point(587, 126);
+            labelTolXReal.Location = new Point(587, 118);
             labelTolXReal.Name = "labelTolXReal";
             labelTolXReal.Size = new Size(52, 15);
             labelTolXReal.TabIndex = 45;
@@ -515,7 +516,7 @@
             // labelSpanX
             // 
             labelSpanX.AutoSize = true;
-            labelSpanX.Location = new Point(587, 141);
+            labelSpanX.Location = new Point(587, 133);
             labelSpanX.Name = "labelSpanX";
             labelSpanX.Size = new Size(41, 15);
             labelSpanX.TabIndex = 46;
@@ -524,7 +525,7 @@
             // labelSpanJ
             // 
             labelSpanJ.AutoSize = true;
-            labelSpanJ.Location = new Point(774, 137);
+            labelSpanJ.Location = new Point(774, 129);
             labelSpanJ.Name = "labelSpanJ";
             labelSpanJ.Size = new Size(38, 15);
             labelSpanJ.TabIndex = 47;
@@ -619,7 +620,7 @@
             // label2
             // 
             label2.AutoSize = true;
-            label2.Location = new Point(412, 109);
+            label2.Location = new Point(412, 101);
             label2.Name = "label2";
             label2.Size = new Size(78, 15);
             label2.TabIndex = 53;
@@ -627,7 +628,7 @@
             // 
             // numericUpDownNs
             // 
-            numericUpDownNs.Location = new Point(412, 126);
+            numericUpDownNs.Location = new Point(412, 118);
             numericUpDownNs.Maximum = new decimal(new int[] { 1000, 0, 0, 0 });
             numericUpDownNs.Minimum = new decimal(new int[] { 2, 0, 0, 0 });
             numericUpDownNs.Name = "numericUpDownNs";
@@ -640,17 +641,27 @@
             // labelNFE
             // 
             labelNFE.AutoSize = true;
-            labelNFE.Location = new Point(17, 165);
+            labelNFE.Location = new Point(17, 164);
             labelNFE.Name = "labelNFE";
             labelNFE.Size = new Size(28, 15);
             labelNFE.TabIndex = 54;
             labelNFE.Text = "NFE";
+            // 
+            // labelShrinkCnt
+            // 
+            labelShrinkCnt.AutoSize = true;
+            labelShrinkCnt.Location = new Point(17, 150);
+            labelShrinkCnt.Name = "labelShrinkCnt";
+            labelShrinkCnt.Size = new Size(26, 15);
+            labelShrinkCnt.TabIndex = 55;
+            labelShrinkCnt.Text = "Cnt";
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(908, 723);
+            Controls.Add(labelShrinkCnt);
             Controls.Add(labelNFE);
             Controls.Add(label2);
             Controls.Add(numericUpDownNs);
@@ -767,5 +778,6 @@
         private NumericUpDown numericUpDownNs;
         private Label labelNFE;
         private RadioButton radioButtonBoth;
+        private Label labelShrinkCnt;
     }
 }

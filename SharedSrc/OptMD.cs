@@ -116,6 +116,7 @@ namespace OptNet
         public T[]? DX { get; set; }
         public T[]? DXHalf { get; set; }
         public uint Nfe { get; set; }
+        public uint ShrinkCnt { get; set; }
         public List<T>? SampleJtot { get; set; }
         //public T? TolX { get; set; }
         public (T[][] X, T J)[] OptResultReal { get; set; } 
@@ -167,6 +168,7 @@ namespace OptNet
             get => Ns.ToArray(); // ImmutableArray → 배열 변환
             set => Ns = ImmutableArray.Create(value); // 배열 → ImmutableArray 변환
         }
+        public uint ShrinkCnt { get; set; } = 0;
         public uint Nfe { get; set; } = 0;
         public StaMaskEnum Mode { get => mode; set => mode = value; }
 
@@ -288,6 +290,7 @@ namespace OptNet
         private StateSnapshot<T> oldDataBeforeShrink = new StateSnapshot<T>();
         public void ShrinkBy(T factorSelected, int optSelectedIdx) // ratio other than 0.5 makes the sample number(Ns) changed!!! 
         {
+            ShrinkCnt++;
             var minx = new T[dimN];
             var maxx = new T[dimN];
             var dx = new T[dimN];
@@ -497,7 +500,8 @@ namespace OptNet
                 SampleJtot = [.. sampleJtot.ToList()],
                 //TolX = TolX,
                 OptResultReal = [.. optResultReal.ToArray()],
-                Nfe = Nfe
+                Nfe = Nfe,
+                ShrinkCnt = ShrinkCnt
             };
         }
         public void RestoreState()
@@ -523,6 +527,7 @@ namespace OptNet
                 spanJ = sampleJtot.Max() - sampleJtot.Min();
                 spanX = CalSpanX();
                 Nfe = oldDataBeforeShrink.Nfe;
+                //ShrinkCnt = oldDataBeforeShrink.ShrinkCnt;
             }
         }
 

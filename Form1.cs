@@ -994,6 +994,7 @@ namespace OptNet
             labelSpanJ.Text = $"SpanJ:    {mOptMD.SpanJ:F4}";
             labelSpanX.Text = $"SpanX:    {mOptMD.SpanX:F4}";
             labelNFE.Text = $"NFE:  {mOptMD.Nfe:N0}";
+            labelShrinkCnt.Text = $"Cnt:  {mOptMD.ShrinkCnt:N0}";
         }
 
         public void DisplayMessage(string message)
@@ -1044,6 +1045,7 @@ namespace OptNet
             var old = numericUpDownShrink.Value;
             ResetUICtr();
             numericUpDownShrink.Value = old;
+            buttonUndo.Enabled = true;
         }
         private void ButtonResetAll_Click(object sender, EventArgs e)
         {
@@ -1068,6 +1070,7 @@ namespace OptNet
             labelSpanJ.Text = $"SpanJ:    {mOptMD.SpanJ:F4}";
             labelSpanX.Text = $"SpanX:    {mOptMD.SpanX:F4}";
             labelNFE.Text = $"NFE:  {mOptMD.Nfe:N0}";
+            labelShrinkCnt.Text = $"Cnt:  {mOptMD.ShrinkCnt:N0}";
 
             if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.Done))
             {
@@ -1320,7 +1323,7 @@ namespace OptNet
 
             numericUpDownDimension.Enabled = mOptMD.OptParam.IsScalable;
 
-            mOptMD.CurrentLevel = (OptMD<double>.LogLevel)comboBoxLogLevel.SelectedIndex;
+            mOptMD.CurrentLevel = (OptMD<double>.LogLevel)comboBoxLogLevel.SelectedIndex;            
         }
 
         private void NumericUpDownTolJ_ValueChanged(object sender, EventArgs e)
@@ -1485,6 +1488,7 @@ namespace OptNet
         private void buttonUndo_Click(object sender, EventArgs e)
         {
             //buttonUndo.Enabled = false;
+            mOptMD.ShrinkCnt--;
             try
             {
                 mOptMD.RestoreState();
@@ -1497,6 +1501,8 @@ namespace OptNet
             ResetUICtr();
             numericUpDownShrink.Value = old;
             mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.Done); // Set the Done flag to true after restoring state
+
+            buttonUndo.Enabled = false;
         }
 
         private void checkBoxStrictLimit_CheckedChanged(object sender, EventArgs e)
