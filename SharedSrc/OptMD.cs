@@ -76,14 +76,28 @@ namespace OptNet
             this.Ns = new uint[dim];
             this.MinX = new T[dim];
             this.MaxX = new T[dim];
-            this.IsScalable = optparm.IsScalable;
-            for(int i = 0; i < dim; i++)
+            this.IsScalable = optparm.IsScalable;            
+            for (int i = 0; i < dim; i++)
             {
-                this.Ns[i] = optparm.Ns[0];                
+                this.Ns[i] = optparm.Ns[0];
                 this.MinX[i] = optparm.MinX[0];
                 this.MaxX[i] = optparm.MaxX[0];
             }
             this.Mode = optparm.Mode;
+
+            switch (optparm.Name)
+            {
+                case "Rosenbrock":
+                    if(dimN==2)
+                        this.Ns[0] = this.Ns[1] = 51;
+                    else
+                        for(int i = 0; i < dim; i++)
+                            this.Ns[i] = 31;
+                    break;
+                default:
+                    this.J = optparm.J; // Use the original function if not a known test function
+                    break;
+            }
         }
         public OptParam(
             in string Name,
@@ -2227,7 +2241,7 @@ namespace OptNet
 
                 if (!IsSetSysFlag(StaMaskEnum.SampledOptimal))
                 {
-                    msgOptX1 += string.Format("J:{0,8:G7} Err:{1,8:E2}   at ",
+                    msgOptX1 += string.Format("J:{0,8:E3} Err:{1,8:E3}   at ",
                                                     opt.J, CalcErr( OptParam.Optima[0].J, opt.J)
                                                 );
                 }
@@ -2235,7 +2249,7 @@ namespace OptNet
                 {
                     T[] tmpx = [.. opt.X.Select(row => row[0])];
                     var trueJ = J(tmpx); Nfe--;
-                    msgOptX1 += string.Format("J:{0,8:G7} Err:{1,8:E2} (realJ: {2,8:G7} realErr:{3,8:E2})    at ",
+                    msgOptX1 += string.Format("J:{0,8:E3} Err:{1,8:E3} (realJ: {2,8:E3} realErr:{3,8:E3})    at ",
                                                     opt.J, CalcErr(OptParam.Optima[0].J, opt.J),
                                                     trueJ, CalcErr(OptParam.Optima[0].J, trueJ)
                                                 );
@@ -2247,11 +2261,11 @@ namespace OptNet
                     //if (!IsSetSysFlag(StaMaskEnum.PartialConstJ))
                     if (opt.X[i][0] == opt.X[i][1])
                     {
-                        msgOptX1 += string.Format("{0,8:G7} ", opt.X[i][0]);
+                        msgOptX1 += string.Format("{0,8:E3} ", opt.X[i][0]);
                     }
                     else
                     {                        
-                        msgOptX1 += string.Format("({0,8:G7} {1,8:G7}) ", opt.X[i][0], opt.X[i][1]);
+                        msgOptX1 += string.Format("({0,8:E3} {1,8:E3}) ", opt.X[i][0], opt.X[i][1]);
                     }
                 }
                 msgOptX += msgOptX1 + Environment.NewLine;
