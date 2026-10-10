@@ -660,7 +660,29 @@ namespace OptNet
                 Optlist2?.CopyTo(optResult, count1);  // null이 아니면 count1번 인덱스부터 연속 복사
             }*/
 
-            AdjustResult(); // optResultReal = adjustResult().ToArray();            
+            AdjustResult(); // optResultReal = adjustResult().ToArray();
+        }
+
+        public bool CheckIfOutOfBounds()
+        {
+            for (int i = 0; i < dimN; i++)
+            {
+                if (
+                    (optResultReal[0].X[i][1] > OptParam.MaxX[i]) ||
+                    (optResultReal[0].X[i][0] < OptParam.MinX[i])
+                    )
+                {
+                    SetSysFlag(StaMaskEnum.StrictLimit);
+                    AddDispMsg(
+                        $"Warning: The optimal solution is out of the specified bounds for dimension {i}." + Environment.NewLine +
+                        $"         Setting to strict limit mode and Undoing Shrink." + Environment.NewLine +
+                        $"         Reexecuting Shrink (Zoom-in) required...",
+                        LogLevel.Warning
+                        );
+                    return true;
+                }
+            }
+            return false;
         }
         /// <summary>
         /// Adjusts the result by clustering items based on their distance and selecting representative items from each

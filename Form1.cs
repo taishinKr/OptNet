@@ -1345,16 +1345,7 @@ namespace OptNet
             else
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.MThread);
-            }
-
-            if (checkBoxPartialConstJ.Checked)
-            {
-                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
-            }
-            else
-            {
-                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
-            }
+            }            
 
             if (checkBoxSampledOpt.Checked)
             {
@@ -1374,7 +1365,16 @@ namespace OptNet
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.SampleReuse);
             }
 
-            if (checkBoxStrictLimit.Checked)
+            // Set the system flags for StrictLimit, AutoShrink, and PartialConstJ to true by default
+
+            mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.StrictLimit);
+            mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
+            mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
+            checkBoxStrictLimit.Checked = false;
+            checkBoxAutoShrink.Checked = true;
+            checkBoxPartialConstJ.Checked = true;
+
+            /*if (checkBoxStrictLimit.Checked)
             {
                 mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.StrictLimit);
             }
@@ -1391,6 +1391,15 @@ namespace OptNet
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
             }
+
+            if (checkBoxPartialConstJ.Checked)
+            {
+                mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
+            }
+            else
+            {
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
+            }*/
         }
 
         private void Form1_Load(object sender, EventArgs e)
@@ -1458,6 +1467,16 @@ namespace OptNet
                  // we disable the auto-shrink checkbox to select the first optimum only.
             {
                 checkBoxAutoShrink.Checked = false;
+            }
+
+            if(mOptMD.CheckIfOutOfBounds())
+            {
+                if(mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.StrictLimit) == true)
+                {
+                    checkBoxStrictLimit.Checked = true;
+                    buttonUndo_Click(sender,e);
+                }
+                //MessageBox.Show("Warning: Some of the optimal points are out of bounds.");
             }
         }
         private void ButtonShrink_Click(object sender, EventArgs e)
