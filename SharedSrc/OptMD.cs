@@ -89,7 +89,7 @@ namespace OptNet
             {
                 case "Rosenbrock":
                     if(dimN==2)
-                        this.Ns[0] = this.Ns[1] = 51;
+                        this.Ns[0] = this.Ns[1] = 41;
                     else
                         for(int i = 0; i < dim; i++)
                             this.Ns[i] = 31;
@@ -277,7 +277,21 @@ namespace OptNet
 
             SetSysFlag(StaMaskEnum.ReSamplingOnly);
             ClrSysFlag(StaMaskEnum.AxisChangingOnly);
-            ClrSysFlag(StaMaskEnum.ReSampleAxisChangeBoth);         
+            ClrSysFlag(StaMaskEnum.ReSampleAxisChangeBoth);
+
+            var fieldMax = typeof(T).GetField("MaxValue");
+            var fieldMin = typeof(T).GetField("MinValue");
+            if (fieldMax != null && fieldMin != null)
+            {
+                oldIntvX[0] = (T)fieldMin.GetValue(null)!;
+                oldIntvX[1] = (T)fieldMax.GetValue(null)!;
+            }
+            else
+            {
+                oldIntvX[0] = T.CreateChecked(-1e10);
+                oldIntvX[1] = T.CreateChecked(1e10);
+            }
+
         }
 
         public void InitSample()
@@ -379,9 +393,10 @@ namespace OptNet
                     if (maxIdx >= rangeIdx)
                     {
                         maxIdx = rangeIdx;
-                        minIdx = maxIdx - rdxIdx;
+                        //minIdx = maxIdx - rdxIdx;
                     }
-                }                 
+                }
+                
 
                 int uMinIdx = (int)Math.Ceiling(double.CreateChecked(minIdx));
                 int uMaxIdx = (int)Math.Floor(double.CreateChecked(maxIdx));
@@ -451,6 +466,11 @@ namespace OptNet
                     dxhalf[idxDim] = dx[idxDim] / (T.One + T.One);
                 }
                 //inputIndex[idxDim] = (uint)minIdx;
+                if ( (minx[idxDim] <= OptParam.MinX[idxDim]) && (maxx[idxDim] >= OptParam.MaxX[idxDim]) )
+                {
+                    minx[idxDim] = OptParam.MinX[idxDim];
+                    maxx[idxDim] = OptParam.MaxX[idxDim];
+                }
             }
 
 
@@ -662,26 +682,72 @@ namespace OptNet
 
             AdjustResult(); // optResultReal = adjustResult().ToArray();
         }
-
+        /// <summary>
+        /// Checks if the optimal solution is out of the specified bounds for each dimension.
+        /// If any dimension's optimal solution exceeds the maximum or minimum bounds,
+        /// it sets the system flag to strict limit mode,
+        /// adds a warning message to the display, and returns true. Otherwise, it returns false.
+        /// </summary>
+        /// <returns></returns>
         public bool CheckIfOutOfBounds()
         {
-            for (int i = 0; i < dimN; i++)
+            if (IsSetSysFlag(StaMaskEnum.StrictLimit) == false)
             {
-                if (
-                    (optResultReal[0].X[i][1] > OptParam.MaxX[i]) ||
-                    (optResultReal[0].X[i][0] < OptParam.MinX[i])
-                    )
+                //for (int i = 0; i < dimN; i++)
+                //{
+                var i = 0;
+                    var offsetTmp = T.CreateChecked(0.0000001);
+                if (optResultReal[0].X[i][1] != optResultReal[0].X[i][0]) return false;// continue; // only check for point solution, not interval solution
+                    if (
+                        (optResultReal[0].X[i][1] > OptParam.MaxX[i] + offsetTmp ) ||
+                        (optResultReal[0].X[i][0] < OptParam.MinX[i] - offsetTmp)
+                        )
+                    {
+                        SetSysFlag(StaMaskEnum.StrictLimit);
+                        AddDispMsg(
+                            $"Warning: The optimal solution is out of the specified bounds for dimension {i}." + Environment.NewLine +
+                            $"         Setting to strict limit mode and Undoing Shrink." + Environment.NewLine +
+                            $"         Reexecuting Shrink (Zoom-in) required..." + Environment.NewLine,
+                            LogLevel.Warning
+                            );
+                        return true;
+                    }
+                //}
+            }
+            return false;
+        }
+
+        private T[] oldIntvX = [T.Zero, T.Zero];
+        private T EpsilonBnd = T.CreateChecked(0.1);
+        public bool CheckDoneRefiningInterval()
+        {
+            if(
+                IsSetSysFlag(StaMaskEnum.PartialConstJ) &&
+                optResultReal[0].X[0][1] != optResultReal[0].X[0][0] &&
+                oldIntvX[0] != oldIntvX[1]
+            )
+            {
+                bool isUnChaged = T.Max(
+                                        T.Abs(oldIntvX[0]-optResultReal[0].X[0][0]), 
+                                        T.Abs(oldIntvX[1]-optResultReal[0].X[0][1])
+                                    ) <= EpsilonBnd;
+                bool isGrowing = (optResultReal[0].X[0][0] <= oldIntvX[0]) &&
+                                (optResultReal[0].X[0][1] >= oldIntvX[1]);
+                if (isUnChaged || isGrowing)
                 {
-                    SetSysFlag(StaMaskEnum.StrictLimit);
                     AddDispMsg(
-                        $"Warning: The optimal solution is out of the specified bounds for dimension {i}." + Environment.NewLine +
-                        $"         Setting to strict limit mode and Undoing Shrink." + Environment.NewLine +
-                        $"         Reexecuting Shrink (Zoom-in) required...",
+                        $"Warning: Done refining the interval for dimension 0." + Environment.NewLine +
+                        $"         Clearing PartialConstantOfJ flag." + Environment.NewLine +
+                        $"         Reexecuting Optimization required..." + Environment.NewLine,
                         LogLevel.Warning
                         );
+                    ClrSysFlag(StaMaskEnum.PartialConstJ);
                     return true;
                 }
             }
+
+            oldIntvX[0] = optResultReal[0].X[0][0];
+            oldIntvX[1] = optResultReal[0].X[0][1];
             return false;
         }
         /// <summary>

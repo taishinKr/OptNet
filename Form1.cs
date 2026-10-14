@@ -455,7 +455,7 @@ namespace OptNet
                 TolJ = 0.0001,
                 TolX = 0.1,
                 DimN = 3,
-                Ns = [31, 31, 31],// dim=2일때는 51 (//[30, 30, 30],// dim=2일때는 50)
+                Ns = [31, 31, 31],// dim=2일때는 41 (//[30, 30, 30],// dim=2일때는 50)
                 MinX = [-5, -5, -5],//[-10, -10, -10],
                 MaxX = [15, 15, 15], //[10, 10, 10],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -1365,8 +1365,8 @@ namespace OptNet
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.SampleReuse);
             }
 
-            // Set the system flags for StrictLimit, AutoShrink, and PartialConstJ to true by default
 
+            // Set the default values for StrictLimit, AutoShrink, and PartialConstJ
             mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.StrictLimit);
             mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.AutoShrink);
             mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ);
@@ -1473,10 +1473,30 @@ namespace OptNet
             {
                 if(mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.StrictLimit) == true)
                 {
-                    checkBoxStrictLimit.Checked = true;
+                    checkBoxStrictLimit.Checked = true;                    
                     buttonUndo_Click(sender,e);
+                    // Undoing caused by OutOfBounds should be counted as NFE, and
+                    // Considering ShrinkCnt and Nfehere are reset in ButtonResetAll_Click,
+                    // we can safely increment them here.
+                    mOptMD.ShrinkCnt++;
+                    uint tmpV = 1;
+                    for (int i = 0; i < mOptMD.OptParam.DimN; i++)
+                    {
+                        tmpV *= mOptMD.Nsample[i];
+                    }
+                    mOptMD.Nfe += tmpV;
+                    //ButtonShrink_Click(sender, e);
                 }
                 //MessageBox.Show("Warning: Some of the optimal points are out of bounds.");
+            }
+            else if(mOptMD.CheckDoneRefiningInterval())
+            {
+                if(mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ) == false)
+                {
+                    checkBoxPartialConstJ.Checked = false;
+                    //await mOptMD.OptimizeMD();
+                }
+
             }
         }
         private void ButtonShrink_Click(object sender, EventArgs e)
@@ -1558,7 +1578,8 @@ namespace OptNet
                 }
 
                 if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.AutoShrink) && (mOptMD.optResultReal.Length > 1))
-                    comboBoxIdxXlist.SelectedIndex = mOptMD.optResultReal.Length - 2;
+                    //comboBoxIdxXlist.SelectedIndex = mOptMD.optResultReal.Length - 2;
+                    comboBoxIdxXlist.SelectedIndex = comboBoxIdxXlist.Items.Count - 1;
                 else
                     if (comboBoxIdxXlist.Items.Count > 0)
                         comboBoxIdxXlist.SelectedIndex = 0;

@@ -100,7 +100,7 @@
             textBoxMsg.Multiline = true;
             textBoxMsg.Name = "textBoxMsg";
             textBoxMsg.ScrollBars = ScrollBars.Vertical;
-            textBoxMsg.Size = new Size(884, 497);
+            textBoxMsg.Size = new Size(1098, 497);
             textBoxMsg.TabIndex = 2;
             // 
             // buttonOptimzeMD
@@ -228,16 +228,16 @@
             labelFactor.Name = "labelFactor";
             labelFactor.Size = new Size(40, 15);
             labelFactor.TabIndex = 16;
-            labelFactor.Text = "Factor";
+            labelFactor.Text = "\u03B1_zoom";
             // 
             // labelTolJ
             // 
             labelTolJ.AutoSize = true;
             labelTolJ.Location = new Point(700, 100);
             labelTolJ.Name = "labelTolJ";
-            labelTolJ.Size = new Size(45, 15);
+            labelTolJ.Size = new Size(78, 15);
             labelTolJ.TabIndex = 17;
-            labelTolJ.Text = "TolJ(%)";
+            labelTolJ.Text = "\u03B3J(%)";
             // 
             // labelTolX
             // 
@@ -246,7 +246,7 @@
             labelTolX.Name = "labelTolX";
             labelTolX.Size = new Size(48, 15);
             labelTolX.TabIndex = 18;
-            labelTolX.Text = "TolX(%)";
+            labelTolX.Text = "\u03C1x(%)";
             // 
             // labelMaxX
             // 
@@ -660,7 +660,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(908, 723);
+            ClientSize = new Size(1122, 723);
             Controls.Add(labelShrinkCnt);
             Controls.Add(labelNFE);
             Controls.Add(label2);
