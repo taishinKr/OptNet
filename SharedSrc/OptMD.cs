@@ -718,7 +718,7 @@ namespace OptNet
         }
 
         private T[] oldIntvX = [T.Zero, T.Zero];
-        private T EpsilonBnd = T.CreateChecked(0.1);
+        public T EpsilonBnd { get; set; } = T.CreateChecked(0.1);
         public bool CheckDoneRefiningInterval()
         {
             if(

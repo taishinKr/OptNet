@@ -214,7 +214,7 @@ namespace OptNet
                 TolJ = 0.01,
                 TolX = 0.1,
                 DimN = 3,
-                Ns = [21,21,21],//[31, 31, 31],
+                Ns = [21, 21, 21],//[31, 31, 31],
                 MinX = [-50, -50, -50],//[-50, -50, -50],
                 MaxX = [150, 150, 150],//[5, 5, 5],//[100, 100, 100],
                 Mode = OptMD<double>.StaMaskEnum.Min,
@@ -401,7 +401,7 @@ namespace OptNet
                 DimN = 2,
                 Ns = [41, 41],// [30, 30],
                 MinX = [-50, -50],//[-100, -100],
-                MaxX = [150,150],//[100, 100],
+                MaxX = [150, 150],//[100, 100],
                 Mode = OptMD<double>.StaMaskEnum.Min,
                 IsScalable = false,
                 Optima = [([0, 0], 0.0)]
@@ -1345,7 +1345,7 @@ namespace OptNet
             else
             {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.MThread);
-            }            
+            }
 
             if (checkBoxSampledOpt.Checked)
             {
@@ -1422,6 +1422,8 @@ namespace OptNet
 
 
             numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
+            numericUpDownTolX.Value = (decimal)(mOptMD.TolX * 100); // Set the default value for numericUpDownTolX
+            numericUpDownEpsilonBnd.Value = (decimal)(mOptMD.EpsilonBnd);
 
 
             ResetUICtr();
@@ -1469,12 +1471,12 @@ namespace OptNet
                 checkBoxAutoShrink.Checked = false;
             }
 
-            if(mOptMD.CheckIfOutOfBounds())
+            if (mOptMD.CheckIfOutOfBounds())
             {
-                if(mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.StrictLimit) == true)
+                if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.StrictLimit) == true)
                 {
-                    checkBoxStrictLimit.Checked = true;                    
-                    buttonUndo_Click(sender,e);
+                    checkBoxStrictLimit.Checked = true;
+                    buttonUndo_Click(sender, e);
                     // Undoing caused by OutOfBounds should be counted as NFE, and
                     // Considering ShrinkCnt and Nfehere are reset in ButtonResetAll_Click,
                     // we can safely increment them here.
@@ -1489,9 +1491,9 @@ namespace OptNet
                 }
                 //MessageBox.Show("Warning: Some of the optimal points are out of bounds.");
             }
-            else if(mOptMD.CheckDoneRefiningInterval())
+            else if (mOptMD.CheckDoneRefiningInterval())
             {
-                if(mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ) == false)
+                if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ) == false)
                 {
                     checkBoxPartialConstJ.Checked = false;
                     //await mOptMD.OptimizeMD();
@@ -1739,6 +1741,8 @@ namespace OptNet
             DisplayMessage("Done." + Environment.NewLine);
 
             numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
+            numericUpDownTolX.Value = (decimal)(mOptMD.TolX * 100); // Set the default value for numericUpDownTolX
+            numericUpDownEpsilonBnd.Value = (decimal)(mOptMD.EpsilonBnd); // Set the default value for numericUpDownEpsilonBnd
 
             ResetUICtr();
             SetModeOfNewOptMD();
@@ -1788,10 +1792,11 @@ namespace OptNet
 
             numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100);
             numericUpDownTolX.Value = (decimal)(mOptMD.TolX * 100);
+            numericUpDownEpsilonBnd.Value = (decimal)(mOptMD.EpsilonBnd);
 
             numericUpDownDimension.Enabled = mOptMD.OptParam.IsScalable;
 
-            mOptMD.CurrentLevel = (OptMD<double>.LogLevel)comboBoxLogLevel.SelectedIndex;            
+            mOptMD.CurrentLevel = (OptMD<double>.LogLevel)comboBoxLogLevel.SelectedIndex;
         }
 
         private void NumericUpDownTolJ_ValueChanged(object sender, EventArgs e)
@@ -1861,6 +1866,8 @@ namespace OptNet
                 buttonOptimzeMD.Enabled = true;
 
                 numericUpDownTolJ.Value = (decimal)(mOptMD.TolJ * 100); // Set the default value for numericUpDownTolJ
+                numericUpDownTolX.Value = (decimal)(mOptMD.TolX * 100); // Set the default value for numericUpDownTolX
+                numericUpDownEpsilonBnd.Value = (decimal)(mOptMD.EpsilonBnd); // Set the default value for numericUpDownEpsilonBnd
 
                 ResetUICtr();
                 SetModeOfNewOptMD();
@@ -2136,6 +2143,12 @@ namespace OptNet
                             SetModeOfNewOptMD();
                             MsgForNewFunction();
                         }*/
+        }
+
+        private void numericUpDownEpsilonBnd_ValueChanged(object sender, EventArgs e)
+        {
+            //mOptMD.TolJ = (double)(numericUpDownTolJ.Value / 100);
+            mOptMD.EpsilonBnd = (double)(numericUpDownEpsilonBnd.Value);
         }
     }
 }

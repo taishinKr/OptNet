@@ -82,6 +82,8 @@
             numericUpDownNs = new NumericUpDown();
             labelNFE = new Label();
             labelShrinkCnt = new Label();
+            labelEpsilonBnd = new Label();
+            numericUpDownEpsilonBnd = new NumericUpDown();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -89,6 +91,7 @@
             groupBox1.SuspendLayout();
             groupBoxLowerAxis.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownNs).BeginInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownEpsilonBnd).BeginInit();
             SuspendLayout();
             // 
             // textBoxMsg
@@ -226,27 +229,27 @@
             labelFactor.AutoSize = true;
             labelFactor.Location = new Point(211, 165);
             labelFactor.Name = "labelFactor";
-            labelFactor.Size = new Size(40, 15);
+            labelFactor.Size = new Size(51, 15);
             labelFactor.TabIndex = 16;
-            labelFactor.Text = "\u03B1_zoom";
+            labelFactor.Text = "α_zoom";
             // 
             // labelTolJ
             // 
             labelTolJ.AutoSize = true;
             labelTolJ.Location = new Point(700, 100);
             labelTolJ.Name = "labelTolJ";
-            labelTolJ.Size = new Size(78, 15);
+            labelTolJ.Size = new Size(35, 15);
             labelTolJ.TabIndex = 17;
-            labelTolJ.Text = "\u03B3J(%)";
+            labelTolJ.Text = "γJ(%)";
             // 
             // labelTolX
             // 
             labelTolX.AutoSize = true;
             labelTolX.Location = new Point(516, 100);
             labelTolX.Name = "labelTolX";
-            labelTolX.Size = new Size(48, 15);
+            labelTolX.Size = new Size(38, 15);
             labelTolX.TabIndex = 18;
-            labelTolX.Text = "\u03C1x(%)";
+            labelTolX.Text = "ρx(%)";
             // 
             // labelMaxX
             // 
@@ -656,11 +659,34 @@
             labelShrinkCnt.TabIndex = 55;
             labelShrinkCnt.Text = "Cnt";
             // 
+            // labelEpsilonBnd
+            // 
+            labelEpsilonBnd.AutoSize = true;
+            labelEpsilonBnd.Location = new Point(700, 48);
+            labelEpsilonBnd.Name = "labelEpsilonBnd";
+            labelEpsilonBnd.Size = new Size(38, 15);
+            labelEpsilonBnd.TabIndex = 57;
+            labelEpsilonBnd.Text = "ε_bnd";
+            // 
+            // numericUpDownEpsilonBnd
+            // 
+            numericUpDownEpsilonBnd.DecimalPlaces = 3;
+            numericUpDownEpsilonBnd.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
+            numericUpDownEpsilonBnd.Location = new Point(700, 66);
+            numericUpDownEpsilonBnd.Name = "numericUpDownEpsilonBnd";
+            numericUpDownEpsilonBnd.Size = new Size(65, 23);
+            numericUpDownEpsilonBnd.TabIndex = 56;
+            numericUpDownEpsilonBnd.TextAlign = HorizontalAlignment.Center;
+            numericUpDownEpsilonBnd.Value = new decimal(new int[] { 1, 0, 0, 65536 });
+            numericUpDownEpsilonBnd.ValueChanged += numericUpDownEpsilonBnd_ValueChanged;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
             ClientSize = new Size(1122, 723);
+            Controls.Add(labelEpsilonBnd);
+            Controls.Add(numericUpDownEpsilonBnd);
             Controls.Add(labelShrinkCnt);
             Controls.Add(labelNFE);
             Controls.Add(label2);
@@ -720,6 +746,7 @@
             groupBoxLowerAxis.ResumeLayout(false);
             groupBoxLowerAxis.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownNs).EndInit();
+            ((System.ComponentModel.ISupportInitialize)numericUpDownEpsilonBnd).EndInit();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -779,5 +806,7 @@
         private Label labelNFE;
         private RadioButton radioButtonBoth;
         private Label labelShrinkCnt;
+        private Label labelEpsilonBnd;
+        private NumericUpDown numericUpDownEpsilonBnd;
     }
 }
