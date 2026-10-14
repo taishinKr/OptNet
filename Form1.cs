@@ -1495,6 +1495,8 @@ namespace OptNet
             {
                 if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.PartialConstJ) == false)
                 {
+                    mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.Done);
+                    buttonOptimzeMD.Enabled = true;
                     checkBoxPartialConstJ.Checked = false;
                     //await mOptMD.OptimizeMD();
                 }
