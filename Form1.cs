@@ -1488,6 +1488,8 @@ namespace OptNet
                     }
                     mOptMD.Nfe += tmpV;
                     //ButtonShrink_Click(sender, e);
+
+                    mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.DisableOptimaize);
                 }
                 //MessageBox.Show("Warning: Some of the optimal points are out of bounds.");
             }
@@ -1515,6 +1517,8 @@ namespace OptNet
             }
             var old = numericUpDownShrink.Value;
             ResetUICtr();
+            if( !mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.DisableOptimaize) )
+                buttonOptimzeMD.Enabled = true;
             numericUpDownShrink.Value = old;
             buttonUndo.Enabled = true;
         }
@@ -1549,7 +1553,10 @@ namespace OptNet
                 numericUpDownShrink.Enabled = true;
                 buttonShrink.Enabled = true;
                 //buttonUndo.Enabled = true;
-                buttonOptimzeMD.Enabled = true;
+                if(mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.DisableOptimaize) == false)
+                    buttonOptimzeMD.Enabled = true;
+                else
+                    buttonOptimzeMD.Enabled = false;
             }
             else
             {
@@ -1602,7 +1609,10 @@ namespace OptNet
                 return;
             }
             else
+            {
                 mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.Done);
+                mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.DisableOptimaize);
+            }
 
             DisplayMessage("Initializing...");
             switch (selectedItem)
@@ -1978,6 +1988,7 @@ namespace OptNet
             ResetUICtr();
             numericUpDownShrink.Value = old;
             mOptMD.SetSysFlag(OptMD<double>.StaMaskEnum.Done); // Set the Done flag to true after restoring state
+            mOptMD.ClrSysFlag(OptMD<double>.StaMaskEnum.DisableOptimaize);
 
             buttonUndo.Enabled = false;
         }

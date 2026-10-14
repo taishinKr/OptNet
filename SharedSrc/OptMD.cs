@@ -197,6 +197,7 @@ namespace OptNet
             ReSampling = 1 << 9, AxisChanging = 1 << 10,
             ReSamplingOnly = 1 << 11, AxisChangingOnly = 1 << 12, ReSampleAxisChangeBoth = 1 << 13,
             PartialConstJ = 1 << 14,
+            DisableOptimaize = 1 << 15
         }
         private UInt32 mState = 0;
 
@@ -274,6 +275,7 @@ namespace OptNet
             ClrSysFlag(StaMaskEnum.Done);
             ClrSysFlag(StaMaskEnum.MThread);
             SetSysFlag(StaMaskEnum.SampleReuse);
+            ClrSysFlag(StaMaskEnum.DisableOptimaize);
 
             SetSysFlag(StaMaskEnum.ReSamplingOnly);
             ClrSysFlag(StaMaskEnum.AxisChangingOnly);
@@ -510,6 +512,7 @@ namespace OptNet
             TolX = (adjTolX < T.One) ? adjTolX : T.One; */
 
             ClrSysFlag(StaMaskEnum.Done);
+            ClrSysFlag(StaMaskEnum.DisableOptimaize);
         }
         private T CalSpanX()
         {
