@@ -84,6 +84,7 @@
             labelShrinkCnt = new Label();
             labelEpsilonBnd = new Label();
             numericUpDownEpsilonBnd = new NumericUpDown();
+            groupBox2 = new GroupBox();
             ((System.ComponentModel.ISupportInitialize)numericUpDownShrink).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolX).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownTolJ).BeginInit();
@@ -92,6 +93,7 @@
             groupBoxLowerAxis.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownNs).BeginInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownEpsilonBnd).BeginInit();
+            groupBox2.SuspendLayout();
             SuspendLayout();
             // 
             // textBoxMsg
@@ -103,7 +105,7 @@
             textBoxMsg.Multiline = true;
             textBoxMsg.Name = "textBoxMsg";
             textBoxMsg.ScrollBars = ScrollBars.Vertical;
-            textBoxMsg.Size = new Size(1098, 497);
+            textBoxMsg.Size = new Size(1054, 514);
             textBoxMsg.TabIndex = 2;
             // 
             // buttonOptimzeMD
@@ -119,7 +121,7 @@
             // buttonShrink
             // 
             buttonShrink.Enabled = false;
-            buttonShrink.Location = new Point(17, 179);
+            buttonShrink.Location = new Point(17, 174);
             buttonShrink.Name = "buttonShrink";
             buttonShrink.Size = new Size(49, 28);
             buttonShrink.TabIndex = 1;
@@ -139,7 +141,7 @@
             // 
             // buttonClearMsgs
             // 
-            buttonClearMsgs.Location = new Point(552, 50);
+            buttonClearMsgs.Location = new Point(182, 730);
             buttonClearMsgs.Name = "buttonClearMsgs";
             buttonClearMsgs.Size = new Size(100, 28);
             buttonClearMsgs.TabIndex = 5;
@@ -160,7 +162,7 @@
             comboBoxIdxXlist.Font = new Font("Malgun Gothic", 9F);
             comboBoxIdxXlist.FormattingEnabled = true;
             comboBoxIdxXlist.ItemHeight = 15;
-            comboBoxIdxXlist.Location = new Point(137, 182);
+            comboBoxIdxXlist.Location = new Point(137, 177);
             comboBoxIdxXlist.MaxDropDownItems = 100;
             comboBoxIdxXlist.Name = "comboBoxIdxXlist";
             comboBoxIdxXlist.Size = new Size(65, 23);
@@ -183,7 +185,7 @@
             // 
             numericUpDownShrink.DecimalPlaces = 3;
             numericUpDownShrink.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            numericUpDownShrink.Location = new Point(211, 182);
+            numericUpDownShrink.Location = new Point(211, 177);
             numericUpDownShrink.Maximum = new decimal(new int[] { 1, 0, 0, 0 });
             numericUpDownShrink.Name = "numericUpDownShrink";
             numericUpDownShrink.Size = new Size(65, 23);
@@ -195,7 +197,7 @@
             // 
             numericUpDownTolX.DecimalPlaces = 3;
             numericUpDownTolX.Increment = new decimal(new int[] { 1, 0, 0, 65536 });
-            numericUpDownTolX.Location = new Point(516, 118);
+            numericUpDownTolX.Location = new Point(516, 70);
             numericUpDownTolX.Name = "numericUpDownTolX";
             numericUpDownTolX.Size = new Size(65, 23);
             numericUpDownTolX.TabIndex = 13;
@@ -207,7 +209,7 @@
             // 
             numericUpDownTolJ.DecimalPlaces = 3;
             numericUpDownTolJ.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
-            numericUpDownTolJ.Location = new Point(700, 118);
+            numericUpDownTolJ.Location = new Point(516, 117);
             numericUpDownTolJ.Name = "numericUpDownTolJ";
             numericUpDownTolJ.Size = new Size(65, 23);
             numericUpDownTolJ.TabIndex = 14;
@@ -218,7 +220,7 @@
             // labelIdx
             // 
             labelIdx.AutoSize = true;
-            labelIdx.Location = new Point(137, 165);
+            labelIdx.Location = new Point(137, 160);
             labelIdx.Name = "labelIdx";
             labelIdx.Size = new Size(36, 15);
             labelIdx.TabIndex = 15;
@@ -227,7 +229,7 @@
             // labelFactor
             // 
             labelFactor.AutoSize = true;
-            labelFactor.Location = new Point(211, 165);
+            labelFactor.Location = new Point(211, 160);
             labelFactor.Name = "labelFactor";
             labelFactor.Size = new Size(51, 15);
             labelFactor.TabIndex = 16;
@@ -236,7 +238,7 @@
             // labelTolJ
             // 
             labelTolJ.AutoSize = true;
-            labelTolJ.Location = new Point(700, 100);
+            labelTolJ.Location = new Point(516, 99);
             labelTolJ.Name = "labelTolJ";
             labelTolJ.Size = new Size(35, 15);
             labelTolJ.TabIndex = 17;
@@ -245,7 +247,7 @@
             // labelTolX
             // 
             labelTolX.AutoSize = true;
-            labelTolX.Location = new Point(516, 100);
+            labelTolX.Location = new Point(516, 52);
             labelTolX.Name = "labelTolX";
             labelTolX.Size = new Size(38, 15);
             labelTolX.TabIndex = 18;
@@ -254,7 +256,7 @@
             // labelMaxX
             // 
             labelMaxX.AutoSize = true;
-            labelMaxX.Location = new Point(467, 165);
+            labelMaxX.Location = new Point(467, 160);
             labelMaxX.Name = "labelMaxX";
             labelMaxX.Size = new Size(37, 15);
             labelMaxX.TabIndex = 19;
@@ -263,7 +265,7 @@
             // labelMinX
             // 
             labelMinX.AutoSize = true;
-            labelMinX.Location = new Point(376, 165);
+            labelMinX.Location = new Point(376, 160);
             labelMinX.Name = "labelMinX";
             labelMinX.Size = new Size(35, 15);
             labelMinX.TabIndex = 20;
@@ -276,7 +278,7 @@
             comboBoxMinX.Font = new Font("Malgun Gothic", 9F);
             comboBoxMinX.FormattingEnabled = true;
             comboBoxMinX.ItemHeight = 15;
-            comboBoxMinX.Location = new Point(376, 182);
+            comboBoxMinX.Location = new Point(376, 177);
             comboBoxMinX.MaxDropDownItems = 100;
             comboBoxMinX.Name = "comboBoxMinX";
             comboBoxMinX.Size = new Size(82, 23);
@@ -289,7 +291,7 @@
             comboBoxMaxX.Font = new Font("Malgun Gothic", 9F);
             comboBoxMaxX.FormattingEnabled = true;
             comboBoxMaxX.ItemHeight = 15;
-            comboBoxMaxX.Location = new Point(467, 182);
+            comboBoxMaxX.Location = new Point(467, 177);
             comboBoxMaxX.MaxDropDownItems = 100;
             comboBoxMaxX.Name = "comboBoxMaxX";
             comboBoxMaxX.Size = new Size(82, 23);
@@ -311,7 +313,7 @@
             comboBoxMaxXdX.Font = new Font("Malgun Gothic", 9F);
             comboBoxMaxXdX.FormattingEnabled = true;
             comboBoxMaxXdX.ItemHeight = 15;
-            comboBoxMaxXdX.Location = new Point(558, 182);
+            comboBoxMaxXdX.Location = new Point(558, 177);
             comboBoxMaxXdX.MaxDropDownItems = 100;
             comboBoxMaxXdX.Name = "comboBoxMaxXdX";
             comboBoxMaxXdX.Size = new Size(82, 23);
@@ -324,7 +326,7 @@
             comboBoxMinXdX.Font = new Font("Malgun Gothic", 9F);
             comboBoxMinXdX.FormattingEnabled = true;
             comboBoxMinXdX.ItemHeight = 15;
-            comboBoxMinXdX.Location = new Point(285, 182);
+            comboBoxMinXdX.Location = new Point(285, 177);
             comboBoxMinXdX.MaxDropDownItems = 100;
             comboBoxMinXdX.Name = "comboBoxMinXdX";
             comboBoxMinXdX.Size = new Size(82, 23);
@@ -333,7 +335,7 @@
             // labelMinXdX
             // 
             labelMinXdX.AutoSize = true;
-            labelMinXdX.Location = new Point(285, 165);
+            labelMinXdX.Location = new Point(285, 160);
             labelMinXdX.Name = "labelMinXdX";
             labelMinXdX.Size = new Size(66, 15);
             labelMinXdX.TabIndex = 25;
@@ -342,7 +344,7 @@
             // labelMaxXdX
             // 
             labelMaxXdX.AutoSize = true;
-            labelMaxXdX.Location = new Point(558, 165);
+            labelMaxXdX.Location = new Point(558, 160);
             labelMaxXdX.Name = "labelMaxXdX";
             labelMaxXdX.Size = new Size(71, 15);
             labelMaxXdX.TabIndex = 24;
@@ -351,7 +353,7 @@
             // radioButtonMin
             // 
             radioButtonMin.AutoSize = true;
-            radioButtonMin.Location = new Point(14, 22);
+            radioButtonMin.Location = new Point(10, 22);
             radioButtonMin.Name = "radioButtonMin";
             radioButtonMin.Size = new Size(86, 19);
             radioButtonMin.TabIndex = 29;
@@ -363,7 +365,7 @@
             // checkBoxThread
             // 
             checkBoxThread.AutoSize = true;
-            checkBoxThread.Location = new Point(17, 14);
+            checkBoxThread.Location = new Point(11, 22);
             checkBoxThread.Name = "checkBoxThread";
             checkBoxThread.Size = new Size(90, 19);
             checkBoxThread.TabIndex = 30;
@@ -374,7 +376,7 @@
             // radioButtonMax
             // 
             radioButtonMax.AutoSize = true;
-            radioButtonMax.Location = new Point(14, 43);
+            radioButtonMax.Location = new Point(10, 42);
             radioButtonMax.Name = "radioButtonMax";
             radioButtonMax.Size = new Size(88, 19);
             radioButtonMax.TabIndex = 31;
@@ -386,7 +388,7 @@
             // labelTolJReal
             // 
             labelTolJReal.AutoSize = true;
-            labelTolJReal.Location = new Point(774, 115);
+            labelTolJReal.Location = new Point(590, 114);
             labelTolJReal.Name = "labelTolJReal";
             labelTolJReal.Size = new Size(49, 15);
             labelTolJReal.TabIndex = 33;
@@ -418,7 +420,7 @@
             comboBoxLogLevel.DropDownStyle = ComboBoxStyle.DropDownList;
             comboBoxLogLevel.Font = new Font("Malgun Gothic", 9F);
             comboBoxLogLevel.FormattingEnabled = true;
-            comboBoxLogLevel.Location = new Point(552, 24);
+            comboBoxLogLevel.Location = new Point(72, 733);
             comboBoxLogLevel.Name = "comboBoxLogLevel";
             comboBoxLogLevel.Size = new Size(100, 23);
             comboBoxLogLevel.TabIndex = 36;
@@ -427,7 +429,7 @@
             // labelLogLevel
             // 
             labelLogLevel.AutoSize = true;
-            labelLogLevel.Location = new Point(557, 6);
+            labelLogLevel.Location = new Point(12, 737);
             labelLogLevel.Name = "labelLogLevel";
             labelLogLevel.Size = new Size(58, 15);
             labelLogLevel.TabIndex = 37;
@@ -440,7 +442,7 @@
             comboBoxNs.Font = new Font("Malgun Gothic", 9F);
             comboBoxNs.FormattingEnabled = true;
             comboBoxNs.ItemHeight = 15;
-            comboBoxNs.Location = new Point(649, 181);
+            comboBoxNs.Location = new Point(649, 176);
             comboBoxNs.MaxDropDownItems = 100;
             comboBoxNs.Name = "comboBoxNs";
             comboBoxNs.Size = new Size(65, 23);
@@ -449,7 +451,7 @@
             // labelNs
             // 
             labelNs.AutoSize = true;
-            labelNs.Location = new Point(649, 164);
+            labelNs.Location = new Point(649, 159);
             labelNs.Name = "labelNs";
             labelNs.Size = new Size(21, 15);
             labelNs.TabIndex = 38;
@@ -458,7 +460,7 @@
             // checkBoxSampleReuse
             // 
             checkBoxSampleReuse.AutoSize = true;
-            checkBoxSampleReuse.Location = new Point(118, 14);
+            checkBoxSampleReuse.Location = new Point(112, 22);
             checkBoxSampleReuse.Name = "checkBoxSampleReuse";
             checkBoxSampleReuse.Size = new Size(101, 19);
             checkBoxSampleReuse.TabIndex = 40;
@@ -468,7 +470,7 @@
             // 
             // buttonUndo
             // 
-            buttonUndo.Location = new Point(82, 179);
+            buttonUndo.Location = new Point(82, 174);
             buttonUndo.Name = "buttonUndo";
             buttonUndo.Size = new Size(49, 28);
             buttonUndo.TabIndex = 41;
@@ -479,7 +481,7 @@
             // label1
             // 
             label1.AutoSize = true;
-            label1.Location = new Point(68, 186);
+            label1.Location = new Point(68, 181);
             label1.Name = "label1";
             label1.Size = new Size(12, 15);
             label1.TabIndex = 42;
@@ -488,7 +490,7 @@
             // checkBoxStrictLimit
             // 
             checkBoxStrictLimit.AutoSize = true;
-            checkBoxStrictLimit.Location = new Point(118, 31);
+            checkBoxStrictLimit.Location = new Point(112, 42);
             checkBoxStrictLimit.Name = "checkBoxStrictLimit";
             checkBoxStrictLimit.Size = new Size(81, 19);
             checkBoxStrictLimit.TabIndex = 43;
@@ -500,17 +502,17 @@
             // 
             groupBox1.Controls.Add(radioButtonMin);
             groupBox1.Controls.Add(radioButtonMax);
-            groupBox1.Location = new Point(237, 6);
+            groupBox1.Location = new Point(247, 6);
             groupBox1.Name = "groupBox1";
-            groupBox1.Size = new Size(113, 72);
+            groupBox1.Size = new Size(107, 87);
             groupBox1.TabIndex = 44;
             groupBox1.TabStop = false;
-            groupBox1.Text = "MODE";
+            groupBox1.Text = "Mode2";
             // 
             // labelTolXReal
             // 
             labelTolXReal.AutoSize = true;
-            labelTolXReal.Location = new Point(587, 118);
+            labelTolXReal.Location = new Point(587, 70);
             labelTolXReal.Name = "labelTolXReal";
             labelTolXReal.Size = new Size(52, 15);
             labelTolXReal.TabIndex = 45;
@@ -519,7 +521,7 @@
             // labelSpanX
             // 
             labelSpanX.AutoSize = true;
-            labelSpanX.Location = new Point(587, 133);
+            labelSpanX.Location = new Point(587, 85);
             labelSpanX.Name = "labelSpanX";
             labelSpanX.Size = new Size(41, 15);
             labelSpanX.TabIndex = 46;
@@ -528,7 +530,7 @@
             // labelSpanJ
             // 
             labelSpanJ.AutoSize = true;
-            labelSpanJ.Location = new Point(774, 129);
+            labelSpanJ.Location = new Point(590, 128);
             labelSpanJ.Name = "labelSpanJ";
             labelSpanJ.Size = new Size(38, 15);
             labelSpanJ.TabIndex = 47;
@@ -539,7 +541,7 @@
             checkBoxAutoShrink.AutoSize = true;
             checkBoxAutoShrink.Checked = true;
             checkBoxAutoShrink.CheckState = CheckState.Checked;
-            checkBoxAutoShrink.Location = new Point(118, 48);
+            checkBoxAutoShrink.Location = new Point(112, 62);
             checkBoxAutoShrink.Name = "checkBoxAutoShrink";
             checkBoxAutoShrink.Size = new Size(86, 19);
             checkBoxAutoShrink.TabIndex = 48;
@@ -552,7 +554,7 @@
             checkBoxSampledOpt.AutoSize = true;
             checkBoxSampledOpt.Checked = true;
             checkBoxSampledOpt.CheckState = CheckState.Checked;
-            checkBoxSampledOpt.Location = new Point(17, 50);
+            checkBoxSampledOpt.Location = new Point(11, 62);
             checkBoxSampledOpt.Name = "checkBoxSampledOpt";
             checkBoxSampledOpt.Size = new Size(93, 19);
             checkBoxSampledOpt.TabIndex = 49;
@@ -589,9 +591,9 @@
             groupBoxLowerAxis.Controls.Add(radioButtonBoth);
             groupBoxLowerAxis.Controls.Add(radioButtonReSample);
             groupBoxLowerAxis.Controls.Add(radioButtonAxisChange);
-            groupBoxLowerAxis.Location = new Point(369, 6);
+            groupBoxLowerAxis.Location = new Point(366, 6);
             groupBoxLowerAxis.Name = "groupBoxLowerAxis";
-            groupBoxLowerAxis.Size = new Size(148, 87);
+            groupBoxLowerAxis.Size = new Size(136, 87);
             groupBoxLowerAxis.TabIndex = 50;
             groupBoxLowerAxis.TabStop = false;
             groupBoxLowerAxis.Text = "Lower Axis Handling";
@@ -612,7 +614,7 @@
             checkBoxPartialConstJ.AutoSize = true;
             checkBoxPartialConstJ.Checked = true;
             checkBoxPartialConstJ.CheckState = CheckState.Checked;
-            checkBoxPartialConstJ.Location = new Point(17, 31);
+            checkBoxPartialConstJ.Location = new Point(11, 42);
             checkBoxPartialConstJ.Name = "checkBoxPartialConstJ";
             checkBoxPartialConstJ.Size = new Size(94, 19);
             checkBoxPartialConstJ.TabIndex = 51;
@@ -644,7 +646,7 @@
             // labelNFE
             // 
             labelNFE.AutoSize = true;
-            labelNFE.Location = new Point(17, 164);
+            labelNFE.Location = new Point(17, 159);
             labelNFE.Name = "labelNFE";
             labelNFE.Size = new Size(28, 15);
             labelNFE.TabIndex = 54;
@@ -653,7 +655,7 @@
             // labelShrinkCnt
             // 
             labelShrinkCnt.AutoSize = true;
-            labelShrinkCnt.Location = new Point(17, 150);
+            labelShrinkCnt.Location = new Point(17, 145);
             labelShrinkCnt.Name = "labelShrinkCnt";
             labelShrinkCnt.Size = new Size(26, 15);
             labelShrinkCnt.TabIndex = 55;
@@ -662,7 +664,7 @@
             // labelEpsilonBnd
             // 
             labelEpsilonBnd.AutoSize = true;
-            labelEpsilonBnd.Location = new Point(700, 48);
+            labelEpsilonBnd.Location = new Point(516, 5);
             labelEpsilonBnd.Name = "labelEpsilonBnd";
             labelEpsilonBnd.Size = new Size(38, 15);
             labelEpsilonBnd.TabIndex = 57;
@@ -672,7 +674,7 @@
             // 
             numericUpDownEpsilonBnd.DecimalPlaces = 3;
             numericUpDownEpsilonBnd.Increment = new decimal(new int[] { 1, 0, 0, 131072 });
-            numericUpDownEpsilonBnd.Location = new Point(700, 66);
+            numericUpDownEpsilonBnd.Location = new Point(516, 23);
             numericUpDownEpsilonBnd.Name = "numericUpDownEpsilonBnd";
             numericUpDownEpsilonBnd.Size = new Size(65, 23);
             numericUpDownEpsilonBnd.TabIndex = 56;
@@ -680,29 +682,40 @@
             numericUpDownEpsilonBnd.Value = new decimal(new int[] { 1, 0, 0, 65536 });
             numericUpDownEpsilonBnd.ValueChanged += numericUpDownEpsilonBnd_ValueChanged;
             // 
+            // groupBox2
+            // 
+            groupBox2.Controls.Add(checkBoxStrictLimit);
+            groupBox2.Controls.Add(checkBoxThread);
+            groupBox2.Controls.Add(checkBoxSampleReuse);
+            groupBox2.Controls.Add(checkBoxAutoShrink);
+            groupBox2.Controls.Add(checkBoxSampledOpt);
+            groupBox2.Controls.Add(checkBoxPartialConstJ);
+            groupBox2.Location = new Point(19, 6);
+            groupBox2.Name = "groupBox2";
+            groupBox2.Size = new Size(216, 87);
+            groupBox2.TabIndex = 58;
+            groupBox2.TabStop = false;
+            groupBox2.Text = "Mode1";
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1122, 723);
+            ClientSize = new Size(1078, 771);
+            Controls.Add(groupBox2);
             Controls.Add(labelEpsilonBnd);
             Controls.Add(numericUpDownEpsilonBnd);
             Controls.Add(labelShrinkCnt);
             Controls.Add(labelNFE);
             Controls.Add(label2);
             Controls.Add(numericUpDownNs);
-            Controls.Add(checkBoxPartialConstJ);
             Controls.Add(groupBoxLowerAxis);
-            Controls.Add(checkBoxSampledOpt);
-            Controls.Add(checkBoxAutoShrink);
             Controls.Add(labelSpanJ);
             Controls.Add(labelSpanX);
             Controls.Add(labelTolXReal);
             Controls.Add(groupBox1);
-            Controls.Add(checkBoxStrictLimit);
             Controls.Add(label1);
             Controls.Add(buttonUndo);
-            Controls.Add(checkBoxSampleReuse);
             Controls.Add(comboBoxNs);
             Controls.Add(labelNs);
             Controls.Add(labelLogLevel);
@@ -710,7 +723,6 @@
             Controls.Add(labelDimension);
             Controls.Add(numericUpDownDimension);
             Controls.Add(labelTolJReal);
-            Controls.Add(checkBoxThread);
             Controls.Add(comboBoxMaxXdX);
             Controls.Add(comboBoxMinXdX);
             Controls.Add(labelMinXdX);
@@ -747,6 +759,8 @@
             groupBoxLowerAxis.PerformLayout();
             ((System.ComponentModel.ISupportInitialize)numericUpDownNs).EndInit();
             ((System.ComponentModel.ISupportInitialize)numericUpDownEpsilonBnd).EndInit();
+            groupBox2.ResumeLayout(false);
+            groupBox2.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -808,5 +822,6 @@
         private Label labelShrinkCnt;
         private Label labelEpsilonBnd;
         private NumericUpDown numericUpDownEpsilonBnd;
+        private GroupBox groupBox2;
     }
 }

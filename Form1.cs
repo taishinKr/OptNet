@@ -1517,7 +1517,7 @@ namespace OptNet
             }
             var old = numericUpDownShrink.Value;
             ResetUICtr();
-            if( !mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.DisableOptimaize) )
+            if (!mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.DisableOptimaize))
                 buttonOptimzeMD.Enabled = true;
             numericUpDownShrink.Value = old;
             buttonUndo.Enabled = true;
@@ -1553,7 +1553,7 @@ namespace OptNet
                 numericUpDownShrink.Enabled = true;
                 buttonShrink.Enabled = true;
                 //buttonUndo.Enabled = true;
-                if(mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.DisableOptimaize) == false)
+                if (mOptMD.IsSetSysFlag(OptMD<double>.StaMaskEnum.DisableOptimaize) == false)
                     buttonOptimzeMD.Enabled = true;
                 else
                     buttonOptimzeMD.Enabled = false;
