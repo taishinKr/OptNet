@@ -1,5 +1,7 @@
 # OptNet: Multidimensional QSS Global Optimization Framework
 
+![OptNet Graphical User Interface](./UI_Overview.jpg)
+
 **OptNet** is a GUI-based demonstration tool for the **Quadratic Sinusoidal Series (QSS)** multidimensional global optimization framework. It allows users to test, analyze, and benchmark the deterministic QSS-ND optimization algorithm across various standard benchmark functions.
 
 ## 📸 User Interface Overview
